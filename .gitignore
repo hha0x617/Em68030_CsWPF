@@ -1,0 +1,14 @@
+# Visual Studio
+.vs/
+
+# Build output
+bin/
+obj/
+*.deps.json
+
+# Application config (contains local paths)
+appsettings.json
+
+# Archives
+*.7z
+*.zip

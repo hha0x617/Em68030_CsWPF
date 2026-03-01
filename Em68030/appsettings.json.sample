@@ -1,0 +1,28 @@
+{
+    "BoardType": "MVME147",
+    "ConsoleBaseAddress": 16711680,
+    "ConsoleEnabled": true,
+    "ConsoleScrollbackLines": 2000,
+    "FontFamily": "Consolas",
+    "FontSize": 14.0,
+    "HddBaseAddress": 16715776,
+    "HddEnabled": true,
+    "HddImagePath": "",
+    "LastLoadAddress": 4096,
+    "LastOpenedFile": "C:\\em68030\\netbsd-GENERIC",
+    "MemoryRegions": [],
+    "MemorySize": 67108864,
+    "Mvme147RomPath": "",
+    "Mvme147ScsiCdromId": 3,
+    "Mvme147ScsiCdromPath": "C:\\em68030\\NetBSD-10.1-mvme68k.iso",
+    "Mvme147ScsiDisks": [
+        {
+            "Path": "C:\\em68030\\scsi0-root.img",
+            "ScsiId": 0
+        },
+        {
+            "Path": "C:\\em68030\\scsi1-data.img",
+            "ScsiId": 1
+        }
+    ]
+}
