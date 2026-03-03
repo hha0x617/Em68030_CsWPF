@@ -52,6 +52,11 @@ public partial class ConsoleWindow : Window
         _renderTimer.Tick += (_, _) => RenderScreen();
         _renderTimer.Start();
 
+        // Intercept context-menu Paste so it routes through SCC/input instead of TextBox
+        OutputBox.CommandBindings.Add(new CommandBinding(
+            ApplicationCommands.Paste, OnPasteCommand,
+            (_, args) => { args.CanExecute = true; args.Handled = true; }));
+
         // Focus the output area for keyboard capture
         Loaded += (_, _) => OutputBox.Focus();
         Activated += (_, _) => OutputBox.Focus();
@@ -105,6 +110,11 @@ public partial class ConsoleWindow : Window
         _cursorVisible = newVisible;
 
         if (!_terminal.IsDirty && !blinkChanged) return;
+
+        // Suspend text updates while the user has a text selection active,
+        // so mouse-drag selections aren't reset every 100ms render tick.
+        if (OutputBox.SelectionLength > 0) return;
+
         _terminal.ClearDirty();
 
         if (_showScrollback)
@@ -203,6 +213,31 @@ public partial class ConsoleWindow : Window
                 return;
             }
 
+            // Ctrl+C: copy selected text (let TextBox handle), or send 0x03 (ETX) if no selection
+            if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && key == Key.C)
+            {
+                if (OutputBox.SelectionLength == 0)
+                {
+                    OnCharInput(0x03);
+                    e.Handled = true;
+                }
+                // Selection active: don't handle — TextBox copies natively
+                return;
+            }
+
+            // Ctrl+V: paste clipboard text into SCC
+            if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && key == Key.V)
+            {
+                string text = Clipboard.GetText();
+                if (!string.IsNullOrEmpty(text))
+                {
+                    text = text.Replace("\r\n", "\r").Replace('\n', '\r');
+                    SendRawBytes(text);
+                }
+                e.Handled = true;
+                return;
+            }
+
             // Ctrl+A..Z -> control codes 0x01..0x1A
             if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 &&
                 key >= Key.A && key <= Key.Z)
@@ -215,6 +250,32 @@ public partial class ConsoleWindow : Window
         }
         else
         {
+            // Ctrl+C: copy selected text (let TextBox handle natively)
+            if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && key == Key.C)
+            {
+                // Selection active: don't handle — TextBox copies natively
+                // No selection: suppress (no action in Generic mode)
+                e.Handled = OutputBox.SelectionLength == 0;
+                return;
+            }
+
+            // Ctrl+V: paste clipboard text into input buffer + local echo
+            if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && key == Key.V)
+            {
+                string text = Clipboard.GetText();
+                if (!string.IsNullOrEmpty(text))
+                {
+                    text = text.Replace("\r\n", "\r").Replace('\n', '\r');
+                    foreach (char c in text)
+                    {
+                        _inputLine.Append(c);
+                        _terminal.Write(c);
+                    }
+                }
+                e.Handled = true;
+                return;
+            }
+
             // Generic mode: handle special keys for inline input
             switch (key)
             {
@@ -300,6 +361,33 @@ public partial class ConsoleWindow : Window
         }
 
         _terminal.Write('\n');
+    }
+
+    /// <summary>
+    /// Handle context-menu Paste (routes clipboard through SCC/input instead of TextBox).
+    /// </summary>
+    private void OnPasteCommand(object sender, ExecutedRoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (!Clipboard.ContainsText()) return;
+
+        string text = Clipboard.GetText();
+        if (string.IsNullOrEmpty(text)) return;
+
+        text = text.Replace("\r\n", "\r").Replace('\n', '\r');
+
+        if (OnCharInput != null)
+        {
+            SendRawBytes(text);
+        }
+        else
+        {
+            foreach (char c in text)
+            {
+                _inputLine.Append(c);
+                _terminal.Write(c);
+            }
+        }
     }
 
     /// <summary>
