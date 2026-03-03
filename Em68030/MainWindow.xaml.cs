@@ -190,6 +190,11 @@ public partial class MainWindow : Window
         }
     }
 
+    private void About_Click(object sender, RoutedEventArgs e)
+    {
+        new AboutWindow { Owner = this }.ShowDialog();
+    }
+
     private void DisasmAddrBox_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)

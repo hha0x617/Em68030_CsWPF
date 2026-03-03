@@ -321,6 +321,9 @@
             <MenuItem Header="_Settings">
                 <MenuItem Header="_Emulator Settings..." Click="Settings_Click" />
             </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_About..." Click="About_Click" />
+            </MenuItem>
         </Menu>
 
         <!-- Toolbar -->
