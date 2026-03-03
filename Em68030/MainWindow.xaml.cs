@@ -117,7 +117,7 @@ public partial class MainWindow : Window
                     $"Entry Point: ${result.EntryPoint:X8}\n" +
                     $"Load Range: ${result.StartAddress:X8} - ${result.EndAddress:X8}\n" +
                     $"Segments: {result.SegmentsLoaded}",
-                    "ELF Loader", MessageBoxButton.OK, MessageBoxImage.Information);
+                    "ELF Loader", MessageBoxButton.OK, MessageBoxImage.None);
             }
             catch (Exception ex)
             {

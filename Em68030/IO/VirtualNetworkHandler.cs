@@ -7,7 +7,7 @@ using System.Collections.Generic;
 /// Implements a gateway at 10.0.2.2 with proxy ARP, ICMP echo, TCP echo (port 7), and UDP echo (port 7).
 /// No external network connection required.
 /// </summary>
-public class VirtualNetworkHandler
+public class VirtualNetworkHandler : INetworkHandler
 {
     private static readonly byte[] GatewayMac = { 0x52, 0x54, 0x00, 0x12, 0x34, 0x56 };
     private static readonly byte[] GatewayIp = { 10, 0, 2, 2 };
@@ -66,6 +66,10 @@ public class VirtualNetworkHandler
         _tcpConnections.Clear();
     }
 
+    public void Dispose()
+    {
+    }
+
     // --- ARP ---
 
     private void HandleArp(byte[] frame, int length)
@@ -75,9 +79,19 @@ public class VirtualNetworkHandler
         ushort op = ReadBE16(frame, 20);
         if (op != 1) return; // Only handle ARP Request
 
+        // Ignore DAD probes (SPA = 0.0.0.0) — responding would cause
+        // "DAD duplicate address" errors during interface configuration.
+        if (frame[28] == 0 && frame[29] == 0 && frame[30] == 0 && frame[31] == 0)
+            return;
+
         // Learn guest IP from sender protocol address (SPA at offset 28)
         System.Array.Copy(frame, 28, _guestIp, 0, 4);
         _guestIpKnown = true;
+
+        // Don't respond if TPA = guest IP (gratuitous ARP / DAD announcement)
+        if (frame[38] == _guestIp[0] && frame[39] == _guestIp[1] &&
+            frame[40] == _guestIp[2] && frame[41] == _guestIp[3])
+            return;
 
         // Build ARP Reply
         byte[] reply = new byte[MIN_ETHERNET_FRAME];

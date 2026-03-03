@@ -133,6 +133,8 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    public string NetworkModeText => "Net: " + _config.NetworkMode;
+
     public bool IsMemoryEditMode
     {
         get => _isMemoryEditMode;
@@ -395,6 +397,12 @@ public class MainViewModel : INotifyPropertyChanged
         _scsiDevice.AttachMemory(_memory);
         _lanceDevice = new LanceDevice();
         _lanceDevice.AttachMemory(_memory);
+        if (_config.NetworkMode == "NAT")
+        {
+            var natHandler = new SlirpNetworkHandler();
+            natHandler.DiagnosticOutput = msg => _traceWriter?.Write(msg);
+            _lanceDevice.SetNetworkHandler(natHandler);
+        }
 
         // First, register catch-all for the entire I/O space ($FFFE0000-$FFFEFFFF)
         // This prevents bus errors when kernel probes unmapped device addresses
@@ -446,15 +454,8 @@ public class MainViewModel : INotifyPropertyChanged
         // SCC Channel B -> also wire to console output (kernel may use either channel)
         _sccDevice.ChannelB.CharTransmitted += ch => { ConsoleCharOutput?.Invoke((char)ch); _traceWriter?.Write((char)ch); };
 
-        // Diagnostic output: always to console, also to trace file when VerboseTrace is active
-        _cpu.DiagnosticOutput = msg =>
-        {
-            // When trace file is open, diagnostic messages go to file only (not console)
-            if (_traceWriter != null)
-                _traceWriter.Write(msg);
-            else
-                ConsoleStringOutput?.Invoke(msg);
-        };
+        // Diagnostic output: trace file only (not shown in console window)
+        _cpu.DiagnosticOutput = msg => _traceWriter?.Write(msg);
 
         // CPU tick handlers for PCC timer, SCC TX/RX, and LANCE TX
         _cpu.AddTickHandler(() =>

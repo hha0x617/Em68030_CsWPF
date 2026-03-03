@@ -55,11 +55,19 @@ public class LanceDevice : IMemoryMappedDevice
     private int _txRingIndex;
     private bool _txPending;
     private int _rxRingIndex;
-    private readonly VirtualNetworkHandler _networkHandler = new();
+    private INetworkHandler _networkHandler = new VirtualNetworkHandler();
 
     public LanceDevice()
     {
         _csr[0] = CSR0_STOP;
+    }
+
+    public void SetNetworkHandler(INetworkHandler handler)
+    {
+        _networkHandler.Dispose();
+        _networkHandler = handler;
+        if (_initialized)
+            _networkHandler.SetGuestMac(_macAddress);
     }
 
     public void AttachMemory(Memory memory)
@@ -187,11 +195,9 @@ public class LanceDevice : IMemoryMappedDevice
         ushort w1cBits = (ushort)(value & W1C_MASK);
         _csr[0] = (ushort)(_csr[0] & ~w1cBits);
 
-        // 3. INEA: set or clear from write value directly
+        // 3. INEA: writing 1 sets it; writing 0 does NOT clear it (AM7990 spec)
         if ((value & CSR0_INEA) != 0)
             _csr[0] |= CSR0_INEA;
-        else
-            _csr[0] = (ushort)(_csr[0] & ~CSR0_INEA);
 
         // 4. TDMD: trigger transmit demand
         if ((value & CSR0_TDMD) != 0)

@@ -1,5 +1,6 @@
 namespace Em68030.IO;
 
+using System.Diagnostics;
 using Em68030.Core;
 
 /// <summary>
@@ -95,6 +96,13 @@ public class PccDevice : IMemoryMappedDevice
     private byte _timer1OverflowCount;
     private byte _timer2OverflowCount;
 
+    // Wall-clock timer: real PCC timer runs at 160,000 Hz independent of CPU speed.
+    // Using Stopwatch for high-resolution wall-clock timing to keep timer in sync with real time.
+    private const int TimerFreq = 160000;
+    private long _lastTimerTimestamp = Stopwatch.GetTimestamp();
+    private long _timer1Fractional;
+    private long _timer2Fractional;
+
     // Device ICR and control registers ($1C-$2F)
     private byte _acFailIcr;             // $1C
     private byte _wdogIcr;              // $1D
@@ -160,6 +168,9 @@ public class PccDevice : IMemoryMappedDevice
         _timer2OverflowCount = 0;
         _timer1Count = 0;
         _timer2Count = 0;
+        _timer1Fractional = 0;
+        _timer2Fractional = 0;
+        _lastTimerTimestamp = Stopwatch.GetTimestamp();
 
         // Clear all device ICRs
         _acFailIcr = 0;
@@ -189,41 +200,100 @@ public class PccDevice : IMemoryMappedDevice
 
     public void Tick()
     {
+        // Calculate elapsed wall-clock time and convert to 160 kHz timer ticks.
+        // Real PCC timer runs at a fixed 160,000 Hz crystal, independent of CPU speed.
+        long now = Stopwatch.GetTimestamp();
+        long elapsed = now - _lastTimerTimestamp;
+        _lastTimerTimestamp = now;
+
+        // Clamp: ignore negative or huge jumps (e.g., after pause/resume)
+        if (elapsed <= 0) return;
+        long maxElapsed = Stopwatch.Frequency / 10; // 100ms max
+        if (elapsed > maxElapsed) elapsed = maxElapsed;
+
         // Timer 1: count-up from preload, overflow at 0x10000
-        // Bit 2 (CEN) = count enable, Bit 1 (COC) = reload on overflow, Bit 0 (CCI) = clear inhibit
         if ((_timer1Control & 0x04) != 0) // CEN (bit 2) = count enable
         {
-            _timer1Count++;
-            if (_timer1Count > 0xFFFF) // 16-bit overflow
-            {
-                if ((_timer1Control & 0x02) != 0) // COC (bit 1) = reload preload on overflow
-                    _timer1Count = _timer1Preload;
-                else
-                    _timer1Count &= 0xFFFF;
-                // Increment overflow counter (4-bit, bits 7:4 of control reg read value, saturate at 15)
-                if (_timer1OverflowCount < 15)
-                    _timer1OverflowCount++;
-                _timer1Icr |= 0x80; // Set INT pending
-                UpdateIPL();
-            }
+            _timer1Fractional += elapsed * TimerFreq;
+            int ticks = (int)(_timer1Fractional / Stopwatch.Frequency);
+            _timer1Fractional -= (long)ticks * Stopwatch.Frequency;
+            if (ticks > 0)
+                AdvanceTimer(ref _timer1Count, _timer1Control, _timer1Preload,
+                    ref _timer1OverflowCount, ref _timer1Icr, ticks);
         }
 
         // Timer 2: same model
         if ((_timer2Control & 0x04) != 0)
         {
-            _timer2Count++;
-            if (_timer2Count > 0xFFFF)
-            {
-                if ((_timer2Control & 0x02) != 0)
-                    _timer2Count = _timer2Preload;
-                else
-                    _timer2Count &= 0xFFFF;
-                if (_timer2OverflowCount < 15)
-                    _timer2OverflowCount++;
-                _timer2Icr |= 0x80;
-                UpdateIPL();
-            }
+            _timer2Fractional += elapsed * TimerFreq;
+            int ticks = (int)(_timer2Fractional / Stopwatch.Frequency);
+            _timer2Fractional -= (long)ticks * Stopwatch.Frequency;
+            if (ticks > 0)
+                AdvanceTimer(ref _timer2Count, _timer2Control, _timer2Preload,
+                    ref _timer2OverflowCount, ref _timer2Icr, ticks);
         }
+    }
+
+    /// <summary>
+    /// Get the current timer count with real-time interpolation.
+    /// The PCC timer is a free-running hardware counter at 160 kHz.
+    /// Between Tick() calls, the stored count is stale — this method computes
+    /// the current value by adding wall-clock-elapsed ticks since the last Tick().
+    /// Required for NetBSD's timecounter subsystem (clock_gettime CLOCK_MONOTONIC).
+    /// </summary>
+    private ushort GetCurrentTimerCount(uint count, long fractional, byte control)
+    {
+        if ((control & 0x04) == 0) // CEN not set, timer stopped
+            return (ushort)(count & 0xFFFF);
+
+        long now = Stopwatch.GetTimestamp();
+        long elapsed = now - _lastTimerTimestamp;
+        if (elapsed <= 0) return (ushort)(count & 0xFFFF);
+
+        long totalFrac = fractional + elapsed * TimerFreq;
+        int additionalTicks = (int)(totalFrac / Stopwatch.Frequency);
+
+        // Clamp: don't cross the 16-bit overflow boundary (0xFFFF).
+        // Overflow handling (incrementing overflow count, setting ICR INT) is done
+        // in Tick(). If we wrapped here, clock_pcc_getcount() would see a count
+        // below preload while the overflow counter hasn't been incremented yet,
+        // causing the monotonic clock to go backwards.
+        int distToOverflow = 0x10000 - (int)(count & 0xFFFF);
+        if (additionalTicks >= distToOverflow)
+            additionalTicks = distToOverflow - 1; // clamp at 0xFFFF
+
+        return (ushort)((count + (uint)additionalTicks) & 0xFFFF);
+    }
+
+    /// <summary>
+    /// Advance a timer counter by the given number of 160 kHz ticks, handling
+    /// overflow counting and preload reload efficiently (no per-tick loop).
+    /// </summary>
+    private void AdvanceTimer(ref uint count, byte control, ushort preload,
+        ref byte overflowCount, ref byte icr, int ticks)
+    {
+        bool coc = (control & 0x02) != 0;
+        int period = coc ? (0x10000 - preload) : 0x10000;
+        if (period <= 0) period = 1;
+
+        int distToOverflow = 0x10000 - (int)(count & 0xFFFF);
+
+        if (ticks < distToOverflow)
+        {
+            count += (uint)ticks;
+            return;
+        }
+
+        // At least one overflow
+        ticks -= distToOverflow;
+        int overflows = 1 + ticks / period;
+        int remainder = ticks % period;
+        count = (uint)((coc ? preload : 0) + remainder);
+
+        int newOvf = overflowCount + overflows;
+        overflowCount = (byte)(newOvf > 15 ? 15 : newOvf);
+        icr |= 0x80; // Set INT pending
+        UpdateIPL();
     }
 
     /// <summary>
@@ -299,12 +369,12 @@ public class PccDevice : IMemoryMappedDevice
         {
             0x10 => (byte)(_timer1Preload >> 8),
             0x11 => (byte)(_timer1Preload & 0xFF),
-            0x12 => (byte)((_timer1Count >> 8) & 0xFF),
-            0x13 => (byte)(_timer1Count & 0xFF),
+            0x12 => (byte)((GetCurrentTimerCount(_timer1Count, _timer1Fractional, _timer1Control) >> 8) & 0xFF),
+            0x13 => (byte)(GetCurrentTimerCount(_timer1Count, _timer1Fractional, _timer1Control) & 0xFF),
             0x14 => (byte)(_timer2Preload >> 8),
             0x15 => (byte)(_timer2Preload & 0xFF),
-            0x16 => (byte)((_timer2Count >> 8) & 0xFF),
-            0x17 => (byte)(_timer2Count & 0xFF),
+            0x16 => (byte)((GetCurrentTimerCount(_timer2Count, _timer2Fractional, _timer2Control) >> 8) & 0xFF),
+            0x17 => (byte)(GetCurrentTimerCount(_timer2Count, _timer2Fractional, _timer2Control) & 0xFF),
             0x18 => _timer1Icr,
             0x19 => (byte)(_timer1Control | (_timer1OverflowCount << 4)),
             0x1A => _timer2Icr,
@@ -339,9 +409,9 @@ public class PccDevice : IMemoryMappedDevice
         return offset switch
         {
             0x10 => _timer1Preload,
-            0x12 => (ushort)(_timer1Count & 0xFFFF),
+            0x12 => GetCurrentTimerCount(_timer1Count, _timer1Fractional, _timer1Control),
             0x14 => _timer2Preload,
-            0x16 => (ushort)(_timer2Count & 0xFFFF),
+            0x16 => GetCurrentTimerCount(_timer2Count, _timer2Fractional, _timer2Control),
             _ => (ushort)((ReadByte(address) << 8) | ReadByte(address + 1))
         };
     }

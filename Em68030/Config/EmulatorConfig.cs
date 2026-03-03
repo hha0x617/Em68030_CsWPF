@@ -39,6 +39,9 @@ public class EmulatorConfig
     public string Mvme147ScsiCdromPath { get; set; } = "";
     public int Mvme147ScsiCdromId { get; set; } = 3;
 
+    // Network mode: "Virtual" (internal echo server) or "NAT" (host network via user-mode NAT)
+    public string NetworkMode { get; set; } = "Virtual";
+
     // Legacy fields kept for JSON deserialization backward compatibility
     [JsonIgnore] public string Mvme147ScsiDiskPath { get; set; } = "";
     [JsonIgnore] public int Mvme147ScsiDiskId { get; set; } = 0;

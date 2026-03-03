@@ -205,6 +205,19 @@
                             <ComboBoxItem Content="6" />
                         </ComboBox>
                     </Grid>
+                    <!-- Network Mode -->
+                    <TextBlock Text="Network" Style="{StaticResource SectionHeader}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Network Mode:" Style="{StaticResource SettingLabel}" />
+                        <ComboBox x:Name="NetworkModeBox" Grid.Column="1">
+                            <ComboBoxItem Content="Virtual (Echo Server)" />
+                            <ComboBoxItem Content="NAT (Host Network)" />
+                        </ComboBox>
+                    </Grid>
                 </StackPanel>
 
                 <!-- Memory Settings -->

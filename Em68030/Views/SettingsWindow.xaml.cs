@@ -45,6 +45,7 @@ public partial class SettingsWindow : Window
 
         ScsiCdromPathBox.Text = Config.Mvme147ScsiCdromPath;
         _desiredCdromId = Math.Clamp(Config.Mvme147ScsiCdromId, 0, 6);
+        NetworkModeBox.SelectedIndex = Config.NetworkMode == "NAT" ? 1 : 0;
         UpdateMvme147Visibility();
         RefreshScsiIdOptions();
 
@@ -287,6 +288,7 @@ public partial class SettingsWindow : Window
 
         Config.Mvme147ScsiCdromPath = ScsiCdromPathBox.Text;
         Config.Mvme147ScsiCdromId = GetSelectedScsiId(ScsiCdromIdBox);
+        Config.NetworkMode = NetworkModeBox.SelectedIndex == 1 ? "NAT" : "Virtual";
 
         // Memory size
         if (int.TryParse(MemSizeBox.Text, out int memMB))
