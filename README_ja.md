@@ -20,18 +20,19 @@
 | デバイス | エミュレーション |
 |---|---|
 | WD33C93 SCSI コントローラ | ハードディスク・CD-ROM (複数台) |
-| AM7990 LANCE Ethernet | 仮想ネットワーク (ARP/ICMP/TCP/UDP) |
+| AM7990 LANCE Ethernet | 仮想ネットワーク (ARP/ICMP/TCP/UDP) / NAT (ホストネットワーク) |
 | Z8530 SCC シリアル | VT100 ターミナルエミュレーション |
 | Mk48t02 RTC | リアルタイムクロック |
-| PCC | 割り込みコントローラ |
+| PCC | 割り込みコントローラ、実時間タイマー |
 
 ### デバッガ UI
 - 逆アセンブリビュー (PC 自動追従、アドレスジャンプ)
 - レジスタ表示・編集 (D0-D7, A0-A7, PC, SR, SSP, VBR, FP0-FP7)
 - メモリダンプ・編集
 - ブレークポイント
-- コンソールウィンドウ (VT100 ターミナル、スクロールバック対応)
+- コンソールウィンドウ (VT100 ターミナル、スクロールバック・ペースト対応)
 - ELF / S-Record / バイナリファイルの読み込み
+- ウォームリブート (RESET 命令) およびハルト検出
 
 ### パフォーマンス
 i7-13700 上で 34-36 MHz 相当のエミュレーション速度を達成。主な最適化:
@@ -81,6 +82,7 @@ dotnet run --project Em68030/Em68030.csproj -c Release
     ],
     "Mvme147ScsiCdromPath": "path/to/NetBSD-10.1-mvme68k.iso",
     "Mvme147ScsiCdromId": 3,
+    "NetworkMode": "Virtual",
     "ConsoleScrollbackLines": 2000
 }
 ```
@@ -91,6 +93,7 @@ dotnet run --project Em68030/Em68030.csproj -c Release
 | `MemorySize` | RAM サイズ (バイト) | 48 MB |
 | `Mvme147ScsiDisks` | SCSI ディスクイメージのリスト (Path + ScsiId) | `[]` |
 | `Mvme147ScsiCdromPath` | SCSI CD-ROM ISO イメージパス | `""` |
+| `NetworkMode` | `"Virtual"` (エコーサーバ) または `"NAT"` (ホストネットワーク) | `"Virtual"` |
 | `ConsoleScrollbackLines` | コンソールのスクロールバック行数 (0-100000) | 2000 |
 
 ## NetBSD の起動
@@ -110,9 +113,9 @@ Em68030_CsWpf/
 │   ├── IO/             SCSI, Ethernet, Serial, RTC, PCC 等のデバイス
 │   ├── Config/         EmulatorConfig (appsettings.json)
 │   ├── ViewModels/     MainViewModel
-│   ├── Views/          ConsoleWindow, BreakpointsWindow, SettingsWindow
+│   ├── Views/          ConsoleWindow, BreakpointsWindow, SettingsWindow, AboutWindow
 │   └── MainWindow.xaml メインデバッガ UI
-└── Em68030.Tests/      xUnit テスト (102 tests)
+└── Em68030.Tests/      xUnit テスト (163 tests)
 ```
 
 ## 制限事項
@@ -127,7 +130,7 @@ Em68030_CsWpf/
 
 ### デバイス
 - **SCSI**: NetBSD が使用する標準コマンドのみ実装。SCSI-2 の全コマンドセットには対応していません
-- **Ethernet**: 仮想ネットワークは ARP 応答、ICMP Echo (ping)、TCP/UDP エコーサーバのみ。ホスト OS のネットワークスタックへの接続 (TAP/ブリッジ) には対応していません
+- **Ethernet**: Virtual モードは ARP 応答、ICMP Echo (ping)、TCP/UDP エコーサーバのみ。NAT モードではホストネットワーク経由で通信可能ですが、TAP/ブリッジには非対応
 - **シリアル (SCC)**: ボーレートのシミュレーション、モデム制御信号 (RTS/CTS) はありません
 - **RTC**: ホストのシステム時刻を返す読み取り専用実装です。ゲスト OS からの時刻設定は反映されません
 - **NVRAM**: メモリ上のみで、ファイルへの永続化は行いません
@@ -139,7 +142,6 @@ Em68030_CsWpf/
 
 ## 今後の予定
 
-- Ethernet: ホスト OS ネットワークへの接続 (TAP デバイス / ユーザモード NAT)
 - FPU: 80-bit 拡張精度の正確なエミュレーション
 - NVRAM のファイル永続化
 - グラフィックス出力 (フレームバッファ)
