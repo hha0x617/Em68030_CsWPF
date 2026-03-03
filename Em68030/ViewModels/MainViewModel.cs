@@ -1158,6 +1158,7 @@ public class MainViewModel : INotifyPropertyChanged
     public void ToggleTrace()
     {
         _cpu.VerboseTrace = !_cpu.VerboseTrace;
+        _cpu.FpuTraceEnabled = _cpu.VerboseTrace;
         if (_cpu.VerboseTrace)
         {
             // Open trace log file in the application directory

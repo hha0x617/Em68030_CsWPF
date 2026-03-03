@@ -101,6 +101,9 @@ public class MC68030
     // Enable verbose tracing (bus errors, syscalls) — toggled from UI
     public bool VerboseTrace;
 
+    /// <summary>Enable FPU operation tracing for user-mode code (diagnostic).</summary>
+    public bool FpuTraceEnabled;
+
     public bool TrapHandled { get; set; }
 
     public void LogException(string message) => ExceptionOccurred?.Invoke(message);

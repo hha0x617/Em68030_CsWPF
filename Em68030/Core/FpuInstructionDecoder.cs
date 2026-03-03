@@ -17,6 +17,46 @@ public class FpuInstructionDecoder
         _fpu = fpu;
     }
 
+    private void FpuTrace(string msg)
+    {
+        if (_cpu.FpuTraceEnabled && !_cpu.SupervisorMode)
+            _cpu.DiagnosticOutput?.Invoke(msg);
+    }
+
+    /// <summary>
+    /// MC68882 FMOVECR constant ROM table.
+    /// Returns the constant for the given ROM offset (0x00-0x3F).
+    /// </summary>
+    private static double GetFmovecrConstant(int offset)
+    {
+        return offset switch
+        {
+            0x00 => Math.PI,                          // π
+            0x0B => 0.30102999566398119521,            // log₁₀(2)
+            0x0C => Math.E,                            // e
+            0x0D => 1.4426950408889634074,             // log₂(e)
+            0x0E => 0.43429448190325182765,            // log₁₀(e)
+            0x0F => 0.0,                               // zero
+            0x30 => 0.69314718055994530942,            // ln(2)
+            0x31 => 2.30258509299404568402,            // ln(10)
+            0x32 => 1e0,                               // 10^0
+            0x33 => 1e1,                               // 10^1
+            0x34 => 1e2,                               // 10^2
+            0x35 => 1e4,                               // 10^4
+            0x36 => 1e8,                               // 10^8
+            0x37 => 1e16,                              // 10^16
+            0x38 => 1e32,                              // 10^32
+            0x39 => 1e64,                              // 10^64
+            0x3A => 1e128,                             // 10^128
+            0x3B => 1e256,                             // 10^256
+            0x3C => double.PositiveInfinity,           // 10^512 (overflows double)
+            0x3D => double.PositiveInfinity,           // 10^1024 (overflows double)
+            0x3E => double.PositiveInfinity,           // 10^2048 (overflows double)
+            0x3F => double.PositiveInfinity,           // 10^4096 (overflows double)
+            _ => 0.0,                                  // undefined offsets return 0
+        };
+    }
+
     /// <summary>Decode and execute an FPU instruction. opcode is the first word already fetched.</summary>
     public void Execute(ushort opcode)
     {
@@ -63,6 +103,7 @@ public class FpuInstructionDecoder
     private void ExecuteGeneral(ushort opcode, int eaMode, int eaReg)
     {
         ushort cmdWord = _cpu.FetchWord();
+        FpuTrace($"[FPU] PC=${_fpu.FPIAR:X8} DECODE opcode={opcode:X4} cmdWord={cmdWord:X4} eaM={eaMode} eaR={eaReg}\n");
         int cmdType = (cmdWord >> 13) & 7;
 
         switch (cmdType)
@@ -82,6 +123,19 @@ public class FpuInstructionDecoder
                 int srcFormat = (cmdWord >> 10) & 7;
                 int dstReg = (cmdWord >> 7) & 7;
                 int op = cmdWord & 0x7F;
+
+                // FMOVECR: srcFormat=7 means "Move Constant ROM"
+                // Loads an MC68882 on-chip constant into FPn.
+                // Bits 6-0 select the ROM constant offset.
+                if (srcFormat == 7)
+                {
+                    double constant = GetFmovecrConstant(op);
+                    _fpu.FP[dstReg] = constant;
+                    _fpu.SetConditionCodes(constant);
+                    FpuTrace($"[FPU] PC=${_fpu.FPIAR:X8} FMOVECR #{op:X2} => FP{dstReg}={constant}\n");
+                    break;
+                }
+
                 double src = ReadEAFloat(eaMode, eaReg, srcFormat);
                 ExecuteArithmetic(op, src, dstReg);
                 break;
@@ -93,6 +147,7 @@ public class FpuInstructionDecoder
                 int srcReg = (cmdWord >> 7) & 7;
                 double val = _fpu.FP[srcReg];
                 _fpu.SetConditionCodes(val);
+                FpuTrace($"[FPU] PC=${_fpu.FPIAR:X8} FMOVE.{Fpu.FormatName(dstFormat)} FP{srcReg}={val} => EA(m{eaMode}r{eaReg})\n");
                 WriteEAFloat(eaMode, eaReg, dstFormat, val);
                 break;
             }
@@ -100,30 +155,38 @@ public class FpuInstructionDecoder
             case 4: // EA to control register (FMOVE/FMOVEM to FPCR/FPSR/FPIAR)
             {
                 int regSelect = (cmdWord >> 10) & 7;
-                var (mode, reg) = EffectiveAddress.Decode(eaMode, eaReg);
-                if (regSelect == 0) break; // No register selected
+                if (regSelect == 0) break;
 
-                // May move multiple control registers
-                if ((regSelect & 4) != 0) // FPCR
+                if (eaMode == 0) // Data register direct (single register only)
                 {
-                    _fpu.FPCR = EffectiveAddress.ReadValue(_cpu, mode, reg, 4);
-                    if ((regSelect & 3) != 0)
-                    {
-                        // Advance address for next register
-                        mode = AdvanceEA(mode, ref reg, 4, eaMode, eaReg);
-                    }
+                    uint value = _cpu.D[eaReg];
+                    if ((regSelect & 4) != 0) _fpu.FPCR = value;
+                    else if ((regSelect & 2) != 0) _fpu.FPSR = value;
+                    else if ((regSelect & 1) != 0) _fpu.FPIAR = value;
                 }
-                if ((regSelect & 2) != 0) // FPSR
+                else if (eaMode == 3) // Post-increment (An)+
                 {
-                    _fpu.FPSR = EffectiveAddress.ReadValue(_cpu, mode, reg, 4);
-                    if ((regSelect & 1) != 0)
-                    {
-                        mode = AdvanceEA(mode, ref reg, 4, eaMode, eaReg);
-                    }
+                    uint addr = _cpu.A[eaReg];
+                    if ((regSelect & 4) != 0) { _fpu.FPCR = _cpu.ReadLong(addr); addr += 4; }
+                    if ((regSelect & 2) != 0) { _fpu.FPSR = _cpu.ReadLong(addr); addr += 4; }
+                    if ((regSelect & 1) != 0) { _fpu.FPIAR = _cpu.ReadLong(addr); addr += 4; }
+                    _cpu.A[eaReg] = addr;
                 }
-                if ((regSelect & 1) != 0) // FPIAR
+                else if (eaMode == 7 && eaReg == 4) // Immediate
                 {
-                    _fpu.FPIAR = EffectiveAddress.ReadValue(_cpu, mode, reg, 4);
+                    uint addr = _cpu.PC;
+                    if ((regSelect & 4) != 0) { _fpu.FPCR = _cpu.ReadLong(addr); addr += 4; }
+                    if ((regSelect & 2) != 0) { _fpu.FPSR = _cpu.ReadLong(addr); addr += 4; }
+                    if ((regSelect & 1) != 0) { _fpu.FPIAR = _cpu.ReadLong(addr); addr += 4; }
+                    _cpu.PC = addr;
+                }
+                else // Other addressing modes: (An), d(An), d(An,Xi), d(PC), d(PC,Xi), abs
+                {
+                    var (mode, reg) = EffectiveAddress.Decode(eaMode, eaReg);
+                    uint addr = EffectiveAddress.ResolveAddress(_cpu, mode, reg, 4);
+                    if ((regSelect & 4) != 0) { _fpu.FPCR = _cpu.ReadLong(addr); addr += 4; }
+                    if ((regSelect & 2) != 0) { _fpu.FPSR = _cpu.ReadLong(addr); addr += 4; }
+                    if ((regSelect & 1) != 0) { _fpu.FPIAR = _cpu.ReadLong(addr); }
                 }
                 break;
             }
@@ -131,24 +194,31 @@ public class FpuInstructionDecoder
             case 5: // Control register to EA (FMOVE/FMOVEM from FPCR/FPSR/FPIAR)
             {
                 int regSelect = (cmdWord >> 10) & 7;
-                var (mode, reg) = EffectiveAddress.Decode(eaMode, eaReg);
                 if (regSelect == 0) break;
 
-                if ((regSelect & 4) != 0) // FPCR
+                if (eaMode == 0) // Data register direct (single register only)
                 {
-                    EffectiveAddress.WriteValue(_cpu, mode, reg, 4, _fpu.FPCR);
-                    if ((regSelect & 3) != 0)
-                        mode = AdvanceEA(mode, ref reg, 4, eaMode, eaReg);
+                    if ((regSelect & 4) != 0) _cpu.D[eaReg] = _fpu.FPCR;
+                    else if ((regSelect & 2) != 0) _cpu.D[eaReg] = _fpu.FPSR;
+                    else if ((regSelect & 1) != 0) _cpu.D[eaReg] = _fpu.FPIAR;
                 }
-                if ((regSelect & 2) != 0) // FPSR
+                else if (eaMode == 4) // Pre-decrement -(An)
                 {
-                    EffectiveAddress.WriteValue(_cpu, mode, reg, 4, _fpu.FPSR);
-                    if ((regSelect & 1) != 0)
-                        mode = AdvanceEA(mode, ref reg, 4, eaMode, eaReg);
+                    // MC68881/82: predecrement writes in reverse order (FPIAR, FPSR, FPCR)
+                    // so that postincrement restore reads them back correctly.
+                    uint addr = _cpu.A[eaReg];
+                    if ((regSelect & 1) != 0) { addr -= 4; _cpu.WriteLong(addr, _fpu.FPIAR); }
+                    if ((regSelect & 2) != 0) { addr -= 4; _cpu.WriteLong(addr, _fpu.FPSR); }
+                    if ((regSelect & 4) != 0) { addr -= 4; _cpu.WriteLong(addr, _fpu.FPCR); }
+                    _cpu.A[eaReg] = addr;
                 }
-                if ((regSelect & 1) != 0) // FPIAR
+                else // Other addressing modes: (An), d(An), d(An,Xi), abs
                 {
-                    EffectiveAddress.WriteValue(_cpu, mode, reg, 4, _fpu.FPIAR);
+                    var (mode, reg) = EffectiveAddress.Decode(eaMode, eaReg);
+                    uint addr = EffectiveAddress.ResolveAddress(_cpu, mode, reg, 4);
+                    if ((regSelect & 4) != 0) { _cpu.WriteLong(addr, _fpu.FPCR); addr += 4; }
+                    if ((regSelect & 2) != 0) { _cpu.WriteLong(addr, _fpu.FPSR); addr += 4; }
+                    if ((regSelect & 1) != 0) { _cpu.WriteLong(addr, _fpu.FPIAR); }
                 }
                 break;
             }
@@ -427,10 +497,12 @@ public class FpuInstructionDecoder
                 break;
             case 0x38: // FCMP
                 _fpu.SetConditionCodes(dst - src);
+                FpuTrace($"[FPU] PC=${_fpu.FPIAR:X8} FCMP FP{dstReg}={dst} - src={src} => diff={dst - src} CC={(_fpu.FPSR >> 24) & 0xF:X}\n");
                 return; // Don't write result
 
             case 0x3A: // FTST
                 _fpu.SetConditionCodes(src);
+                FpuTrace($"[FPU] PC=${_fpu.FPIAR:X8} FTST src={src} CC={(_fpu.FPSR >> 24) & 0xF:X}\n");
                 return; // Don't write result
 
             default:
@@ -456,6 +528,7 @@ public class FpuInstructionDecoder
 
         _fpu.FP[dstReg] = result;
         _fpu.SetConditionCodes(result);
+        FpuTrace($"[FPU] PC=${_fpu.FPIAR:X8} op={op:X2} FP{dstReg}: src={src} dst={dst} => {result}\n");
     }
 
     private void ExecuteFBcc(ushort opcode, bool longDisp)
@@ -473,7 +546,9 @@ public class FpuInstructionDecoder
             disp = (short)_cpu.FetchWord();
         }
 
-        if (_fpu.EvaluateCondition(condition))
+        bool taken = _fpu.EvaluateCondition(condition);
+        FpuTrace($"[FPU] PC=${_fpu.FPIAR:X8} FBcc cond={condition:X2} CC={(_fpu.FPSR >> 24) & 0xF:X} taken={taken}\n");
+        if (taken)
         {
             _cpu.PC = (uint)(_cpu.PC - (longDisp ? 4 : 2) + disp);
         }
@@ -524,24 +599,62 @@ public class FpuInstructionDecoder
 
     private void ExecuteFSave(ushort opcode, int eaMode, int eaReg)
     {
-        // Simplified: write a null frame (idle state)
-        // Use CPU memory access (through MMU) not direct physical memory
-        var (mode, reg) = EffectiveAddress.Decode(eaMode, eaReg);
-        uint addr = EffectiveAddress.ResolveAddress(_cpu, mode, reg, 4);
-        _cpu.WriteLong(addr, 0x00000000); // Null frame
+        // Write MC68882 idle state frame: version=0x1F, fsize=0x38 (56 bytes internal state).
+        // Total frame = 4-byte header + 56 bytes = 60 bytes.
+        // NetBSD's fpu_probe() reads fsize to identify FPU type:
+        //   fsize=0x18 → MC68881, fsize=0x38 → MC68882.
+        // A non-null version byte tells the kernel to save FP registers via FMOVEM.
+        const uint FrameSize = 60;
+        const uint Header = 0x1F380000; // version=0x1F, fsize=0x38
+
+        uint addr;
+        if (eaMode == 4) // Pre-decrement -(An)
+        {
+            addr = _cpu.A[eaReg] - FrameSize;
+            _cpu.A[eaReg] = addr;
+        }
+        else
+        {
+            var (mode, reg) = EffectiveAddress.Decode(eaMode, eaReg);
+            addr = EffectiveAddress.ResolveAddress(_cpu, mode, reg, 4);
+        }
+
+        _cpu.WriteLong(addr, Header);
+        for (uint i = 4; i < FrameSize; i += 4)
+            _cpu.WriteLong(addr + i, 0);
     }
 
     private void ExecuteFRestore(ushort opcode, int eaMode, int eaReg)
     {
-        // Simplified: read frame header and skip
-        // Use CPU memory access (through MMU) not direct physical memory
-        var (mode, reg) = EffectiveAddress.Decode(eaMode, eaReg);
-        uint addr = EffectiveAddress.ResolveAddress(_cpu, mode, reg, 4);
+        // Read FPU state frame header and restore internal state.
+        // Null frame (version byte = 0, fsize = 0): reset FPU, 4 bytes total.
+        // Non-null frame: keep current register state, advance by 4 + fsize bytes.
+        // For postincrement mode, SP must advance by the full frame size.
+        uint addr;
+        bool isPostIncrement = (eaMode == 3);
+
+        if (isPostIncrement)
+        {
+            addr = _cpu.A[eaReg];
+        }
+        else
+        {
+            var (mode, reg) = EffectiveAddress.Decode(eaMode, eaReg);
+            addr = EffectiveAddress.ResolveAddress(_cpu, mode, reg, 4);
+        }
+
         uint header = _cpu.ReadLong(addr);
-        // Null frame = reset FPU
-        if (header == 0)
+        uint version = header >> 24;
+        uint fsize = (header >> 16) & 0xFF;
+
+        if (version == 0)
         {
             _fpu.Reset();
+            if (isPostIncrement) _cpu.A[eaReg] = addr + 4;
+        }
+        else
+        {
+            if (isPostIncrement) _cpu.A[eaReg] = addr + 4 + fsize;
         }
     }
 
