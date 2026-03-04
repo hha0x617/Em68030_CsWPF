@@ -59,6 +59,8 @@ public partial class SettingsWindow : Window
         FontFamilyBox.Text = Config.FontFamily;
         FontSizeBox.Text = Config.FontSize.ToString();
         JitEnabledBox.IsChecked = Config.JitEnabled;
+        JitMinBlockLengthBox.Text = Config.JitMinBlockLength.ToString();
+        JitCompileThresholdBox.Text = Config.JitCompileThreshold.ToString();
     }
 
     // ========================================================================
@@ -310,6 +312,10 @@ public partial class SettingsWindow : Window
         if (double.TryParse(FontSizeBox.Text, out double fontSize))
             Config.FontSize = fontSize;
         Config.JitEnabled = JitEnabledBox.IsChecked == true;
+        if (int.TryParse(JitMinBlockLengthBox.Text, out int minBlock))
+            Config.JitMinBlockLength = Math.Clamp(minBlock, 1, 64);
+        if (int.TryParse(JitCompileThresholdBox.Text, out int threshold))
+            Config.JitCompileThreshold = Math.Clamp(threshold, 1, 255);
 
         DialogResult = true;
     }

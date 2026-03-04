@@ -53,6 +53,8 @@ public class EmulatorConfig
 
     // JIT compiler: experimental feature, disabled by default
     public bool JitEnabled { get; set; } = false;
+    public int JitMinBlockLength { get; set; } = 3;
+    public int JitCompileThreshold { get; set; } = 32;
 
     private static readonly string ConfigPath = Path.Combine(
         AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
