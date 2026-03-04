@@ -51,6 +51,9 @@ public class EmulatorConfig
     // Console scrollback buffer size (lines). Range: 0..100000
     public int ConsoleScrollbackLines { get; set; } = 2000;
 
+    // JIT compiler: experimental feature, disabled by default
+    public bool JitEnabled { get; set; } = false;
+
     private static readonly string ConfigPath = Path.Combine(
         AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
 

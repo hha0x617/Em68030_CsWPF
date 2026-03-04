@@ -58,6 +58,7 @@ public partial class SettingsWindow : Window
         ConsoleScrollbackBox.Text = Config.ConsoleScrollbackLines.ToString();
         FontFamilyBox.Text = Config.FontFamily;
         FontSizeBox.Text = Config.FontSize.ToString();
+        JitEnabledBox.IsChecked = Config.JitEnabled;
     }
 
     // ========================================================================
@@ -308,6 +309,7 @@ public partial class SettingsWindow : Window
         Config.FontFamily = FontFamilyBox.Text;
         if (double.TryParse(FontSizeBox.Text, out double fontSize))
             Config.FontSize = fontSize;
+        Config.JitEnabled = JitEnabledBox.IsChecked == true;
 
         DialogResult = true;
     }

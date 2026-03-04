@@ -360,6 +360,9 @@
             <StatusBarItem>
                 <TextBlock Text="{Binding NetworkModeText}" Foreground="White" Margin="16,0,0,0" />
             </StatusBarItem>
+            <StatusBarItem>
+                <TextBlock Text="{Binding JitStatusText}" Foreground="White" Margin="16,0,0,0" />
+            </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
                 <TextBlock Foreground="Yellow" FontWeight="Bold">
                     <TextBlock.Style>

@@ -285,6 +285,13 @@
                             Background="#FF3E3E42" Foreground="#FFD4D4D4" Padding="8,2" />
                 </StackPanel>
 
+                <!-- Performance -->
+                <TextBlock Text="Performance" Style="{StaticResource SectionHeader}" />
+                <CheckBox x:Name="JitEnabledBox" Content="Enable JIT Compiler (experimental)"
+                          Foreground="#FFD4D4D4" Margin="0,4" />
+                <TextBlock Text="Compiles register-only basic blocks to .NET IL at runtime. Currently covers a limited set of instructions (MOVEQ, MOVE.L Dn, ADD/SUB/CMP.L, AND/OR/EOR.L, Bcc.B, BRA.B). May reduce overall speed due to per-instruction overhead exceeding the benefit of compiled blocks."
+                           Foreground="#FF9E9E9E" FontSize="11" TextWrapping="Wrap" Margin="20,0,0,4" />
+
                 <!-- Display Settings -->
                 <TextBlock Text="Display" Style="{StaticResource SectionHeader}" />
                 <Grid>
