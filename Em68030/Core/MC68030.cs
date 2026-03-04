@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Em68030.Core.Jit;
 
 namespace Em68030.Core;
 
@@ -131,6 +132,7 @@ public class MC68030
             {
                 _fetchCacheValid = false;
                 _dataCacheValid = false;
+                if (JitEnabled) JitCache.InvalidateAll();
             }
         }
     }
@@ -160,6 +162,12 @@ public class MC68030
     }
 
     private InstructionDecoder _decoder;
+
+    // JIT compiler
+    public bool JitEnabled { get; set; }
+    public readonly JitCache JitCache = new();
+    private readonly JitCompiler _jitCompiler = new();
+    private const int JitCompileThreshold = 16;
 
     // Last PC before instruction execution (for caller-side bus error recovery)
     internal uint _lastPC;
@@ -211,7 +219,7 @@ public class MC68030
     {
         Memory = memory;
         Mmu = new Mmu(memory);
-        Mmu.OnFlush = () => { _fetchCacheValid = false; _dataCacheValid = false; };
+        Mmu.OnFlush = () => { _fetchCacheValid = false; _dataCacheValid = false; if (JitEnabled) JitCache.InvalidateAll(); };
         Fpu = new Fpu();
         _decoder = new InstructionDecoder(this);
     }
@@ -237,6 +245,7 @@ public class MC68030
         Mmu.Reset();
         _fetchCacheValid = false;
         _dataCacheValid = false;
+        JitCache.InvalidateAll();
         _processingBusError = false;
         _pendingIPL = 0;
         _pendingVector = -1;
@@ -291,6 +300,7 @@ public class MC68030
         {
             _fetchCacheValid = false;
             _dataCacheValid = false;
+            if (JitEnabled) JitCache.InvalidateAll();
         }
 
         SR = newSR;
@@ -613,6 +623,88 @@ public class MC68030
 
         CycleCount++;
         return true;
+    }
+
+    /// <summary>
+    /// JIT-enabled execution path — kept separate from ExecuteNextFast to avoid
+    /// bloating the interpreter method body, which impairs .NET JIT inlining.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool ExecuteNextFastJit()
+    {
+        if (++_tickDivider >= TickInterval)
+        {
+            _tickDivider = 0;
+            var handlers = _tickHandlerArray;
+            for (int i = 0; i < handlers.Length; i++)
+                handlers[i]();
+
+            JitSamplePC();
+        }
+
+        if (_pendingIPL > 0 && (_pendingIPL == 7 || _pendingIPL > InterruptMask))
+        {
+            Stopped = false;
+            StopReason = null;
+            _lastPC = PC;
+            A.AsSpan().CopyTo(_savedA);
+            D.AsSpan().CopyTo(_savedD);
+            _savedSR = SR;
+            ProcessInterrupt(_pendingIPL);
+            CycleCount++;
+            return !Halted;
+        }
+
+        if (Stopped) return false;
+
+        _lastPC = PC;
+        _savedSR = SR;
+        Array.Copy(A, _savedA, 8);
+        Array.Copy(D, _savedD, 8);
+
+        // Inline block lookup — avoid NoInlining call overhead when no JIT block exists
+        if (_fetchCacheValid && (PC & ~_fetchPageMask) == _fetchPageVA)
+        {
+            uint physPC = _fetchPagePA + (PC & _fetchPageMask);
+            var block = JitCache.TryGetBlock(physPC);
+            if (block != null)
+                return ExecuteNextJit(block);
+        }
+
+        // Interpreter fallback (inline — no function call overhead)
+        _decoder.ExecuteNext();
+        CycleCount++;
+        return true;
+    }
+
+    /// <summary>JIT block execution — called only on block hit to keep ExecuteNextFastJit small.</summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private bool ExecuteNextJit(CompiledBlock block)
+    {
+        PC = block.Execute(this);
+        CycleCount += block.InstructionCount;
+        _tickDivider += block.InstructionCount - 1;
+        return true;
+    }
+
+    /// <summary>JIT PC sampling — called once per TickInterval from tick handler.</summary>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private void JitSamplePC()
+    {
+        if (!_fetchCacheValid || (PC & ~_fetchPageMask) != _fetchPageVA)
+            return;
+        uint physPC = _fetchPagePA + (PC & _fetchPageMask);
+        if (JitCache.TryGetBlock(physPC) != null || JitCache.IsUncompilable(physPC))
+            return;
+        byte count = JitCache.IncrementAndGetCount(physPC);
+        if (count == JitCompileThreshold)
+        {
+            var compiled = _jitCompiler.TryCompile(this, PC, physPC);
+            if (compiled != null)
+                JitCache.AddBlock(physPC, compiled);
+            else
+                JitCache.MarkUncompilable(physPC);
+        }
     }
 
     // --- Exception handling ---

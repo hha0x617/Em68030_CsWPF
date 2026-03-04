@@ -135,6 +135,8 @@ public class MainViewModel : INotifyPropertyChanged
 
     public string NetworkModeText => "Net: " + _config.NetworkMode;
 
+    public string JitStatusText => _config.JitEnabled ? "JIT: ON" : "JIT: OFF";
+
     public bool IsMemoryEditMode
     {
         get => _isMemoryEditMode;
@@ -357,6 +359,7 @@ public class MainViewModel : INotifyPropertyChanged
             _memory = new Memory(_config.MemorySize);
         }
         _cpu = new MC68030(_memory);
+        _cpu.JitEnabled = _config.JitEnabled;
 
         _consoleDevice = new ConsoleDevice(_config.ConsoleBaseAddress);
         _hddDevice = new HddDevice(_config.HddBaseAddress);
@@ -384,6 +387,7 @@ public class MainViewModel : INotifyPropertyChanged
             _memory.AddRegion(0xFF800000, 4 * 1024 * 1024, RegionType.Rom);
 
         _cpu = new MC68030(_memory);
+        _cpu.JitEnabled = _config.JitEnabled;
 
         // Create MVME147 devices
         _pccDevice = new PccDevice(_cpu);
@@ -931,6 +935,11 @@ public class MainViewModel : INotifyPropertyChanged
         uint runToCursorAddr = _runToCursorAddress.GetValueOrDefault();
         long lastMhzUpdate = Stopwatch.GetTimestamp();
 
+        // Boolean branch instead of Func<bool> delegate — delegate invocation prevents
+        // .NET JIT inlining of AggressiveInlining methods, causing ~17% speed regression.
+        // A constant-direction branch is essentially free thanks to branch prediction.
+        bool useJit = _cpu.JitEnabled;
+
         try
         {
             while (!_stopRequested)
@@ -947,7 +956,7 @@ public class MainViewModel : INotifyPropertyChanged
                     {
                         try
                         {
-                            if (!_cpu.ExecuteNextFast())
+                            if (!(useJit ? _cpu.ExecuteNextFastJit() : _cpu.ExecuteNextFast()))
                             {
                                 if (_cpu.Halted || (!_cpu.HasExternalDevices && _cpu.Stopped))
                                 { RequestStopOnUI(); return; }
@@ -988,7 +997,7 @@ public class MainViewModel : INotifyPropertyChanged
                     {
                         try
                         {
-                            if (!_cpu.ExecuteNextFast())
+                            if (!(useJit ? _cpu.ExecuteNextFastJit() : _cpu.ExecuteNextFast()))
                             {
                                 if (_cpu.Halted || (!_cpu.HasExternalDevices && _cpu.Stopped))
                                 { RequestStopOnUI(); return; }
@@ -1300,8 +1309,15 @@ public class MainViewModel : INotifyPropertyChanged
             }
         }
 
+        // Apply JIT setting
+        _cpu.JitEnabled = _config.JitEnabled;
+        if (!_config.JitEnabled)
+            _cpu.JitCache.InvalidateAll();
+
         _config.Save();
         OnPropertyChanged(nameof(Config));
+        OnPropertyChanged(nameof(NetworkModeText));
+        OnPropertyChanged(nameof(JitStatusText));
     }
 
     public void UpdateDisassembly()
