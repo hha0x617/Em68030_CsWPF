@@ -48,6 +48,7 @@ public class MC68030
     public bool Stopped { get; set; }
     public string? StopReason { get; set; }
     public long CycleCount { get; set; }
+    public long InstructionCount { get; set; }
 
     // Double bus fault detection
     private bool _processingBusError;
@@ -167,7 +168,8 @@ public class MC68030
     public bool JitEnabled { get; set; }
     public readonly JitCache JitCache = new();
     private readonly JitCompiler _jitCompiler = new();
-    private const int JitCompileThreshold = 16;
+    public int JitCompileThreshold { get; set; } = 32;
+    public int JitMinBlockLength { get; set; } = 3;
 
     // Last PC before instruction execution (for caller-side bus error recovery)
     internal uint _lastPC;
@@ -254,6 +256,7 @@ public class MC68030
         Stopped = false;
         StopReason = null;
         CycleCount = 0;
+        InstructionCount = 0;
     }
 
     // --- Function Code generation ---
@@ -554,7 +557,8 @@ public class MC68030
                 var (faultAddr, isWrite, fc, ssw) = FixupPhysicalBusError(ex);
                 RaiseBusError(faultAddr, isWrite, fc, ssw);
             }
-            CycleCount++;
+            CycleCount += 34;
+            InstructionCount++;
             return;
         }
 
@@ -566,7 +570,9 @@ public class MC68030
         D.AsSpan().CopyTo(_savedD);
         try
         {
-            _decoder.ExecuteNext();
+            var opcode = _decoder.ExecuteNext();
+            CycleCount += InstructionDecoder.GetCycles(opcode);
+            InstructionCount++;
         }
         catch (BusErrorException ex)
         {
@@ -579,8 +585,6 @@ public class MC68030
             var (faultAddr, isWrite, fc, ssw) = FixupPhysicalBusError(ex);
             RaiseBusError(faultAddr, isWrite, fc, ssw);
         }
-
-        CycleCount++;
     }
 
     /// <summary>
@@ -608,7 +612,8 @@ public class MC68030
             D.AsSpan().CopyTo(_savedD);
             _savedSR = SR;
             ProcessInterrupt(_pendingIPL);
-            CycleCount++;
+            CycleCount += 34;
+            InstructionCount++;
             return !Halted;
         }
 
@@ -619,9 +624,10 @@ public class MC68030
         Array.Copy(A, _savedA, 8);
         Array.Copy(D, _savedD, 8);
 
-        _decoder.ExecuteNext();
+        var opcode = _decoder.ExecuteNext();
 
-        CycleCount++;
+        CycleCount += InstructionDecoder.GetCycles(opcode);
+        InstructionCount++;
         return true;
     }
 
@@ -651,7 +657,8 @@ public class MC68030
             D.AsSpan().CopyTo(_savedD);
             _savedSR = SR;
             ProcessInterrupt(_pendingIPL);
-            CycleCount++;
+            CycleCount += 34;
+            InstructionCount++;
             return !Halted;
         }
 
@@ -672,8 +679,9 @@ public class MC68030
         }
 
         // Interpreter fallback (inline — no function call overhead)
-        _decoder.ExecuteNext();
-        CycleCount++;
+        var opcode = _decoder.ExecuteNext();
+        CycleCount += InstructionDecoder.GetCycles(opcode);
+        InstructionCount++;
         return true;
     }
 
@@ -682,7 +690,8 @@ public class MC68030
     private bool ExecuteNextJit(CompiledBlock block)
     {
         PC = block.Execute(this);
-        CycleCount += block.InstructionCount;
+        CycleCount += block.TotalCycles;
+        InstructionCount += block.InstructionCount;
         _tickDivider += block.InstructionCount - 1;
         return true;
     }
@@ -700,7 +709,7 @@ public class MC68030
         if (count == JitCompileThreshold)
         {
             var compiled = _jitCompiler.TryCompile(this, PC, physPC);
-            if (compiled != null)
+            if (compiled != null && compiled.InstructionCount >= JitMinBlockLength)
                 JitCache.AddBlock(physPC, compiled);
             else
                 JitCache.MarkUncompilable(physPC);

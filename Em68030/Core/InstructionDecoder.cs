@@ -205,10 +205,227 @@ public class InstructionDecoder
     }
 
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-    public void ExecuteNext()
+    public ushort ExecuteNext()
     {
         ushort opcode = _cpu.FetchWord();
         _dispatchTable[opcode](opcode);
+        return opcode;
+    }
+
+    // ====================================================================
+    // Cycle table — approximate MC68030 cycle counts per opcode
+    // ====================================================================
+
+    private static readonly byte[] s_cycleTable = InitCycleTable();
+
+    public static byte GetCycles(ushort opcode) => s_cycleTable[opcode];
+
+    private static byte EaReadCost(int mode, int reg)
+    {
+        return mode switch
+        {
+            0 => 0, // Dn
+            1 => 0, // An
+            2 => 4, // (An)
+            3 => 4, // (An)+
+            4 => 4, // -(An)
+            5 => 4, // d16(An)
+            6 => 6, // d8(An,Xn)
+            7 => reg switch
+            {
+                0 => 4, // abs.W
+                1 => 8, // abs.L
+                2 => 4, // d16(PC)
+                3 => 6, // d8(PC,Xn)
+                4 => 4, // #imm
+                _ => 4,
+            },
+            _ => 4,
+        };
+    }
+
+    private static byte EaWriteCost(int mode, int reg)
+    {
+        return mode switch
+        {
+            0 => 0, // Dn
+            1 => 0, // An
+            2 => 4, // (An)
+            3 => 4, // (An)+
+            4 => 4, // -(An)
+            5 => 4, // d16(An)
+            6 => 6, // d8(An,Xn)
+            7 => reg switch
+            {
+                0 => 4, // abs.W
+                1 => 8, // abs.L
+                _ => 4,
+            },
+            _ => 4,
+        };
+    }
+
+    private static byte[] InitCycleTable()
+    {
+        var table = new byte[65536];
+
+        for (int op = 0; op < 65536; op++)
+        {
+            int group = (op >> 12) & 0xF;
+            int srcMode = (op >> 3) & 7;
+            int srcReg = op & 7;
+            int cycles = 4; // default
+
+            switch (group)
+            {
+                case 0x0: // ORI/ANDI/SUBI/ADDI/CMPI/EORI/Bit ops
+                {
+                    cycles = 4 + EaReadCost(srcMode, srcReg);
+                    if (srcMode != 0 && srcMode != 1)
+                        cycles += EaWriteCost(srcMode, srcReg);
+                    break;
+                }
+
+                case 0x1: // MOVE.B
+                case 0x2: // MOVE.L
+                case 0x3: // MOVE.W
+                {
+                    int dmMode = (op >> 6) & 7;
+                    int dmReg = (op >> 9) & 7;
+                    cycles = 2 + EaReadCost(srcMode, srcReg) + EaWriteCost(dmMode, dmReg);
+                    break;
+                }
+
+                case 0x4: // Misc group
+                {
+                    ushort opcode = (ushort)op;
+                    if (opcode == 0x4E71) { cycles = 2; break; } // NOP
+                    if (opcode == 0x4E75) { cycles = 10; break; } // RTS
+                    if (opcode == 0x4E73) { cycles = 14; break; } // RTE
+                    if (opcode == 0x4E70) { cycles = 255; break; } // RESET
+
+                    if ((opcode & 0xFFF0) == 0x4E40) { cycles = 20; break; } // TRAP #n
+                    if ((opcode & 0xFFF8) == 0x4E50) { cycles = 6; break; } // LINK.W
+                    if ((opcode & 0xFFF8) == 0x4808) { cycles = 6; break; } // LINK.L
+                    if ((opcode & 0xFFF8) == 0x4E58) { cycles = 6; break; } // UNLK
+                    if ((opcode & 0xFFF8) == 0x4840) { cycles = 2; break; } // SWAP
+                    if ((opcode & 0xFFF8) == 0x4880) { cycles = 2; break; } // EXT.W
+                    if ((opcode & 0xFFF8) == 0x48C0) { cycles = 2; break; } // EXT.L
+                    if ((opcode & 0xFFF8) == 0x49C0) { cycles = 2; break; } // EXTB.L
+
+                    if ((opcode & 0xFFC0) == 0x4E80) { cycles = 8 + EaReadCost(srcMode, srcReg); break; } // JSR
+                    if ((opcode & 0xFFC0) == 0x4EC0) { cycles = 4 + EaReadCost(srcMode, srcReg); break; } // JMP
+                    if ((opcode & 0xF1C0) == 0x41C0) { cycles = 2 + EaReadCost(srcMode, srcReg); break; } // LEA
+                    if ((opcode & 0xFFC0) == 0x4840 && srcMode != 0) { cycles = 6 + EaReadCost(srcMode, srcReg); break; } // PEA
+                    if ((opcode & 0xFB80) == 0x4880) { cycles = 20; break; } // MOVEM
+                    if ((opcode & 0xFFC0) == 0x4C00) { cycles = 44; break; } // MULU.L/MULS.L
+                    if ((opcode & 0xFFC0) == 0x4C40) { cycles = 78; break; } // DIVU.L/DIVS.L
+                    if ((opcode & 0xF040) == 0x4000 && ((opcode >> 7) & 3) >= 2) { cycles = 8; break; } // CHK
+
+                    // CLR/NEG/NOT/NEGX/TST
+                    int subOp = (opcode >> 8) & 0xF;
+                    if (subOp == 0x2 || subOp == 0x4 || subOp == 0x6 || subOp == 0x0 || subOp == 0xA)
+                    {
+                        if (srcMode == 0) { cycles = 2; break; }
+                        cycles = 2 + EaReadCost(srcMode, srcReg) + EaWriteCost(srcMode, srcReg);
+                        break;
+                    }
+
+                    cycles = 4 + EaReadCost(srcMode, srcReg);
+                    break;
+                }
+
+                case 0x5: // ADDQ/SUBQ/Scc/DBcc
+                {
+                    int sizeField = (op >> 6) & 3;
+                    if (sizeField == 3)
+                    {
+                        if (srcMode == 1) { cycles = 6; break; } // DBcc
+                        cycles = 2 + EaWriteCost(srcMode, srcReg); // Scc
+                        break;
+                    }
+                    cycles = 2 + EaReadCost(srcMode, srcReg);
+                    if (srcMode != 0 && srcMode != 1)
+                        cycles += EaWriteCost(srcMode, srcReg);
+                    break;
+                }
+
+                case 0x6: // Bcc/BRA/BSR
+                {
+                    int cond = (op >> 8) & 0xF;
+                    cycles = (cond == 1) ? 8 : 6;
+                    break;
+                }
+
+                case 0x7: cycles = 2; break; // MOVEQ
+
+                case 0x8: // OR/DIVU/DIVS/SBCD
+                {
+                    int opMode = (op >> 6) & 7;
+                    if (opMode == 3) { cycles = 38; break; } // DIVU.W
+                    if (opMode == 7) { cycles = 38; break; } // DIVS.W
+                    if (opMode == 4 && (srcMode == 0 || srcMode == 1)) { cycles = 4; break; } // SBCD
+                    cycles = 2 + EaReadCost(srcMode, srcReg);
+                    if (opMode >= 4 && opMode <= 6 && srcMode != 0)
+                        cycles += EaWriteCost(srcMode, srcReg);
+                    break;
+                }
+
+                case 0x9: // SUB/SUBA/SUBX
+                {
+                    int opMode = (op >> 6) & 7;
+                    if ((opMode == 4 || opMode == 5 || opMode == 6) && (srcMode == 0 || srcMode == 1))
+                    { cycles = 4; break; }
+                    cycles = 2 + EaReadCost(srcMode, srcReg);
+                    break;
+                }
+
+                case 0xA: cycles = 34; break; // Line-A
+
+                case 0xB: // CMP/CMPA/EOR/CMPM
+                {
+                    int opMode = (op >> 6) & 7;
+                    if ((opMode == 4 || opMode == 5 || opMode == 6) && srcMode == 1) { cycles = 12; break; } // CMPM
+                    if (opMode == 4 || opMode == 5 || opMode == 6)
+                    {
+                        cycles = 2 + EaReadCost(srcMode, srcReg) + EaWriteCost(srcMode, srcReg); // EOR
+                        break;
+                    }
+                    cycles = 2 + EaReadCost(srcMode, srcReg);
+                    break;
+                }
+
+                case 0xC: // AND/MULU/MULS/EXG/ABCD
+                {
+                    int opMode = (op >> 6) & 7;
+                    if (opMode == 3) { cycles = 28; break; } // MULU.W
+                    if (opMode == 7) { cycles = 28; break; } // MULS.W
+                    if (opMode == 4 && (srcMode == 0 || srcMode == 1)) { cycles = 4; break; } // ABCD
+                    if (opMode == 5 && (srcMode == 0 || srcMode == 1)) { cycles = 4; break; } // EXG
+                    if (opMode == 6 && srcMode == 1) { cycles = 4; break; } // EXG Dn↔An
+                    cycles = 2 + EaReadCost(srcMode, srcReg);
+                    if (opMode >= 4 && opMode <= 6 && srcMode != 0)
+                        cycles += EaWriteCost(srcMode, srcReg);
+                    break;
+                }
+
+                case 0xD: // ADD/ADDA/ADDX
+                {
+                    int opMode = (op >> 6) & 7;
+                    if ((opMode == 4 || opMode == 5 || opMode == 6) && (srcMode == 0 || srcMode == 1))
+                    { cycles = 4; break; }
+                    cycles = 2 + EaReadCost(srcMode, srcReg);
+                    break;
+                }
+
+                case 0xE: cycles = 4; break; // Shifts/Rotates
+                case 0xF: cycles = 40; break; // FPU
+            }
+
+            table[op] = (byte)(cycles > 255 ? 255 : cycles);
+        }
+
+        return table;
     }
 
     // ====================================================================
