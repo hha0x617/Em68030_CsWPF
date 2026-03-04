@@ -35,12 +35,13 @@ Developed through vibe coding with [Claude Code](https://docs.anthropic.com/en/d
 - Warm reboot (RESET instruction) and halt detection
 
 ### Performance
-Achieves emulation speed equivalent to 34-36 MHz on an i7-13700. Key optimizations:
+Achieves ~36 MIPS (~108 MHz estimated) on an Intel Core i7-13700. The status bar displays both approximate MHz (cycle-based) and MIPS (instruction throughput). Key optimizations:
 
 - 65,536-entry opcode delegate table
 - Specialized fast handlers for frequent instructions (MOVEQ, MOVE.L, Bcc.B, RTS, etc.)
 - Inline fast path for direct ATC lookup
 - Data page cache (1-entry read cache)
+- Approximate cycle table (65,536-entry lookup with EA cost calculation)
 
 As an interpreter, each instruction consumes a large number of host CPU cycles. The C# JIT compiler has limitations on method inlining, resulting in approximately 25% lower speed compared to the C++ native version.
 
@@ -48,9 +49,9 @@ As an interpreter, each instruction consumes a large number of host CPU cycles. 
 
 An optional JIT compiler is available that compiles basic blocks of register-only MC68030 instructions into .NET IL at runtime using `System.Reflection.Emit`. It can be enabled in Settings > Performance. The status bar displays the current JIT state ("JIT: ON" / "JIT: OFF").
 
-**Supported instructions**: MOVEQ, MOVE.L Dn→Dm, ADD.L/SUB.L/CMP.L Dn→Dm, AND.L/OR.L/EOR.L Dn→Dm, Bcc.B, BRA.B, NOP
+**Supported instructions**: MOVEQ, MOVE.L Dn→Dm, MOVE.L An→Dn, MOVEA.L Dn→An, MOVEA.L An→Am, CLR.L Dn, TST.L Dn, ADD/SUB/CMP.L Dn→Dm, AND/OR/EOR.L Dn→Dm, ADDQ/SUBQ.L Dn, ADDQ/SUBQ An, ASL/ASR/LSL/LSR.L #imm Dn, EXG Dn↔Dm/An↔Am/Dn↔An, SWAP Dn, EXT.W/EXT.L/EXTB.L Dn, NEG.L Dn, NOT.L Dn, Bcc.B, BRA.B, NOP
 
-**Current status**: This feature is experimental and **disabled by default**. In its current form, enabling JIT reduces overall emulation speed from ~36 MHz to ~33 MHz. The overhead of the JIT infrastructure outweighs the benefit of compiled blocks, because the supported instruction set (register-only operations) covers only a small fraction of real-world code.
+**Current status**: This feature is experimental and **disabled by default**. In its current form, enabling JIT reduces overall emulation speed from ~36 MIPS to ~33 MIPS. The overhead of the JIT infrastructure outweighs the benefit of compiled blocks, because the supported instruction set (register-only operations) covers only a small fraction of real-world code.
 
 **Known issues and future improvements**:
 
@@ -113,6 +114,8 @@ On first launch, an `appsettings.json` file is generated from the Settings menu.
 | `NetworkMode` | `"Virtual"` (echo server) or `"NAT"` (host network) | `"Virtual"` |
 | `ConsoleScrollbackLines` | Console scrollback lines (0-100000) | 2000 |
 | `JitEnabled` | Enable experimental JIT compiler | `false` |
+| `JitMinBlockLength` | Minimum instruction count for JIT compilation | 3 |
+| `JitCompileThreshold` | Execution count before a block is compiled | 32 |
 
 ## Booting NetBSD
 
@@ -133,7 +136,8 @@ Em68030_CsWpf/
 │   ├── ViewModels/     MainViewModel
 │   ├── Views/          ConsoleWindow, BreakpointsWindow, SettingsWindow, AboutWindow
 │   └── MainWindow.xaml Main debugger UI
-└── Em68030.Tests/      xUnit tests (187 tests)
+├── Em68030.Tests/      xUnit tests (263 tests)
+└── installer/          Inno Setup installer script
 ```
 
 ## Limitations
@@ -144,7 +148,7 @@ Em68030_CsWpf/
 - FSAVE/FRESTORE are simplified (null/idle frame only)
 - CACR/CAAR registers are readable and writable but hardware cache emulation is not performed
 - PTEST level 0 ATC search is simplified
-- Cycle-accurate instruction timing is not guaranteed (cycle count is for measurement only, not used for timing control)
+- Cycle timing is approximate: a 65,536-entry lookup table provides per-opcode cycle estimates with EA cost adjustments, but is not cycle-accurate to the real MC68030. Cycle count is used for MHz estimation only, not for timing control
 
 ### Devices
 - **SCSI**: Only standard commands used by NetBSD are implemented; not the full SCSI-2 command set
@@ -172,3 +176,7 @@ Em68030_CsWpf/
 ## License
 
 [Apache License 2.0](LICENSE)
+
+## Trademarks
+
+All product names, trademarks, and registered trademarks are the property of their respective owners.

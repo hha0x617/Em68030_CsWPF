@@ -35,12 +35,13 @@
 - ウォームリブート (RESET 命令) およびハルト検出
 
 ### パフォーマンス
-i7-13700 上で 34-36 MHz 相当のエミュレーション速度を達成。主な最適化:
+Intel Core i7-13700 上で約 36 MIPS (概算約 108 MHz) のエミュレーション速度を達成。ステータスバーに概算 MHz (サイクルベース) と MIPS (命令スループット) を併記表示します。主な最適化:
 
 - 65,536 エントリのオペコードデリゲートテーブル
 - 頻出命令の専用ファストハンドラ (MOVEQ, MOVE.L, Bcc.B, RTS 等)
 - ATC 直接参照のインライン高速パス
 - データページキャッシュ (1 エントリ読み取りキャッシュ)
+- 概算サイクルテーブル (65,536 エントリのルックアップ + EA コスト計算)
 
 インタープリタ方式のため、1 命令あたりホスト CPU で多数のサイクルを消費します。C# の JIT コンパイラによるメソッドインライン化には限界があり、C++ ネイティブ版と比較して約 25% 低い速度となります。
 
@@ -48,9 +49,9 @@ i7-13700 上で 34-36 MHz 相当のエミュレーション速度を達成。主
 
 `System.Reflection.Emit` を使用して、レジスタ間操作のみで構成される基本ブロックを実行時に .NET IL へコンパイルするオプション機能です。Settings > Performance から有効化できます。ステータスバーに現在の JIT 状態 ("JIT: ON" / "JIT: OFF") が表示されます。
 
-**対応命令**: MOVEQ, MOVE.L Dn→Dm, ADD.L/SUB.L/CMP.L Dn→Dm, AND.L/OR.L/EOR.L Dn→Dm, Bcc.B, BRA.B, NOP
+**対応命令**: MOVEQ, MOVE.L Dn→Dm, MOVE.L An→Dn, MOVEA.L Dn→An, MOVEA.L An→Am, CLR.L Dn, TST.L Dn, ADD/SUB/CMP.L Dn→Dm, AND/OR/EOR.L Dn→Dm, ADDQ/SUBQ.L Dn, ADDQ/SUBQ An, ASL/ASR/LSL/LSR.L #imm Dn, EXG Dn↔Dm/An↔Am/Dn↔An, SWAP Dn, EXT.W/EXT.L/EXTB.L Dn, NEG.L Dn, NOT.L Dn, Bcc.B, BRA.B, NOP
 
-**現状**: 本機能は実験的であり、**デフォルトで無効**です。現在の実装では、JIT を有効にするとエミュレーション速度が約 36 MHz から約 33 MHz に低下します。JIT インフラのオーバーヘッドがコンパイル済みブロックの恩恵を上回っています。対応命令セット (レジスタ間操作のみ) が実際のコードのごく一部しかカバーしていないことが根本原因です。
+**現状**: 本機能は実験的であり、**デフォルトで無効**です。現在の実装では、JIT を有効にするとエミュレーション速度が約 36 MIPS から約 33 MIPS に低下します。JIT インフラのオーバーヘッドがコンパイル済みブロックの恩恵を上回っています。対応命令セット (レジスタ間操作のみ) が実際のコードのごく一部しかカバーしていないことが根本原因です。
 
 **既知の問題と今後の改善計画**:
 
@@ -113,6 +114,8 @@ dotnet run --project Em68030/Em68030.csproj -c Release
 | `NetworkMode` | `"Virtual"` (エコーサーバ) または `"NAT"` (ホストネットワーク) | `"Virtual"` |
 | `ConsoleScrollbackLines` | コンソールのスクロールバック行数 (0-100000) | 2000 |
 | `JitEnabled` | 実験的 JIT コンパイラを有効化 | `false` |
+| `JitMinBlockLength` | JIT コンパイル対象の最小命令数 | 3 |
+| `JitCompileThreshold` | コンパイルまでの実行回数しきい値 | 32 |
 
 ## NetBSD の起動
 
@@ -133,7 +136,8 @@ Em68030_CsWpf/
 │   ├── ViewModels/     MainViewModel
 │   ├── Views/          ConsoleWindow, BreakpointsWindow, SettingsWindow, AboutWindow
 │   └── MainWindow.xaml メインデバッガ UI
-└── Em68030.Tests/      xUnit テスト (187 tests)
+├── Em68030.Tests/      xUnit テスト (263 tests)
+└── installer/          Inno Setup インストーラスクリプト
 ```
 
 ## 制限事項
@@ -144,7 +148,7 @@ Em68030_CsWpf/
 - FSAVE/FRESTORE は簡易実装 (null/idle フレーム) です
 - CACR/CAAR レジスタは読み書き可能ですが、ハードウェアキャッシュのエミュレーションは行いません
 - PTEST レベル 0 の ATC 検索は簡易実装です
-- 命令実行のサイクル精度は保証されません (サイクルカウントは計測用であり、タイミング制御には使用されません)
+- サイクルタイミングは概算です: 65,536 エントリのルックアップテーブルによりオペコードごとの概算サイクル数を EA コスト調整付きで提供しますが、実際の MC68030 とサイクル精度は一致しません。サイクルカウントは MHz 推定用であり、タイミング制御には使用されません
 
 ### デバイス
 - **SCSI**: NetBSD が使用する標準コマンドのみ実装。SCSI-2 の全コマンドセットには対応していません
@@ -172,3 +176,7 @@ Em68030_CsWpf/
 ## ライセンス
 
 [Apache License 2.0](LICENSE)
+
+## 商標
+
+本ドキュメントに記載されているすべての製品名、商標、および登録商標は、それぞれの所有者に帰属します。
