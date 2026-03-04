@@ -44,6 +44,23 @@ Achieves emulation speed equivalent to 34-36 MHz on an i7-13700. Key optimizatio
 
 As an interpreter, each instruction consumes a large number of host CPU cycles. The C# JIT compiler has limitations on method inlining, resulting in approximately 25% lower speed compared to the C++ native version.
 
+### JIT Compiler (Experimental)
+
+An optional JIT compiler is available that compiles basic blocks of register-only MC68030 instructions into .NET IL at runtime using `System.Reflection.Emit`. It can be enabled in Settings > Performance. The status bar displays the current JIT state ("JIT: ON" / "JIT: OFF").
+
+**Supported instructions**: MOVEQ, MOVE.L Dn→Dm, ADD.L/SUB.L/CMP.L Dn→Dm, AND.L/OR.L/EOR.L Dn→Dm, Bcc.B, BRA.B, NOP
+
+**Current status**: This feature is experimental and **disabled by default**. In its current form, enabling JIT reduces overall emulation speed from ~36 MHz to ~33 MHz. The overhead of the JIT infrastructure outweighs the benefit of compiled blocks, because the supported instruction set (register-only operations) covers only a small fraction of real-world code.
+
+**Known issues and future improvements**:
+
+| Issue | Description | Planned Solution |
+|---|---|---|
+| Low compilation coverage | Only register-to-register instructions are compilable; memory-accessing instructions (the majority of real code) fall back to the interpreter | Extend supported instructions to include memory access operations (e.g., MOVE.L (An),Dn). This requires bus error handling within compiled blocks |
+| Per-instruction dispatch overhead | Even with inlined block lookup and branch-predicted JIT path selection, the JIT-enabled execution path is ~8% slower than the pure interpreter due to method body size impacting .NET JIT inlining | Extend supported instructions to increase JIT block hit rate, offsetting the per-instruction overhead |
+| Privilege transition cost | JIT cache must be fully invalidated on every user/supervisor mode switch due to different MMU address spaces | Implement separate caches per privilege level, or tag blocks with their privilege mode |
+| No backward branch support | Loops with backward branches are excluded from JIT blocks to avoid false infinite-loop detection | Redesign loop detection to be JIT-aware, allowing compiled backward branches |
+
 ## Requirements
 
 - Windows 10 or later
@@ -95,6 +112,7 @@ On first launch, an `appsettings.json` file is generated from the Settings menu.
 | `Mvme147ScsiCdromPath` | SCSI CD-ROM ISO image path | `""` |
 | `NetworkMode` | `"Virtual"` (echo server) or `"NAT"` (host network) | `"Virtual"` |
 | `ConsoleScrollbackLines` | Console scrollback lines (0-100000) | 2000 |
+| `JitEnabled` | Enable experimental JIT compiler | `false` |
 
 ## Booting NetBSD
 
@@ -109,13 +127,13 @@ On first launch, an `appsettings.json` file is generated from the Settings menu.
 Em68030_CsWpf/
 ├── Em68030_CsWpf.sln
 ├── Em68030/
-│   ├── Core/           MC68030, MMU, Memory, InstructionDecoder, ALU, FPU
+│   ├── Core/           MC68030, MMU, Memory, InstructionDecoder, ALU, FPU, JIT
 │   ├── IO/             SCSI, Ethernet, Serial, RTC, PCC devices
 │   ├── Config/         EmulatorConfig (appsettings.json)
 │   ├── ViewModels/     MainViewModel
 │   ├── Views/          ConsoleWindow, BreakpointsWindow, SettingsWindow, AboutWindow
 │   └── MainWindow.xaml Main debugger UI
-└── Em68030.Tests/      xUnit tests (163 tests)
+└── Em68030.Tests/      xUnit tests (187 tests)
 ```
 
 ## Limitations
@@ -142,6 +160,7 @@ Em68030_CsWpf/
 
 ## Roadmap
 
+- Performance: Expand JIT to cover more instruction patterns
 - FPU: Accurate 80-bit extended precision emulation
 - NVRAM file persistence
 - Graphics output (framebuffer)

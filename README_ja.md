@@ -44,6 +44,23 @@ i7-13700 上で 34-36 MHz 相当のエミュレーション速度を達成。主
 
 インタープリタ方式のため、1 命令あたりホスト CPU で多数のサイクルを消費します。C# の JIT コンパイラによるメソッドインライン化には限界があり、C++ ネイティブ版と比較して約 25% 低い速度となります。
 
+### JIT コンパイラ (実験的機能)
+
+`System.Reflection.Emit` を使用して、レジスタ間操作のみで構成される基本ブロックを実行時に .NET IL へコンパイルするオプション機能です。Settings > Performance から有効化できます。ステータスバーに現在の JIT 状態 ("JIT: ON" / "JIT: OFF") が表示されます。
+
+**対応命令**: MOVEQ, MOVE.L Dn→Dm, ADD.L/SUB.L/CMP.L Dn→Dm, AND.L/OR.L/EOR.L Dn→Dm, Bcc.B, BRA.B, NOP
+
+**現状**: 本機能は実験的であり、**デフォルトで無効**です。現在の実装では、JIT を有効にするとエミュレーション速度が約 36 MHz から約 33 MHz に低下します。JIT インフラのオーバーヘッドがコンパイル済みブロックの恩恵を上回っています。対応命令セット (レジスタ間操作のみ) が実際のコードのごく一部しかカバーしていないことが根本原因です。
+
+**既知の問題と今後の改善計画**:
+
+| 課題 | 説明 | 改善の方向性 |
+|---|---|---|
+| コンパイル対象範囲が狭い | レジスタ間命令のみコンパイル可能。メモリアクセス命令 (実コードの大部分) はインタープリタにフォールバック | メモリアクセス命令 (例: MOVE.L (An),Dn) への対応拡大。コンパイル済みブロック内でのバスエラー処理が必要 |
+| 毎命令のディスパッチオーバーヘッド | ブロック検索のインライン化と分岐予測による JIT パス選択を実装済みだが、JIT 有効時の実行パスはメソッド本体のサイズ増加により .NET JIT のインライン化に影響し、純粋なインタープリタより約 8% 遅い | 対応命令の拡充により JIT ブロックヒット率を向上させ、毎命令のオーバーヘッドを相殺 |
+| 特権遷移時のコスト | ユーザ/スーパーバイザモード切替のたびに JIT キャッシュ全体を無効化する必要がある (MMU アドレス空間が異なるため) | 特権レベル別のキャッシュ分離、またはブロックに特権モードタグを付与 |
+| 後方分岐が非対応 | ループの後方分岐は無限ループ誤検出を避けるため JIT ブロックから除外されている | ループ検出機構を JIT 対応に再設計し、コンパイル済み後方分岐を許可 |
+
 ## 必要環境
 
 - Windows 10 以降
@@ -95,6 +112,7 @@ dotnet run --project Em68030/Em68030.csproj -c Release
 | `Mvme147ScsiCdromPath` | SCSI CD-ROM ISO イメージパス | `""` |
 | `NetworkMode` | `"Virtual"` (エコーサーバ) または `"NAT"` (ホストネットワーク) | `"Virtual"` |
 | `ConsoleScrollbackLines` | コンソールのスクロールバック行数 (0-100000) | 2000 |
+| `JitEnabled` | 実験的 JIT コンパイラを有効化 | `false` |
 
 ## NetBSD の起動
 
@@ -109,13 +127,13 @@ dotnet run --project Em68030/Em68030.csproj -c Release
 Em68030_CsWpf/
 ├── Em68030_CsWpf.sln
 ├── Em68030/
-│   ├── Core/           MC68030, MMU, Memory, InstructionDecoder, ALU, FPU
+│   ├── Core/           MC68030, MMU, Memory, InstructionDecoder, ALU, FPU, JIT
 │   ├── IO/             SCSI, Ethernet, Serial, RTC, PCC 等のデバイス
 │   ├── Config/         EmulatorConfig (appsettings.json)
 │   ├── ViewModels/     MainViewModel
 │   ├── Views/          ConsoleWindow, BreakpointsWindow, SettingsWindow, AboutWindow
 │   └── MainWindow.xaml メインデバッガ UI
-└── Em68030.Tests/      xUnit テスト (163 tests)
+└── Em68030.Tests/      xUnit テスト (187 tests)
 ```
 
 ## 制限事項
@@ -142,6 +160,7 @@ Em68030_CsWpf/
 
 ## 今後の予定
 
+- パフォーマンス: JIT コンパイラの対応命令パターン拡張
 - FPU: 80-bit 拡張精度の正確なエミュレーション
 - NVRAM のファイル永続化
 - グラフィックス出力 (フレームバッファ)
