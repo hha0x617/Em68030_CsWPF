@@ -39,8 +39,10 @@ public class MainViewModel : INotifyPropertyChanged
 
     // Clock frequency estimation
     private long _mhzCyclesSnapshot;
+    private long _mipsInsnSnapshot;
     private long _mhzTimestamp;       // Stopwatch ticks
     private double _estimatedMHz;
+    private double _estimatedMips;
 
     // MVME147 devices
     private PccDevice? _pccDevice;
@@ -154,7 +156,7 @@ public class MainViewModel : INotifyPropertyChanged
     public bool IsTracing => _cpu.VerboseTrace;
     public string? StopReason => _cpu.StopReason;
     public long CycleCount => _cpu.CycleCount;
-    public string EstimatedMHz => _estimatedMHz > 0 ? $"{_estimatedMHz:F2} MHz" : "";
+    public string EstimatedMHz => _estimatedMHz > 0 ? $"{_estimatedMHz:F2} MHz ({_estimatedMips:F2} MIPS)" : "";
 
     public bool ShowLst
     {
@@ -360,6 +362,8 @@ public class MainViewModel : INotifyPropertyChanged
         }
         _cpu = new MC68030(_memory);
         _cpu.JitEnabled = _config.JitEnabled;
+        _cpu.JitMinBlockLength = _config.JitMinBlockLength;
+        _cpu.JitCompileThreshold = _config.JitCompileThreshold;
 
         _consoleDevice = new ConsoleDevice(_config.ConsoleBaseAddress);
         _hddDevice = new HddDevice(_config.HddBaseAddress);
@@ -388,6 +392,8 @@ public class MainViewModel : INotifyPropertyChanged
 
         _cpu = new MC68030(_memory);
         _cpu.JitEnabled = _config.JitEnabled;
+        _cpu.JitMinBlockLength = _config.JitMinBlockLength;
+        _cpu.JitCompileThreshold = _config.JitCompileThreshold;
 
         // Create MVME147 devices
         _pccDevice = new PccDevice(_cpu);
@@ -917,8 +923,10 @@ public class MainViewModel : INotifyPropertyChanged
         _stopRequested = false;
         IsRunning = true;
         _mhzCyclesSnapshot = _cpu.CycleCount;
+        _mipsInsnSnapshot = _cpu.InstructionCount;
         _mhzTimestamp = Stopwatch.GetTimestamp();
         _estimatedMHz = 0;
+        _estimatedMips = 0;
         _emulationThread = new Thread(EmulationThreadLoop)
         {
             Name = "EmulationThread",
@@ -1047,6 +1055,11 @@ public class MainViewModel : INotifyPropertyChanged
                     long cycles = _cpu.CycleCount - _mhzCyclesSnapshot;
                     _estimatedMHz = cycles / seconds / 1_000_000.0;
                     _mhzCyclesSnapshot = _cpu.CycleCount;
+
+                    long insns = _cpu.InstructionCount - _mipsInsnSnapshot;
+                    _estimatedMips = insns / seconds / 1_000_000.0;
+                    _mipsInsnSnapshot = _cpu.InstructionCount;
+
                     lastMhzUpdate = now;
                     _mhzTimestamp = now;
                     _dispatcher?.BeginInvoke(() =>
@@ -1084,7 +1097,7 @@ public class MainViewModel : INotifyPropertyChanged
         _emulationThread = null;
         _runToCursorAddress = null;
         IsRunning = false;
-        // Final MHz calculation
+        // Final MHz/MIPS calculation
         long now = Stopwatch.GetTimestamp();
         long elapsed = now - _mhzTimestamp;
         double seconds = (double)elapsed / Stopwatch.Frequency;
@@ -1092,6 +1105,8 @@ public class MainViewModel : INotifyPropertyChanged
         {
             long cycles = _cpu.CycleCount - _mhzCyclesSnapshot;
             _estimatedMHz = cycles / seconds / 1_000_000.0;
+            long insns = _cpu.InstructionCount - _mipsInsnSnapshot;
+            _estimatedMips = insns / seconds / 1_000_000.0;
         }
         RefreshAll();
     }
@@ -1103,7 +1118,7 @@ public class MainViewModel : INotifyPropertyChanged
         _emulationThread = null;
         _runToCursorAddress = null;
         IsRunning = false;
-        // Final MHz calculation
+        // Final MHz/MIPS calculation
         long now = Stopwatch.GetTimestamp();
         long elapsed = now - _mhzTimestamp;
         double seconds = (double)elapsed / Stopwatch.Frequency;
@@ -1111,6 +1126,8 @@ public class MainViewModel : INotifyPropertyChanged
         {
             long cycles = _cpu.CycleCount - _mhzCyclesSnapshot;
             _estimatedMHz = cycles / seconds / 1_000_000.0;
+            long insns = _cpu.InstructionCount - _mipsInsnSnapshot;
+            _estimatedMips = insns / seconds / 1_000_000.0;
         }
         RefreshAll();
     }
@@ -1311,6 +1328,8 @@ public class MainViewModel : INotifyPropertyChanged
 
         // Apply JIT setting
         _cpu.JitEnabled = _config.JitEnabled;
+        _cpu.JitMinBlockLength = _config.JitMinBlockLength;
+        _cpu.JitCompileThreshold = _config.JitCompileThreshold;
         if (!_config.JitEnabled)
             _cpu.JitCache.InvalidateAll();
 
