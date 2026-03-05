@@ -45,8 +45,11 @@ public partial class MainWindow : Window
             EnsureConsoleWindow().ReadString();
         _vm.ScrollToLineRequested += index =>
         {
-            if (index >= 0 && index < DisasmList.Items.Count)
-                ScrollDisasmToCenter(index);
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (index >= 0 && index < DisasmList.Items.Count)
+                    ScrollDisasmToCenter(index);
+            });
         };
     }
 
@@ -210,7 +213,9 @@ public partial class MainWindow : Window
 
     private void DisasmFollowPC_Click(object sender, RoutedEventArgs e)
     {
-        _vm.ResetDisasmFollowPC();
+        // TwoWay binding already updated DisasmFollowPC from ToggleButton.IsChecked
+        if (_vm.DisasmFollowPC)
+            _vm.ResetDisasmFollowPC();
     }
 
     private void ManualUpdate_Click(object sender, RoutedEventArgs e)

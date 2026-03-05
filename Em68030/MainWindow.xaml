@@ -108,6 +108,50 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="ToolBarToggleButton" TargetType="ToggleButton">
+            <Setter Property="Background" Value="#FF3E3E42" />
+            <Setter Property="Foreground" Value="#FFD4D4D4" />
+            <Setter Property="BorderBrush" Value="#FF555555" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="Margin" Value="2,0" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              Focusable="False"
+                                              RecognizesAccessKey="True"
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#FF264F78" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#FF505054" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#FF606064" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Background" Value="#FF2D2D30" />
+                                <Setter TargetName="border" Property="BorderBrush" Value="#FF3F3F46" />
+                                <Setter Property="Foreground" Value="#FF656565" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <!-- ============================================================ -->
         <!-- Dark MenuItem: TopLevelHeader (e.g. "File", "Run") -->
         <!-- ============================================================ -->
@@ -404,8 +448,10 @@
                             <TextBox x:Name="DisasmAddrBox" Width="80" Style="{StaticResource MonoTextBox}"
                                      VerticalAlignment="Center" KeyDown="DisasmAddrBox_KeyDown" />
                             <Button Content="Go" Click="DisasmGo_Click" Style="{StaticResource ToolBarButton}" Margin="4,2" />
-                            <Button x:Name="BtnFollowPC" Content="Follow PC" Click="DisasmFollowPC_Click" Style="{StaticResource ToolBarButton}" Margin="4,2"
-                                    IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" />
+                            <ToggleButton x:Name="BtnFollowPC" Content="Follow PC" Click="DisasmFollowPC_Click"
+                                         IsChecked="{Binding DisasmFollowPC, Mode=TwoWay}"
+                                         Style="{StaticResource ToolBarToggleButton}" Margin="4,2"
+                                         IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" />
                             <Separator Margin="4,2" />
                             <TextBlock Text="Size:" Style="{StaticResource MonoText}" VerticalAlignment="Center" Margin="4,0,2,0" />
                             <TextBox x:Name="DisasmSizeBox" Width="50" Style="{StaticResource MonoTextBox}"
