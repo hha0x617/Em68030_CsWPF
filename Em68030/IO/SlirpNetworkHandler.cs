@@ -12,8 +12,46 @@ using System.Net.Sockets;
 /// </summary>
 public class SlirpNetworkHandler : INetworkHandler
 {
-    private static readonly byte[] GatewayMac = { 0x52, 0x54, 0x00, 0x12, 0x34, 0x56 };
-    private static readonly byte[] GatewayIp = { 10, 0, 2, 2 };
+    private readonly byte[] GatewayMac;
+    private readonly byte[] GatewayIp;
+
+    public SlirpNetworkHandler()
+        : this(new byte[] { 10, 0, 2, 2 }, new byte[] { 0x52, 0x54, 0x00, 0x12, 0x34, 0x56 })
+    {
+    }
+
+    public SlirpNetworkHandler(byte[] gatewayIp, byte[] gatewayMac)
+    {
+        GatewayIp = gatewayIp;
+        GatewayMac = gatewayMac;
+    }
+
+    public static byte[] ParseIpAddress(string s)
+    {
+        var def = new byte[] { 10, 0, 2, 2 };
+        var parts = s.Split('.');
+        if (parts.Length != 4) return def;
+        var result = new byte[4];
+        for (int i = 0; i < 4; i++)
+        {
+            if (!byte.TryParse(parts[i], out result[i])) return def;
+        }
+        return result;
+    }
+
+    public static byte[] ParseMacAddress(string s)
+    {
+        var def = new byte[] { 0x52, 0x54, 0x00, 0x12, 0x34, 0x56 };
+        var parts = s.Split(':');
+        if (parts.Length != 6) return def;
+        var result = new byte[6];
+        for (int i = 0; i < 6; i++)
+        {
+            if (!byte.TryParse(parts[i], System.Globalization.NumberStyles.HexNumber, null, out result[i]))
+                return def;
+        }
+        return result;
+    }
 
     private byte[] _guestMac = new byte[6];
     private readonly byte[] _guestIp = new byte[4];

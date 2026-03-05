@@ -42,6 +42,10 @@ public class EmulatorConfig
     // Network mode: "Virtual" (internal echo server) or "NAT" (host network via user-mode NAT)
     public string NetworkMode { get; set; } = "Virtual";
 
+    // NAT gateway address (shared by SlirpNetworkHandler and VirtualNetworkHandler)
+    public string NatGatewayIp { get; set; } = "10.0.2.2";
+    public string NatGatewayMac { get; set; } = "52:54:00:12:34:56";
+
     // Legacy fields kept for JSON deserialization backward compatibility
     [JsonIgnore] public string Mvme147ScsiDiskPath { get; set; } = "";
     [JsonIgnore] public int Mvme147ScsiDiskId { get; set; } = 0;
