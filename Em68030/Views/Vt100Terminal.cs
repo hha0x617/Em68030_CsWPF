@@ -8,10 +8,10 @@ namespace Em68030.Views;
 /// </summary>
 public class Vt100Terminal
 {
-    public int Cols { get; }
-    public int Rows { get; }
+    public int Cols { get; private set; }
+    public int Rows { get; private set; }
 
-    private readonly char[,] _screen;
+    private char[,] _screen;
     private int _cursorRow;
     private int _cursorCol;
     private bool _dirty = true;
@@ -112,6 +112,61 @@ public class Vt100Terminal
 
         _scrollback = newBuf;
         _maxScrollback = newMax;
+        _dirty = true;
+    }
+
+    /// <summary>
+    /// Resize the terminal screen to new dimensions, preserving existing content.
+    /// Rows that overflow the top are saved to scrollback.
+    /// </summary>
+    public void Resize(int newCols, int newRows)
+    {
+        if (newCols == Cols && newRows == Rows) return;
+
+        var newScreen = new char[newRows, newCols];
+        for (int r = 0; r < newRows; r++)
+            for (int c = 0; c < newCols; c++)
+                newScreen[r, c] = ' ';
+
+        // If shrinking rows, save overflow lines to scrollback
+        int overflow = Rows - newRows;
+        if (overflow > 0 && _maxScrollback > 0)
+        {
+            int linesToSave = Math.Min(overflow, Rows);
+            for (int r = 0; r < linesToSave; r++)
+            {
+                var line = new char[Cols];
+                for (int c = 0; c < Cols; c++)
+                    line[c] = _screen[r, c];
+                int writeIdx = (_scrollbackHead + _scrollbackCount) % _maxScrollback;
+                _scrollback[writeIdx] = new string(line).TrimEnd();
+                if (_scrollbackCount < _maxScrollback)
+                    _scrollbackCount++;
+                else
+                    _scrollbackHead = (_scrollbackHead + 1) % _maxScrollback;
+            }
+        }
+
+        // Copy existing content (shifted if rows shrunk)
+        int srcStartRow = overflow > 0 ? overflow : 0;
+        int copyRows = Math.Min(Rows - Math.Max(overflow, 0), newRows);
+        int copyCols = Math.Min(Cols, newCols);
+        for (int r = 0; r < copyRows; r++)
+            for (int c = 0; c < copyCols; c++)
+                newScreen[r, c] = _screen[srcStartRow + r, c];
+
+        _screen = newScreen;
+        Cols = newCols;
+        Rows = newRows;
+
+        // Clamp cursor
+        _cursorRow = Math.Clamp(_cursorRow - Math.Max(overflow, 0), 0, newRows - 1);
+        _cursorCol = Math.Clamp(_cursorCol, 0, newCols - 1);
+
+        // Reset scroll region
+        _scrollTop = 0;
+        _scrollBottom = newRows - 1;
+
         _dirty = true;
     }
 

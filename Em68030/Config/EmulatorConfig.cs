@@ -51,6 +51,10 @@ public class EmulatorConfig
     // Console scrollback buffer size (lines). Range: 0..100000
     public int ConsoleScrollbackLines { get; set; } = 2000;
 
+    // Console terminal size (columns x rows). Minimum: 80x24
+    public int ConsoleColumns { get; set; } = 80;
+    public int ConsoleRows { get; set; } = 24;
+
     // JIT compiler: experimental feature, disabled by default
     public bool JitEnabled { get; set; } = false;
     public int JitMinBlockLength { get; set; } = 3;
@@ -106,6 +110,8 @@ public class EmulatorConfig
                     }
                 }
 
+                config.ConsoleColumns = Math.Max(config.ConsoleColumns, 80);
+                config.ConsoleRows = Math.Max(config.ConsoleRows, 24);
                 return config;
             }
         }
