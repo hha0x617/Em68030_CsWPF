@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace Em68030.Views;
@@ -28,15 +30,20 @@ public partial class ConsoleWindow : Window
     private int _blinkCounter;
     private bool _cursorVisible;
 
+    // Character cell measurement for resize
+    private double _charWidth;
+    private double _charHeight;
+    private bool _charMeasured;
+
     /// <summary>
     /// Callback to feed characters directly to the SCC device (Z8530 RX FIFO).
     /// Used by MVME147 mode where the kernel polls the SCC hardware for input.
     /// </summary>
     public Action<byte>? OnCharInput;
 
-    public ConsoleWindow(int scrollbackLines = 2000)
+    public ConsoleWindow(int cols = 80, int rows = 24, int scrollbackLines = 2000)
     {
-        _terminal = new Vt100Terminal(80, 24, scrollbackLines);
+        _terminal = new Vt100Terminal(cols, rows, scrollbackLines);
         InitializeComponent();
 
         // Track user scroll position to determine auto-scroll behavior
@@ -52,14 +59,37 @@ public partial class ConsoleWindow : Window
         _renderTimer.Tick += (_, _) => RenderScreen();
         _renderTimer.Start();
 
+        // Intercept Copy to trim trailing whitespace from terminal lines
+        OutputBox.CommandBindings.Add(new CommandBinding(
+            ApplicationCommands.Copy, OnCopyCommand,
+            (_, args) => { args.CanExecute = OutputBox.SelectionLength > 0; args.Handled = true; }));
+
         // Intercept context-menu Paste so it routes through SCC/input instead of TextBox
         OutputBox.CommandBindings.Add(new CommandBinding(
             ApplicationCommands.Paste, OnPasteCommand,
             (_, args) => { args.CanExecute = true; args.Handled = true; }));
 
         // Focus the output area for keyboard capture
-        Loaded += (_, _) => OutputBox.Focus();
+        Loaded += (_, _) =>
+        {
+            OutputBox.Focus();
+            MeasureCharCell();
+            SetMinWindowSize();
+            UpdateTitle();
+
+            // Resize window to fit the configured terminal dimensions
+            if (_charMeasured && _charWidth > 0 && _charHeight > 0)
+            {
+                double contentWidth = _terminal.Cols * _charWidth + 8;
+                double contentHeight = _terminal.Rows * _charHeight + 8;
+                double chromeWidth = ActualWidth - OutputBox.ActualWidth;
+                double chromeHeight = ActualHeight - OutputBox.ActualHeight;
+                Width = contentWidth + chromeWidth;
+                Height = contentHeight + chromeHeight;
+            }
+        };
         Activated += (_, _) => OutputBox.Focus();
+        SizeChanged += OnWindowSizeChanged;
     }
 
     private void OnOutputScrollChanged(object sender, ScrollChangedEventArgs e)
@@ -77,6 +107,72 @@ public partial class ConsoleWindow : Window
     public void SetScrollbackLines(int lines)
     {
         _terminal.ResizeScrollback(lines);
+    }
+
+    /// <summary>
+    /// Resize the terminal and adjust window size to match.
+    /// </summary>
+    public void SetTerminalSize(int cols, int rows)
+    {
+        cols = Math.Max(cols, 80);
+        rows = Math.Max(rows, 24);
+        if (cols == _terminal.Cols && rows == _terminal.Rows) return;
+
+        _terminal.Resize(cols, rows);
+        UpdateTitle();
+
+        // Adjust window size to fit the new terminal dimensions
+        if (_charMeasured && _charWidth > 0 && _charHeight > 0)
+        {
+            double contentWidth = cols * _charWidth + 8; // Padding="4" left+right
+            double contentHeight = rows * _charHeight + 8; // Padding="4" top+bottom
+            double chromeWidth = ActualWidth - OutputBox.ActualWidth;
+            double chromeHeight = ActualHeight - OutputBox.ActualHeight;
+            Width = contentWidth + chromeWidth;
+            Height = contentHeight + chromeHeight;
+        }
+    }
+
+    private void MeasureCharCell()
+    {
+        var ft = new FormattedText("M", CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
+            new Typeface(OutputBox.FontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal),
+            OutputBox.FontSize, Brushes.White, VisualTreeHelper.GetDpi(this).PixelsPerDip);
+        _charWidth = ft.Width;
+        _charHeight = ft.Height;
+        _charMeasured = true;
+    }
+
+    private void SetMinWindowSize()
+    {
+        if (!_charMeasured) return;
+        double chromeWidth = ActualWidth - OutputBox.ActualWidth;
+        double chromeHeight = ActualHeight - OutputBox.ActualHeight;
+        MinWidth = 80 * _charWidth + 8 + chromeWidth;  // Padding="4" left+right
+        MinHeight = 24 * _charHeight + 8 + chromeHeight; // Padding="4" top+bottom
+    }
+
+    private void UpdateTitle()
+    {
+        Title = $"Console - {_terminal.Cols}\u00d7{_terminal.Rows}";
+    }
+
+    private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (!_charMeasured || _charWidth <= 0 || _charHeight <= 0) return;
+
+        double availableWidth = OutputBox.ActualWidth - 8; // padding
+        double availableHeight = OutputBox.ActualHeight - 8;
+        if (availableWidth <= 0 || availableHeight <= 0) return;
+
+        int newCols = Math.Max(80, (int)(availableWidth / _charWidth));
+        int newRows = Math.Max(24, (int)(availableHeight / _charHeight));
+
+        if (newCols != _terminal.Cols || newRows != _terminal.Rows)
+        {
+            _terminal.Resize(newCols, newRows);
+            UpdateTitle();
+        }
     }
 
     /// <summary>
@@ -213,7 +309,7 @@ public partial class ConsoleWindow : Window
                 return;
             }
 
-            // Ctrl+C: copy selected text (let TextBox handle), or send 0x03 (ETX) if no selection
+            // Ctrl+C: copy selected text (CommandBinding handles trimming), or send 0x03 (ETX) if no selection
             if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && key == Key.C)
             {
                 if (OutputBox.SelectionLength == 0)
@@ -221,7 +317,7 @@ public partial class ConsoleWindow : Window
                     OnCharInput(0x03);
                     e.Handled = true;
                 }
-                // Selection active: don't handle — TextBox copies natively
+                // Selection active: let CommandBinding (OnCopyCommand) handle it
                 return;
             }
 
@@ -250,11 +346,11 @@ public partial class ConsoleWindow : Window
         }
         else
         {
-            // Ctrl+C: copy selected text (let TextBox handle natively)
+            // Ctrl+C: copy selected text (CommandBinding handles trimming)
             if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && key == Key.C)
             {
-                // Selection active: don't handle — TextBox copies natively
                 // No selection: suppress (no action in Generic mode)
+                // Selection: let CommandBinding (OnCopyCommand) handle it
                 e.Handled = OutputBox.SelectionLength == 0;
                 return;
             }
@@ -361,6 +457,30 @@ public partial class ConsoleWindow : Window
         }
 
         _terminal.Write('\n');
+    }
+
+    /// <summary>
+    /// Copy selected text to clipboard with trailing whitespace trimmed per line.
+    /// </summary>
+    private void OnCopyCommand(object sender, ExecutedRoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (OutputBox.SelectionLength == 0) return;
+
+        try
+        {
+            string text = OutputBox.SelectedText;
+            var lines = text.Split(["\r\n", "\n"], StringSplitOptions.None);
+            for (int i = 0; i < lines.Length; i++)
+                lines[i] = lines[i].TrimEnd(' ', '\t');
+            string trimmed = string.Join("\r\n", lines);
+            if (!string.IsNullOrWhiteSpace(trimmed))
+                Clipboard.SetText(trimmed);
+        }
+        catch (Exception)
+        {
+            // Clipboard access can fail (e.g., locked by another process)
+        }
     }
 
     /// <summary>

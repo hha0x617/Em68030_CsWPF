@@ -57,7 +57,7 @@ public partial class MainWindow : Window
     {
         if (_consoleWindow == null || !_consoleWindow.IsLoaded)
         {
-            _consoleWindow = new ConsoleWindow(_vm.Config.ConsoleScrollbackLines);
+            _consoleWindow = new ConsoleWindow(_vm.Config.ConsoleColumns, _vm.Config.ConsoleRows, _vm.Config.ConsoleScrollbackLines);
             _consoleWindow.Owner = this;
             _consoleWindow.OnCharInput = ch => _vm.SendConsoleChar(ch);
             _consoleWindow.Show();
@@ -195,6 +195,7 @@ public partial class MainWindow : Window
         {
             _vm.ApplyConfig(settings.Config);
             _consoleWindow?.SetScrollbackLines(settings.Config.ConsoleScrollbackLines);
+            _consoleWindow?.SetTerminalSize(settings.Config.ConsoleColumns, settings.Config.ConsoleRows);
         }
     }
 

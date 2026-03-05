@@ -56,6 +56,8 @@ public partial class SettingsWindow : Window
         HddAddrBox.Text = Config.HddBaseAddress.ToString("X8");
         HddPathBox.Text = Config.HddImagePath;
         ConsoleScrollbackBox.Text = Config.ConsoleScrollbackLines.ToString();
+        ConsoleColumnsBox.Text = Config.ConsoleColumns.ToString();
+        ConsoleRowsBox.Text = Config.ConsoleRows.ToString();
         FontFamilyBox.Text = Config.FontFamily;
         FontSizeBox.Text = Config.FontSize.ToString();
         JitEnabledBox.IsChecked = Config.JitEnabled;
@@ -308,6 +310,10 @@ public partial class SettingsWindow : Window
         Config.HddImagePath = HddPathBox.Text;
         if (int.TryParse(ConsoleScrollbackBox.Text, out int scrollback) && scrollback >= 0)
             Config.ConsoleScrollbackLines = Math.Min(scrollback, 100000);
+        if (int.TryParse(ConsoleColumnsBox.Text, out int cols))
+            Config.ConsoleColumns = Math.Max(cols, 80);
+        if (int.TryParse(ConsoleRowsBox.Text, out int rows))
+            Config.ConsoleRows = Math.Max(rows, 24);
         Config.FontFamily = FontFamilyBox.Text;
         if (double.TryParse(FontSizeBox.Text, out double fontSize))
             Config.FontSize = fontSize;
