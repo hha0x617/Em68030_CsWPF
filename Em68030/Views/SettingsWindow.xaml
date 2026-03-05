@@ -213,10 +213,27 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Network Mode:" Style="{StaticResource SettingLabel}" />
-                        <ComboBox x:Name="NetworkModeBox" Grid.Column="1">
+                        <ComboBox x:Name="NetworkModeBox" Grid.Column="1"
+                                  SelectionChanged="NetworkMode_Changed">
                             <ComboBoxItem Content="Virtual (Echo Server)" />
                             <ComboBoxItem Content="NAT (Host Network)" />
                         </ComboBox>
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Gateway IP:" Style="{StaticResource SettingLabel}" />
+                        <TextBox x:Name="NatGatewayIpBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Gateway MAC:" Style="{StaticResource SettingLabel}" />
+                        <TextBox x:Name="NatGatewayMacBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                     </Grid>
                 </StackPanel>
 

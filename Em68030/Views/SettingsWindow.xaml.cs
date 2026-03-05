@@ -46,6 +46,9 @@ public partial class SettingsWindow : Window
         ScsiCdromPathBox.Text = Config.Mvme147ScsiCdromPath;
         _desiredCdromId = Math.Clamp(Config.Mvme147ScsiCdromId, 0, 6);
         NetworkModeBox.SelectedIndex = Config.NetworkMode == "NAT" ? 1 : 0;
+        NatGatewayIpBox.Text = Config.NatGatewayIp;
+        NatGatewayMacBox.Text = Config.NatGatewayMac;
+        UpdateNatGatewayEnabled();
         UpdateMvme147Visibility();
         RefreshScsiIdOptions();
 
@@ -265,10 +268,25 @@ public partial class SettingsWindow : Window
         Mvme147Panel.Visibility = isMvme ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private void UpdateNatGatewayEnabled()
+    {
+        bool isNat = NetworkModeBox.SelectedIndex == 1;
+        NatGatewayIpBox.IsEnabled = isNat;
+        NatGatewayMacBox.IsEnabled = isNat;
+        NatGatewayIpBox.Opacity = isNat ? 1.0 : 0.35;
+        NatGatewayMacBox.Opacity = isNat ? 1.0 : 0.35;
+    }
+
     private void BoardType_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (Mvme147Panel != null)
             UpdateMvme147Visibility();
+    }
+
+    private void NetworkMode_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (NatGatewayIpBox != null)
+            UpdateNatGatewayEnabled();
     }
 
     // ========================================================================
@@ -294,6 +312,12 @@ public partial class SettingsWindow : Window
         Config.Mvme147ScsiCdromPath = ScsiCdromPathBox.Text;
         Config.Mvme147ScsiCdromId = GetSelectedScsiId(ScsiCdromIdBox);
         Config.NetworkMode = NetworkModeBox.SelectedIndex == 1 ? "NAT" : "Virtual";
+
+        // Validate and save gateway IP/MAC (fallback to default on invalid input)
+        var parsedIp = SlirpNetworkHandler.ParseIpAddress(NatGatewayIpBox.Text);
+        Config.NatGatewayIp = $"{parsedIp[0]}.{parsedIp[1]}.{parsedIp[2]}.{parsedIp[3]}";
+        var parsedMac = SlirpNetworkHandler.ParseMacAddress(NatGatewayMacBox.Text);
+        Config.NatGatewayMac = $"{parsedMac[0]:x2}:{parsedMac[1]:x2}:{parsedMac[2]:x2}:{parsedMac[3]:x2}:{parsedMac[4]:x2}:{parsedMac[5]:x2}";
 
         // Memory size
         if (int.TryParse(MemSizeBox.Text, out int memMB))
