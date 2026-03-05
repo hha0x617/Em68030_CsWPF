@@ -390,7 +390,8 @@
                     </TextBlock.Text>
                 </TextBlock>
                 <TextBlock Text="{Binding EstimatedMHz}" Foreground="LightGreen" VerticalAlignment="Center"
-                           Style="{StaticResource MonoText}" Margin="8,0" />
+                           Style="{StaticResource MonoText}" Margin="8,0"
+                           MouseLeftButtonDown="MhzText_MouseLeftButtonDown" Cursor="Hand" />
                 <TextBlock Text="{Binding StopReason}" Foreground="Orange" VerticalAlignment="Center"
                            Style="{StaticResource MonoText}" Margin="8,0" />
             </ToolBar>

@@ -182,6 +182,11 @@ public partial class MainWindow : Window
         _vm.ShowLst = !_vm.ShowLst;
     }
 
+    private void MhzText_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        _vm.ToggleMhzDisplayMode();
+    }
+
     private void Settings_Click(object sender, RoutedEventArgs e)
     {
         var settings = new SettingsWindow(_vm.Config.Clone());

@@ -44,6 +44,14 @@ public class MainViewModel : INotifyPropertyChanged
     private double _estimatedMHz;
     private double _estimatedMips;
 
+    // Average MHz/MIPS (cumulative since Run started)
+    private long _runStartCycleCount;
+    private long _runStartInsnCount;
+    private long _runStartTimestamp;
+    private double _avgMHz;
+    private double _avgMips;
+    private bool _showAvgMhz;
+
     // MVME147 devices
     private PccDevice? _pccDevice;
     private Z8530Device? _sccDevice;
@@ -156,7 +164,23 @@ public class MainViewModel : INotifyPropertyChanged
     public bool IsTracing => _cpu.VerboseTrace;
     public string? StopReason => _cpu.StopReason;
     public long CycleCount => _cpu.CycleCount;
-    public string EstimatedMHz => _estimatedMHz > 0 ? $"{_estimatedMHz:F2} MHz ({_estimatedMips:F2} MIPS)" : "";
+    public string EstimatedMHz
+    {
+        get
+        {
+            double mhz = _showAvgMhz ? _avgMHz : _estimatedMHz;
+            double mips = _showAvgMhz ? _avgMips : _estimatedMips;
+            return mhz > 0
+                ? (_showAvgMhz ? $"Avg {mhz:F2} MHz ({mips:F2} MIPS)" : $"{mhz:F2} MHz ({mips:F2} MIPS)")
+                : "";
+        }
+    }
+
+    public void ToggleMhzDisplayMode()
+    {
+        _showAvgMhz = !_showAvgMhz;
+        OnPropertyChanged(nameof(EstimatedMHz));
+    }
 
     public bool ShowLst
     {
@@ -930,6 +954,11 @@ public class MainViewModel : INotifyPropertyChanged
         _mhzTimestamp = Stopwatch.GetTimestamp();
         _estimatedMHz = 0;
         _estimatedMips = 0;
+        _runStartCycleCount = _cpu.CycleCount;
+        _runStartInsnCount = _cpu.InstructionCount;
+        _runStartTimestamp = Stopwatch.GetTimestamp();
+        _avgMHz = 0;
+        _avgMips = 0;
         _emulationThread = new Thread(EmulationThreadLoop)
         {
             Name = "EmulationThread",
@@ -1065,6 +1094,15 @@ public class MainViewModel : INotifyPropertyChanged
 
                     lastMhzUpdate = now;
                     _mhzTimestamp = now;
+
+                    // Cumulative average since Run started
+                    double totalSec = (double)(now - _runStartTimestamp) / Stopwatch.Frequency;
+                    if (totalSec > 0.01)
+                    {
+                        _avgMHz = (_cpu.CycleCount - _runStartCycleCount) / totalSec / 1_000_000.0;
+                        _avgMips = (_cpu.InstructionCount - _runStartInsnCount) / totalSec / 1_000_000.0;
+                    }
+
                     _dispatcher?.BeginInvoke(() =>
                     {
                         OnPropertyChanged(nameof(EstimatedMHz));
@@ -1111,6 +1149,13 @@ public class MainViewModel : INotifyPropertyChanged
             long insns = _cpu.InstructionCount - _mipsInsnSnapshot;
             _estimatedMips = insns / seconds / 1_000_000.0;
         }
+        // Final average calculation
+        double totalSec = (double)(now - _runStartTimestamp) / Stopwatch.Frequency;
+        if (totalSec > 0.01)
+        {
+            _avgMHz = (_cpu.CycleCount - _runStartCycleCount) / totalSec / 1_000_000.0;
+            _avgMips = (_cpu.InstructionCount - _runStartInsnCount) / totalSec / 1_000_000.0;
+        }
         RefreshAll();
     }
 
@@ -1131,6 +1176,13 @@ public class MainViewModel : INotifyPropertyChanged
             _estimatedMHz = cycles / seconds / 1_000_000.0;
             long insns = _cpu.InstructionCount - _mipsInsnSnapshot;
             _estimatedMips = insns / seconds / 1_000_000.0;
+        }
+        // Final average calculation
+        double totalSec = (double)(now - _runStartTimestamp) / Stopwatch.Frequency;
+        if (totalSec > 0.01)
+        {
+            _avgMHz = (_cpu.CycleCount - _runStartCycleCount) / totalSec / 1_000_000.0;
+            _avgMips = (_cpu.InstructionCount - _runStartInsnCount) / totalSec / 1_000_000.0;
         }
         RefreshAll();
     }
