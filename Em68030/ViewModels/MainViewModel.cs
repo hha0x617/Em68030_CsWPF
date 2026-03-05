@@ -193,7 +193,7 @@ public class MainViewModel : INotifyPropertyChanged
     public void NavigateDisassembly(uint address)
     {
         _disasmAddress = address;
-        _disasmFollowPC = false;
+        DisasmFollowPC = false;
         _fullProgramDisassembled = false;
         UpdateDisassemblyAt(_disasmAddress);
     }
@@ -218,7 +218,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (targetIndex < 0)
         {
             // Address not in current view — navigate so the address appears
-            _disasmFollowPC = false;
+            DisasmFollowPC = false;
             _fullProgramDisassembled = false;
             // Back up ~20 instructions worth of bytes so target ends up near center
             uint backBytes = Math.Min(address, 80u);
@@ -244,18 +244,22 @@ public class MainViewModel : INotifyPropertyChanged
     public void NavigateToProgram()
     {
         _disasmAddress = _programStartAddress;
-        _disasmFollowPC = false;
+        DisasmFollowPC = false;
         _fullProgramDisassembled = false;
         UpdateDisassemblyRange(_programStartAddress, _programEndAddress);
     }
 
     public bool HasProgramLoaded => _programEndAddress > _programStartAddress;
 
-    public bool DisasmFollowPC => _disasmFollowPC;
+    public bool DisasmFollowPC
+    {
+        get => _disasmFollowPC;
+        set { if (_disasmFollowPC != value) { _disasmFollowPC = value; OnPropertyChanged(); } }
+    }
 
     public void ResetDisasmFollowPC()
     {
-        _disasmFollowPC = true;
+        DisasmFollowPC = true;
         _fullProgramDisassembled = false;
         UpdateDisassembly();
     }
@@ -265,7 +269,7 @@ public class MainViewModel : INotifyPropertyChanged
     public void ManualDisassembly(uint address, uint sizeBytes)
     {
         _manualDisasmMode = true;
-        _disasmFollowPC = false;
+        DisasmFollowPC = false;
         _fullProgramDisassembled = false;
         _disasmAddress = address;
         UpdateDisassemblyRange(address, address + sizeBytes);
@@ -709,7 +713,7 @@ public class MainViewModel : INotifyPropertyChanged
         _cpu.PC = loadAddress;
         _programStartAddress = loadAddress;
         _programEndAddress = loadAddress + size;
-        _disasmFollowPC = true;
+        DisasmFollowPC = true;
         _fullProgramDisassembled = false;
         ClearManualDisasmMode();
         InitStackPointer();
@@ -735,7 +739,7 @@ public class MainViewModel : INotifyPropertyChanged
             _programStartAddress = start;
         }
         _programEndAddress = end;
-        _disasmFollowPC = true;
+        DisasmFollowPC = true;
         _fullProgramDisassembled = false;
         ClearManualDisasmMode();
         InitStackPointer();
@@ -752,7 +756,7 @@ public class MainViewModel : INotifyPropertyChanged
         _cpu.PC = result.EntryPoint;
         _programStartAddress = result.StartAddress;
         _programEndAddress = result.EndAddress;
-        _disasmFollowPC = true;
+        DisasmFollowPC = true;
         _fullProgramDisassembled = false;
         ClearManualDisasmMode();
 
@@ -896,7 +900,6 @@ public class MainViewModel : INotifyPropertyChanged
         // In MVME147 mode, allow stepping even when Stopped (to process tick/interrupts)
         if (_cpu.Stopped && !_cpu.HasExternalDevices) return;
         _cpu.ExecuteStep();
-        _disasmFollowPC = true;
         RefreshAll();
     }
 
@@ -1578,7 +1581,6 @@ public class MainViewModel : INotifyPropertyChanged
         IsRegisterEditMode = false;
         // Values are already written to CPU via two-way bindings.
         // Update disassembly in case PC changed.
-        _disasmFollowPC = true;
         RefreshAll();
     }
 
