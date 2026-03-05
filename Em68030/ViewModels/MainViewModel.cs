@@ -437,7 +437,9 @@ public class MainViewModel : INotifyPropertyChanged
         _lanceDevice.AttachMemory(_memory);
         if (_config.NetworkMode == "NAT")
         {
-            var natHandler = new SlirpNetworkHandler();
+            var gwIp = SlirpNetworkHandler.ParseIpAddress(_config.NatGatewayIp);
+            var gwMac = SlirpNetworkHandler.ParseMacAddress(_config.NatGatewayMac);
+            var natHandler = new SlirpNetworkHandler(gwIp, gwMac);
             natHandler.DiagnosticOutput = msg => _traceWriter?.Write(msg);
             _lanceDevice.SetNetworkHandler(natHandler);
         }
