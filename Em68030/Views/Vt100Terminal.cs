@@ -117,56 +117,114 @@ public class Vt100Terminal
 
     /// <summary>
     /// Resize the terminal screen to new dimensions, preserving existing content.
-    /// Rows that overflow the top are saved to scrollback.
+    /// Shrinking: removes bottom blank lines first, then pushes top lines to scrollback.
+    /// Growing: pulls lines from scrollback to fill top, then adds blank lines at bottom.
     /// </summary>
     public void Resize(int newCols, int newRows)
     {
         if (newCols == Cols && newRows == Rows) return;
 
+        int rowDiff = newRows - Rows; // positive = growing, negative = shrinking
         var newScreen = new char[newRows, newCols];
         for (int r = 0; r < newRows; r++)
             for (int c = 0; c < newCols; c++)
                 newScreen[r, c] = ' ';
 
-        // If shrinking rows, save overflow lines to scrollback
-        int overflow = Rows - newRows;
-        if (overflow > 0 && _maxScrollback > 0)
+        if (rowDiff < 0)
         {
-            int linesToSave = Math.Min(overflow, Rows);
-            for (int r = 0; r < linesToSave; r++)
+            // --- Shrinking height ---
+            int rowsToRemove = -rowDiff;
+
+            // Count trailing blank lines at bottom of screen (up to rowsToRemove)
+            int trailingBlanks = 0;
+            for (int r = Rows - 1; r >= 0 && trailingBlanks < rowsToRemove; r--)
             {
-                var line = new char[Cols];
+                bool blank = true;
                 for (int c = 0; c < Cols; c++)
-                    line[c] = _screen[r, c];
-                int writeIdx = (_scrollbackHead + _scrollbackCount) % _maxScrollback;
-                _scrollback[writeIdx] = new string(line).TrimEnd();
-                if (_scrollbackCount < _maxScrollback)
-                    _scrollbackCount++;
-                else
-                    _scrollbackHead = (_scrollbackHead + 1) % _maxScrollback;
+                {
+                    if (_screen[r, c] != ' ') { blank = false; break; }
+                }
+                if (!blank) break;
+                trailingBlanks++;
             }
+
+            // Don't remove blank lines at or above cursor (cursor row must remain visible)
+            int removableBlanks = Math.Min(trailingBlanks, Rows - 1 - _cursorRow);
+            int blanksConsumed = Math.Min(removableBlanks, rowsToRemove);
+            int remainingToRemove = rowsToRemove - blanksConsumed;
+
+            // Push top lines to scrollback (anchor bottom of display)
+            if (remainingToRemove > 0 && _maxScrollback > 0)
+            {
+                for (int r = 0; r < remainingToRemove; r++)
+                {
+                    var line = new char[Cols];
+                    for (int c = 0; c < Cols; c++)
+                        line[c] = _screen[r, c];
+                    int writeIdx = (_scrollbackHead + _scrollbackCount) % _maxScrollback;
+                    _scrollback[writeIdx] = new string(line).TrimEnd();
+                    if (_scrollbackCount < _maxScrollback)
+                        _scrollbackCount++;
+                    else
+                        _scrollbackHead = (_scrollbackHead + 1) % _maxScrollback;
+                }
+            }
+
+            // Copy: skip top `remainingToRemove` lines, drop bottom `blanksConsumed` blank lines
+            int srcStartRow = remainingToRemove;
+            int copyRows = Math.Min(Rows - remainingToRemove - blanksConsumed, newRows);
+            int copyCols = Math.Min(Cols, newCols);
+            for (int r = 0; r < copyRows; r++)
+                for (int c = 0; c < copyCols; c++)
+                    newScreen[r, c] = _screen[srcStartRow + r, c];
+
+            _cursorRow = Math.Clamp(_cursorRow - remainingToRemove, 0, newRows - 1);
+        }
+        else if (rowDiff > 0)
+        {
+            // --- Growing height ---
+            int rowsToAdd = rowDiff;
+
+            // Pull most recent lines from scrollback to fill top
+            int fromScrollback = Math.Min(rowsToAdd, _scrollbackCount);
+
+            for (int i = 0; i < fromScrollback; i++)
+            {
+                // Older lines at top, newer lines adjacent to existing content
+                int scrollIdx = (_scrollbackHead + _scrollbackCount - fromScrollback + i) % _maxScrollback;
+                string line = _scrollback[scrollIdx];
+                int len = Math.Min(line.Length, newCols);
+                for (int c = 0; c < len; c++)
+                    newScreen[i, c] = line[c];
+            }
+            _scrollbackCount -= fromScrollback;
+
+            // Copy existing screen content after the restored scrollback lines
+            int destStartRow = fromScrollback;
+            int copyRows = Math.Min(Rows, newRows - fromScrollback);
+            int copyCols = Math.Min(Cols, newCols);
+            for (int r = 0; r < copyRows; r++)
+                for (int c = 0; c < copyCols; c++)
+                    newScreen[destStartRow + r, c] = _screen[r, c];
+
+            // Remaining rows at bottom are already blank (initialized to ' ')
+            _cursorRow = Math.Clamp(_cursorRow + fromScrollback, 0, newRows - 1);
+        }
+        else
+        {
+            // Only column width changed
+            int copyCols = Math.Min(Cols, newCols);
+            for (int r = 0; r < Rows; r++)
+                for (int c = 0; c < copyCols; c++)
+                    newScreen[r, c] = _screen[r, c];
         }
 
-        // Copy existing content (shifted if rows shrunk)
-        int srcStartRow = overflow > 0 ? overflow : 0;
-        int copyRows = Math.Min(Rows - Math.Max(overflow, 0), newRows);
-        int copyCols = Math.Min(Cols, newCols);
-        for (int r = 0; r < copyRows; r++)
-            for (int c = 0; c < copyCols; c++)
-                newScreen[r, c] = _screen[srcStartRow + r, c];
-
         _screen = newScreen;
+        _cursorCol = Math.Clamp(_cursorCol, 0, newCols - 1);
         Cols = newCols;
         Rows = newRows;
-
-        // Clamp cursor
-        _cursorRow = Math.Clamp(_cursorRow - Math.Max(overflow, 0), 0, newRows - 1);
-        _cursorCol = Math.Clamp(_cursorCol, 0, newCols - 1);
-
-        // Reset scroll region
         _scrollTop = 0;
         _scrollBottom = newRows - 1;
-
         _dirty = true;
     }
 
