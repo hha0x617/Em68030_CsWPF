@@ -33,7 +33,7 @@ You can verify the digital signature of the released binaries on Windows:
 Alternatively, using PowerShell:
 
 ```powershell
-Get-AuthenticodeSignature .\Em68030.exe | Format-List
+Get-AuthenticodeSignature .\Em68030-WPF.exe | Format-List
 ```
 
 A valid signature confirms that the binary was built from this repository's

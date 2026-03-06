@@ -1,6 +1,6 @@
 #define MyAppName "Em68030"
 #define MyAppPublisher "hha0x617"
-#define MyAppExeName "Em68030.exe"
+#define MyAppExeName "Em68030-WPF.exe"
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
@@ -33,7 +33,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "{#SourceDir}\Em68030.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\Em68030.exe"; DestDir: "{app}"; DestName: "{#MyAppExeName}"; Flags: ignoreversion
 Source: "{#SourceDir}\*.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\*.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
