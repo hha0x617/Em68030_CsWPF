@@ -1,12 +1,13 @@
 # MC68030 Emulator (C# WPF) - Instruction Set Implementation Status
 
-Date: 2026-03-05
+Date: 2026-03-07
 
 ## Legend
 
 - [x] = Implemented
 - [ ] = Not implemented
-- JIT = JIT compilable (register-only, .L size)
+- JIT = JIT compilable (register-only or with data page cache bailout)
+  - (blank) = Not yet attempted for JIT
 
 ---
 
@@ -53,8 +54,9 @@ to .NET IL and executed as DynamicMethod instances.
   design as C++).
 - Method selection uses a bool branch. Func<bool> delegate dispatch caused a 36 to 30 MHz
   regression and was rejected.
-- JIT ON is currently slower than JIT OFF (33 vs 36 MIPS): the per-instruction NoInlining
-  method call overhead outweighs the benefit given the rarity of compilable blocks.
+- JIT ON is currently slower than JIT OFF (31.0 vs 32.1 MIPS): NoInlining method call
+  overhead for ExecuteNextJit + DynamicMethod delegate dispatch cost for block.Execute()
+  outweigh the benefit given the rarity of compilable blocks.
 
 ### FPU Diagnostic Trace
 
@@ -63,7 +65,16 @@ instruction tracing is output to diagnostics (not available in C++ version).
 
 ### Performance (JIT OFF)
 
-~33 MIPS / ~204 MHz-cycles (measured via Avg mode), ~6.1 cycles/instruction
+~32.14 MIPS / ~216.75 MHz-cycles (measured via Avg mode), ~6.7 cycles/instruction
+
+> **Note**: These figures are approximate estimates, not cycle-accurate measurements.
+> - **MHz** = total emulated cycles / wall-clock seconds / 1,000,000. Cycle counts come from
+>   a 65,536-entry static lookup table (`s_cycleTable`) with EA cost adjustments, which
+>   approximates MC68030 timing but does not model pipeline, cache, or bus wait states.
+> - **MIPS** = total emulated instructions / wall-clock seconds / 1,000,000.
+> - **Avg** values are cumulative from the start of a Run session. Instantaneous values
+>   are sampled every ~500ms.
+> - Results vary depending on workload, host CPU, and system load.
 
 ### Cycle Table
 
@@ -90,7 +101,7 @@ memory access overhead per addressing mode.
 
 | Status | Instruction | Description | JIT |
 |--------|-------------|-------------|-----|
-| [x] | MOVE.B / .W / .L | Move data | |
+| [x] | MOVE.B / .W / .L | Move data | JIT (.L (An)/d16(An)->Dm, (An)+->Dm, Dm->(An)/d16(An) with bailout) |
 | [x] | MOVEA.W / .L | Move to address register | JIT (.L Dn->An, An->Am) |
 | [x] | MOVEQ | Move quick (8-bit immediate) | JIT |
 | [x] | MOVEM | Move multiple registers | |
@@ -107,26 +118,26 @@ memory access overhead per addressing mode.
 
 | Status | Instruction | Description | JIT |
 |--------|-------------|-------------|-----|
-| [x] | ADD.B / .W / .L | Add | JIT (.L Dn,Dm) |
+| [x] | ADD.B / .W / .L | Add | JIT (.B/.W/.L Dn,Dm) |
 | [x] | ADDA.W / .L | Add to address register | |
 | [x] | ADDI | Add immediate | |
-| [x] | ADDQ | Add quick (1-8) | JIT (.L Dn / An) |
+| [x] | ADDQ | Add quick (1-8) | JIT (.B/.W/.L Dn / An) |
 | [x] | ADDX.B / .W / .L | Add with extend | |
-| [x] | SUB.B / .W / .L | Subtract | JIT (.L Dn,Dm) |
+| [x] | SUB.B / .W / .L | Subtract | JIT (.B/.W/.L Dn,Dm) |
 | [x] | SUBA.W / .L | Subtract from address register | |
 | [x] | SUBI | Subtract immediate | |
-| [x] | SUBQ | Subtract quick (1-8) | JIT (.L Dn / An) |
+| [x] | SUBQ | Subtract quick (1-8) | JIT (.B/.W/.L Dn / An) |
 | [x] | SUBX.B / .W / .L | Subtract with extend | |
-| [x] | NEG.B / .W / .L | Negate | JIT (.L Dn) |
+| [x] | NEG.B / .W / .L | Negate | JIT (.B/.W/.L Dn) |
 | [x] | NEGX.B / .W / .L | Negate with extend | |
-| [x] | CLR.B / .W / .L | Clear | JIT (.L Dn) |
-| [x] | CMP.B / .W / .L | Compare | JIT (.L Dn,Dm) |
+| [x] | CLR.B / .W / .L | Clear | JIT (.B/.W/.L Dn) |
+| [x] | CMP.B / .W / .L | Compare | JIT (.B/.W/.L Dn,Dm) |
 | [x] | CMPA.W / .L | Compare with address register | |
 | [x] | CMPI | Compare immediate | |
 | [x] | CMPM.B / .W / .L | Compare memory (An)+,(Am)+ | |
 | [x] | CMP2 / CHK2 | Compare/Check against bounds (68020+) | |
-| [x] | MULU.W | Unsigned multiply 16x16->32 | |
-| [x] | MULS.W | Signed multiply 16x16->32 | |
+| [x] | MULU.W | Unsigned multiply 16x16->32 | JIT (Dn,Dm) |
+| [x] | MULS.W | Signed multiply 16x16->32 | JIT (Dn,Dm) |
 | [x] | MULU.L | Unsigned multiply 32x32->32/64 (68020+) | |
 | [x] | MULS.L | Signed multiply 32x32->32/64 (68020+) | |
 | [x] | DIVU.W | Unsigned divide 32/16 | |
@@ -138,20 +149,20 @@ memory access overhead per addressing mode.
 
 | Status | Instruction | Description | JIT |
 |--------|-------------|-------------|-----|
-| [x] | AND.B / .W / .L | Logical AND | JIT (.L Dn,Dm) |
+| [x] | AND.B / .W / .L | Logical AND | JIT (.B/.W/.L Dn,Dm) |
 | [x] | ANDI | AND immediate | |
 | [x] | ANDI to CCR | AND immediate to CCR | |
 | [x] | ANDI to SR | AND immediate to SR (supervisor) | |
-| [x] | OR.B / .W / .L | Logical OR | JIT (.L Dn,Dm) |
+| [x] | OR.B / .W / .L | Logical OR | JIT (.B/.W/.L Dn,Dm) |
 | [x] | ORI | OR immediate | |
 | [x] | ORI to CCR | OR immediate to CCR | |
 | [x] | ORI to SR | OR immediate to SR (supervisor) | |
-| [x] | EOR.B / .W / .L | Exclusive OR | JIT (.L Dn,Dm) |
+| [x] | EOR.B / .W / .L | Exclusive OR | JIT (.B/.W/.L Dn,Dm) |
 | [x] | EORI | XOR immediate | |
 | [x] | EORI to CCR | XOR immediate to CCR | |
 | [x] | EORI to SR | XOR immediate to SR (supervisor) | |
-| [x] | NOT.B / .W / .L | Logical NOT | JIT (.L Dn) |
-| [x] | TST.B / .W / .L | Test | JIT (.L Dn) |
+| [x] | NOT.B / .W / .L | Logical NOT | JIT (.B/.W/.L Dn) |
+| [x] | TST.B / .W / .L | Test | JIT (.B/.W/.L Dn) |
 
 ### Shift & Rotate
 
@@ -170,7 +181,7 @@ memory access overhead per addressing mode.
 
 | Status | Instruction | Description | JIT |
 |--------|-------------|-------------|-----|
-| [x] | BTST | Bit test (register/immediate) | |
+| [x] | BTST | Bit test (register/immediate) | JIT (Dn,Dm) |
 | [x] | BCHG | Bit change (register/immediate) | |
 | [x] | BCLR | Bit clear (register/immediate) | |
 | [x] | BSET | Bit set (register/immediate) | |
@@ -202,14 +213,14 @@ memory access overhead per addressing mode.
 
 | Status | Instruction | Description | JIT |
 |--------|-------------|-------------|-----|
-| [x] | BRA | Branch always (.B/.W/.L) | JIT (.B) |
-| [x] | Bcc | Branch on condition (.B/.W/.L), all 16 conditions | JIT (.B) |
+| [x] | BRA | Branch always (.B/.W/.L) | JIT (.B/.W) |
+| [x] | Bcc | Branch on condition (.B/.W/.L), all 16 conditions | JIT (.B/.W) |
 | [x] | BSR | Branch to subroutine (.B/.W/.L) | |
 | [x] | DBcc | Decrement and branch, all 16 conditions | |
 | [x] | Scc | Set byte on condition, all 16 conditions | |
 | [x] | JMP | Jump | |
 | [x] | JSR | Jump to subroutine | |
-| [x] | RTS | Return from subroutine | |
+| [x] | RTS | Return from subroutine | JIT (bailout) |
 | [x] | RTR | Return and restore CCR | |
 | [x] | RTE | Return from exception (supervisor) | |
 | [x] | RTD | Return with displacement (68010+) | |
@@ -230,7 +241,7 @@ memory access overhead per addressing mode.
 | Status | Instruction | Description | JIT |
 |--------|-------------|-------------|-----|
 | [x] | PEA | Push effective address | |
-| [x] | LEA | Load effective address | |
+| [x] | LEA | Load effective address | JIT ((An), d16(An), d8(An,Xn)) |
 | [x] | LINK.W / .L | Link and allocate stack frame | |
 | [x] | UNLK | Unlink stack frame | |
 
@@ -361,17 +372,26 @@ memory access overhead per addressing mode.
 
 ## JIT Summary
 
-JIT compiles basic blocks of **register-only** instructions (no memory access).
-31 instruction patterns are supported:
+JIT compiles basic blocks of instructions. Register-only blocks execute entirely in JIT.
+Memory access blocks use a **data page cache bailout** mechanism: on cache hit, execution
+continues in JIT; on cache miss, the block bails out to the interpreter at the current
+instruction. Blocks that bail out too frequently (>64 times) are blacklisted and evicted.
+
+~60 instruction patterns are supported:
 
 | Category | Instructions |
 |----------|-------------|
-| Move | MOVEQ, MOVE.L Dn->Dm, MOVE.L An->Dn, MOVEA.L Dn->An, MOVEA.L An->Am |
-| Arithmetic | ADD.L, SUB.L, CMP.L (Dn,Dm), ADDQ/SUBQ (.L Dn, An), NEG.L Dn |
-| Logic | AND.L, OR.L, EOR.L (Dn,Dm), NOT.L Dn, CLR.L Dn, TST.L Dn |
+| Move (register) | MOVEQ, MOVE.L Dn->Dm, MOVE.L An->Dn, MOVEA.L Dn->An, MOVEA.L An->Am |
+| Move (memory) | MOVE.L (An)->Dm, (An)+->Dm, Dm->(An), d16(An)->Dm, Dm->d16(An) (bailout) |
+| Arithmetic | ADD/SUB/CMP .B/.W/.L (Dn,Dm), ADDQ/SUBQ .B/.W/.L (Dn, An), NEG .B/.W/.L Dn |
+| Multiply | MULU.W, MULS.W (Dn,Dm) |
+| Logic | AND/OR/EOR .B/.W/.L (Dn,Dm), NOT/CLR/TST .B/.W/.L Dn |
 | Shift | ASL/ASR/LSL/LSR.L #imm,Dn |
+| Bit | BTST Dn,Dm |
 | Register | EXG (all 3 forms), SWAP Dn, EXT.W/EXT.L/EXTB.L Dn |
-| Branch | BRA.B, Bcc.B (all conditions) |
+| Address | LEA (An)/d16(An)/d8(An,Xn),Ar |
+| Branch | BRA .B/.W, Bcc .B/.W (all conditions) |
+| Subroutine | RTS (bailout) |
 | Other | NOP |
 
 ### C# JIT Implementation Details
@@ -381,8 +401,20 @@ JIT compiles basic blocks of **register-only** instructions (no memory access).
 - Sampling at TickInterval (256), threshold = 16 hits to compile
 - ExecuteNextFast() and ExecuteNextFastJit() are completely separate methods (same separation
   design as C++)
-- Method selection uses a bool branch. Func<bool> delegate dispatch caused a 36 to 30 MHz
+- Method selection uses a bool branch. Func<bool> delegate dispatch caused a 36 to 30 MIPS
   regression (a constant-direction branch is essentially free thanks to branch prediction)
-- JIT ON is currently slower than JIT OFF (33 vs 36 MIPS): per-instruction NoInlining method
-  call overhead outweighs the benefit given the rarity of compilable blocks
-- Tests: JIT-specific tests in Em68030.Tests/
+- Bailout mechanism: memory access instructions call `TryReadLongCached()` and communicate
+  partial execution via `_jitExecutedCount`/`_jitExecutedCycles` side-channel fields.
+  Blocks exceeding 64 bailouts are blacklisted.
+- Tests: 327 total (including JIT-specific tests in Em68030.Tests/)
+
+### Performance
+
+| Mode | MHz (cycles) | MIPS | Notes |
+|------|-------------|------|-------|
+| JIT OFF | ~217 | ~32.1 | Baseline |
+| JIT ON | ~190 | ~31.0 | -3.5% MIPS / -12.3% MHz overhead |
+
+JIT ON is currently slower than JIT OFF (-3.5% MIPS, -12.3% MHz). NoInlining method call
+overhead for ExecuteNextJit + DynamicMethod delegate dispatch cost for block.Execute()
+outweigh the benefit given the rarity of compilable blocks. JIT is disabled by default.

@@ -8,7 +8,7 @@ Developed through vibe coding with [Claude Code](https://docs.anthropic.com/en/d
 
 <a href="docs/screenshot_jit_off.png"><img src="docs/screenshot_jit_off.png" alt="NetBSD booting on Em68030" width="50%"></a>
 
-**Documentation**: [Instruction Set](docs/instruction_set.md) | [Hardware Platform](docs/hardware_platform.md)
+**Documentation**: [Getting Started](docs/getting_started.md) | [Instruction Set](docs/instruction_set.md) | [Hardware Platform](docs/hardware_platform.md)
 
 ## Features
 
@@ -37,7 +37,7 @@ Developed through vibe coding with [Claude Code](https://docs.anthropic.com/en/d
 - Warm reboot (RESET instruction) and halt detection
 
 ### Performance
-Achieves ~33 MIPS (~204 MHz estimated) on an Intel Core i7-13700. The status bar displays both approximate MHz (cycle-based) and MIPS (instruction throughput). Key optimizations:
+Achieves ~32.14 MIPS (~216.75 MHz estimated) on an Intel Core i7-13700. The status bar displays both approximate MHz (cycle-based) and MIPS (instruction throughput). Key optimizations:
 
 - 65,536-entry opcode delegate table
 - Specialized fast handlers for frequent instructions (MOVEQ, MOVE.L, Bcc.B, RTS, etc.)
@@ -53,7 +53,7 @@ An optional JIT compiler is available that compiles basic blocks of register-onl
 
 **Supported instructions**: MOVEQ, MOVE.L Dn→Dm, MOVE.L An→Dn, MOVEA.L Dn→An, MOVEA.L An→Am, CLR.L Dn, TST.L Dn, ADD/SUB/CMP.L Dn→Dm, AND/OR/EOR.L Dn→Dm, ADDQ/SUBQ.L Dn, ADDQ/SUBQ An, ASL/ASR/LSL/LSR.L #imm Dn, EXG Dn↔Dm/An↔Am/Dn↔An, SWAP Dn, EXT.W/EXT.L/EXTB.L Dn, NEG.L Dn, NOT.L Dn, Bcc.B, BRA.B, NOP
 
-**Current status**: This feature is experimental and **disabled by default**. In its current form, enabling JIT reduces overall emulation speed from ~33 MIPS to ~31 MIPS. The overhead of the JIT infrastructure outweighs the benefit of compiled blocks, because the supported instruction set (register-only operations) covers only a small fraction of real-world code.
+**Current status**: This feature is experimental and **disabled by default**. In its current form, enabling JIT reduces overall emulation speed from ~32 MIPS to ~31 MIPS. The NoInlining method call overhead for ExecuteNextJit + DynamicMethod delegate dispatch cost for block.Execute() outweigh the benefit of compiled blocks, because compilable blocks cover only a small fraction of real-world code.
 
 **Known issues and future improvements**:
 
