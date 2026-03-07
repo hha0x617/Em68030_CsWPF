@@ -19,7 +19,7 @@ public class ScsiDisk : IScsiTarget
     public void MountImage(string path)
     {
         UnmountImage();
-        _imageStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+        _imageStream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
         _totalSectors = _imageStream.Length / SectorSize;
         if (_totalSectors == 0 && _imageStream.Length > 0)
             _totalSectors = 1;
@@ -450,7 +450,7 @@ public class ScsiDisk : IScsiTarget
     /// <summary>
     /// Writes a valid NetBSD disklabel to sector 0 of a disk image file.
     /// For mvme68k: LABELSECTOR=0, LABELOFFSET=0, big-endian byte order.
-    /// Defines partition 'a' (FFS, entire disk) and 'c' (whole disk).
+    /// Defines partition 'a' (FFS, root), 'b' (swap/miniroot), and 'c' (whole disk).
     /// </summary>
     /// <summary>
     /// Write a NetBSD/mvme68k cpu_disklabel to sector 0 of a disk image.
@@ -492,19 +492,30 @@ public class ScsiDisk : IScsiTarget
         PutBE32(sector, 0x90, 1);                            // vid_cas = 1
         sector[0x94] = 1;                                    // vid_cal = 1
 
-        // Partitions 0-3 in vid_4[64] at offset 0x98
+        // Partitions 0-3 in vid_4[64] at offset 0x98 (each entry 16 bytes)
+        // Partition b: 64 MB swap (also used for miniroot during installation)
+        int swapSectors = Math.Min(131072, secperunit / 4); // 64 MB or 25% of disk
+        swapSectors = Math.Max(swapSectors, 16384);          // minimum 8 MB
+        int aSectors = secperunit - swapSectors;
+        int bOffset = aSectors;
+
         int pa = 0x98;
-        PutBE32(sector, pa + 0, (uint)secperunit);           // a: p_size
+        // a: root filesystem
+        PutBE32(sector, pa + 0, (uint)aSectors);             // a: p_size
         PutBE32(sector, pa + 4, 0);                          // a: p_offset
         PutBE32(sector, pa + 8, 1024);                       // a: p_fsize
         sector[pa + 12] = 7;                                 // a: FS_BSDFFS
         sector[pa + 13] = 8;                                 // a: p_frag
         PutBE16(sector, pa + 14, 16);                        // a: p_cpg
 
-        sector[0x98 + 16 + 12] = 1;                         // b: FS_SWAP
+        // b: swap (miniroot written here during installation Phase 1)
+        PutBE32(sector, pa + 16 + 0, (uint)swapSectors);     // b: p_size
+        PutBE32(sector, pa + 16 + 4, (uint)bOffset);         // b: p_offset
+        sector[pa + 16 + 12] = 1;                            // b: FS_SWAP
 
-        PutBE32(sector, 0x98 + 32 + 0, (uint)secperunit);   // c: p_size
-        PutBE32(sector, 0x98 + 32 + 4, 0);                  // c: p_offset
+        // c: whole disk
+        PutBE32(sector, pa + 32 + 0, (uint)secperunit);      // c: p_size
+        PutBE32(sector, pa + 32 + 4, 0);                     // c: p_offset
 
         PutBE32(sector, 0xF4, 8192);                         // sbsize
         SetLabelString(sector, 0xF8, 8, "MOTOROLA");         // vid_mot

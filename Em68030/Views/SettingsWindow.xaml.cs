@@ -23,11 +23,13 @@ public partial class SettingsWindow : Window
 
     private readonly List<DiskRowInfo> _diskRows = new();
     private int _desiredCdromId = 3;
+    private readonly Action? _unmountScsiDisks;
 
-    public SettingsWindow(EmulatorConfig config)
+    public SettingsWindow(EmulatorConfig config, Action? unmountScsiDisks = null)
     {
         InitializeComponent();
         Config = config;
+        _unmountScsiDisks = unmountScsiDisks;
         LoadSettings();
     }
 
@@ -45,6 +47,7 @@ public partial class SettingsWindow : Window
 
         ScsiCdromPathBox.Text = Config.Mvme147ScsiCdromPath;
         _desiredCdromId = Math.Clamp(Config.Mvme147ScsiCdromId, 0, 6);
+        BootPartitionBox.SelectedIndex = Math.Clamp(Config.Mvme147BootPartition, 0, 1);
         NetworkModeBox.SelectedIndex = Config.NetworkMode == "NAT" ? 1 : 0;
         NatGatewayIpBox.Text = Config.NatGatewayIp;
         NatGatewayMacBox.Text = Config.NatGatewayMac;
@@ -311,6 +314,7 @@ public partial class SettingsWindow : Window
 
         Config.Mvme147ScsiCdromPath = ScsiCdromPathBox.Text;
         Config.Mvme147ScsiCdromId = GetSelectedScsiId(ScsiCdromIdBox);
+        Config.Mvme147BootPartition = BootPartitionBox.SelectedIndex;
         Config.NetworkMode = NetworkModeBox.SelectedIndex == 1 ? "NAT" : "Virtual";
 
         // Validate and save gateway IP/MAC (fallback to default on invalid input)
@@ -442,6 +446,9 @@ public partial class SettingsWindow : Window
             return;
         }
 
+        // Unmount currently mounted disks so the file is not locked
+        _unmountScsiDisks?.Invoke();
+
         var dlg = new SaveFileDialog
         {
             Filter = "Disk Image (*.img)|*.img|All files (*.*)|*.*",
@@ -454,8 +461,10 @@ public partial class SettingsWindow : Window
             {
                 fs.SetLength(sizeBytes);
             }
-            // Write a valid NetBSD disklabel with partition 'a' defined
-            ScsiDisk.WriteNetBsdDisklabel(dlg.FileName);
+
+            bool isNetBsd = NewScsiImageTypeBox.SelectedIndex == 0;
+            if (isNetBsd)
+                ScsiDisk.WriteNetBsdDisklabel(dlg.FileName);
 
             // Add a new row with the created image, or set the last empty row
             var emptyRow = _diskRows.FirstOrDefault(r => string.IsNullOrEmpty(r.PathBox.Text));
@@ -469,7 +478,8 @@ public partial class SettingsWindow : Window
                 RefreshScsiIdOptions();
             }
 
-            MessageBox.Show($"Created {sizeMB}MB SCSI disk image with NetBSD disklabel: {dlg.FileName}",
+            string typeLabel = isNetBsd ? "NetBSD disklabel" : "empty";
+            MessageBox.Show($"Created {sizeMB}MB SCSI disk image ({typeLabel}): {dlg.FileName}",
                           "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }

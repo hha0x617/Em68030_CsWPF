@@ -189,7 +189,7 @@ public partial class MainWindow : Window
 
     private void Settings_Click(object sender, RoutedEventArgs e)
     {
-        var settings = new SettingsWindow(_vm.Config.Clone());
+        var settings = new SettingsWindow(_vm.Config.Clone(), () => _vm.UnmountAllScsiDisks());
         settings.Owner = this;
         if (settings.ShowDialog() == true)
         {

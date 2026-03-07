@@ -39,6 +39,9 @@ public class EmulatorConfig
     public string Mvme147ScsiCdromPath { get; set; } = "";
     public int Mvme147ScsiCdromId { get; set; } = 3;
 
+    // Boot partition: 0='a', 1='b', etc. Used by boot stub to tell kernel which partition is root.
+    public int Mvme147BootPartition { get; set; } = 0;
+
     // Network mode: "Virtual" (internal echo server) or "NAT" (host network via user-mode NAT)
     public string NetworkMode { get; set; } = "Virtual";
 

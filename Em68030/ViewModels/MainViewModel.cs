@@ -853,7 +853,7 @@ public class MainViewModel : INotifyPropertyChanged
         _memory.PokeLong(bootArgs + 8,  PCC_WDSC_ADDR);  // bootaddr (WDSC)
         _memory.PokeLong(bootArgs + 12, 0);              // bootctrllun (0)
         _memory.PokeLong(bootArgs + 16, bootdevlun);     // bootdevlun (SCSI ID)
-        _memory.PokeLong(bootArgs + 20, 0);              // bootpart (0 = 'a')
+        _memory.PokeLong(bootArgs + 20, (uint)_config.Mvme147BootPartition); // bootpart (0='a', 1='b', ...)
         _memory.PokeLong(bootArgs + 24, 0);              // esyms (0 = none)
 
         // Set CPU state - VBR=0 like real 147Bug
@@ -868,31 +868,21 @@ public class MainViewModel : INotifyPropertyChanged
     /// </summary>
     private static void EnsureCpuDisklabel(string path)
     {
-        bool needsLabel;
+        // Check if VID/CFG magic values are present. The kernel's readdisklabel()
+        // requires both magic1 (offset 0x3A) and magic2 (offset 0x13C) to equal
+        // DISKMAGIC (0x82564557). If either is missing, write a fresh disklabel.
+        const uint DISKMAGIC = 0x82564557;
         using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
         {
             if (fs.Length < 512) return;
-
-            // Check for VID magic ("NBSD") at offset 0
-            byte[] header = new byte[4];
-            fs.Read(header, 0, 4);
-            if (header[0] == (byte)'N' && header[1] == (byte)'B' &&
-                header[2] == (byte)'S' && header[3] == (byte)'D')
-                return;
-
-            // Check magic1 at offset 0x3A
-            fs.Seek(0x3A, SeekOrigin.Begin);
-            byte[] magic = new byte[4];
-            fs.Read(magic, 0, 4);
-            uint m = (uint)(magic[0] << 24 | magic[1] << 16 | magic[2] << 8 | magic[3]);
-            if (m == 0x82564557)
-                return;
-
-            needsLabel = true;
+            byte[] sector = new byte[512];
+            fs.Read(sector, 0, 512);
+            uint magic1 = (uint)(sector[0x3A] << 24 | sector[0x3B] << 16 | sector[0x3C] << 8 | sector[0x3D]);
+            uint magic2 = (uint)(sector[0x13C] << 24 | sector[0x13D] << 16 | sector[0x13E] << 8 | sector[0x13F]);
+            if (magic1 == DISKMAGIC && magic2 == DISKMAGIC)
+                return; // VID is valid
         }
-
-        if (needsLabel)
-            ScsiDisk.WriteNetBsdDisklabel(path);
+        ScsiDisk.WriteNetBsdDisklabel(path);
     }
 
     private void InitStackPointer()
@@ -1312,6 +1302,13 @@ public class MainViewModel : INotifyPropertyChanged
             if (bp.Enabled)
                 EnabledBreakpoints.Add(addr);
         }
+    }
+
+    public void UnmountAllScsiDisks()
+    {
+        foreach (var disk in _scsiDisks)
+            disk.UnmountImage();
+        _scsiCdrom?.UnmountImage();
     }
 
     public void ApplyConfig(EmulatorConfig newConfig)
