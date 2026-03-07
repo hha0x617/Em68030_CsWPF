@@ -17,15 +17,23 @@ public class CompiledBlock
     /// <summary>Total byte length of the block (for cache invalidation range).</summary>
     public int ByteLength { get; }
 
+    /// <summary>True if block has no memory access instructions (no bailout possible).</summary>
+    public bool RegisterOnly { get; }
+
     /// <summary>Compiled delegate. Takes CPU, returns next PC.</summary>
     public Func<MC68030, uint> Execute { get; }
 
-    public CompiledBlock(uint physicalAddress, int instructionCount, int totalCycles, int byteLength, Func<MC68030, uint> execute)
+    /// <summary>Tracks bailout frequency for blacklisting.</summary>
+    public ushort BailoutCount;
+
+    public CompiledBlock(uint physicalAddress, int instructionCount, int totalCycles, int byteLength,
+        bool registerOnly, Func<MC68030, uint> execute)
     {
         PhysicalAddress = physicalAddress;
         InstructionCount = instructionCount;
         TotalCycles = totalCycles;
         ByteLength = byteLength;
+        RegisterOnly = registerOnly;
         Execute = execute;
     }
 }

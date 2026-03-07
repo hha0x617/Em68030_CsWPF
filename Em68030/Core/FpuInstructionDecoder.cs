@@ -17,11 +17,7 @@ public class FpuInstructionDecoder
         _fpu = fpu;
     }
 
-    private void FpuTrace(string msg)
-    {
-        if (_cpu.FpuTraceEnabled && !_cpu.SupervisorMode)
-            _cpu.DiagnosticOutput?.Invoke(msg);
-    }
+    private bool FpuTraceActive => _cpu.FpuTraceEnabled && !_cpu.SupervisorMode;
 
     /// <summary>
     /// MC68882 FMOVECR constant ROM table.
@@ -103,7 +99,7 @@ public class FpuInstructionDecoder
     private void ExecuteGeneral(ushort opcode, int eaMode, int eaReg)
     {
         ushort cmdWord = _cpu.FetchWord();
-        FpuTrace($"[FPU] PC=${_fpu.FPIAR:X8} DECODE opcode={opcode:X4} cmdWord={cmdWord:X4} eaM={eaMode} eaR={eaReg}\n");
+        if (FpuTraceActive) _cpu.DiagnosticOutput?.Invoke($"[FPU] PC=${_fpu.FPIAR:X8} DECODE opcode={opcode:X4} cmdWord={cmdWord:X4} eaM={eaMode} eaR={eaReg}\n");
         int cmdType = (cmdWord >> 13) & 7;
 
         switch (cmdType)
@@ -132,7 +128,7 @@ public class FpuInstructionDecoder
                     double constant = GetFmovecrConstant(op);
                     _fpu.FP[dstReg] = constant;
                     _fpu.SetConditionCodes(constant);
-                    FpuTrace($"[FPU] PC=${_fpu.FPIAR:X8} FMOVECR #{op:X2} => FP{dstReg}={constant}\n");
+                    if (FpuTraceActive) _cpu.DiagnosticOutput?.Invoke($"[FPU] PC=${_fpu.FPIAR:X8} FMOVECR #{op:X2} => FP{dstReg}={constant}\n");
                     break;
                 }
 
@@ -147,7 +143,7 @@ public class FpuInstructionDecoder
                 int srcReg = (cmdWord >> 7) & 7;
                 double val = _fpu.FP[srcReg];
                 _fpu.SetConditionCodes(val);
-                FpuTrace($"[FPU] PC=${_fpu.FPIAR:X8} FMOVE.{Fpu.FormatName(dstFormat)} FP{srcReg}={val} => EA(m{eaMode}r{eaReg})\n");
+                if (FpuTraceActive) _cpu.DiagnosticOutput?.Invoke($"[FPU] PC=${_fpu.FPIAR:X8} FMOVE.{Fpu.FormatName(dstFormat)} FP{srcReg}={val} => EA(m{eaMode}r{eaReg})\n");
                 WriteEAFloat(eaMode, eaReg, dstFormat, val);
                 break;
             }
@@ -497,12 +493,12 @@ public class FpuInstructionDecoder
                 break;
             case 0x38: // FCMP
                 _fpu.SetConditionCodes(dst - src);
-                FpuTrace($"[FPU] PC=${_fpu.FPIAR:X8} FCMP FP{dstReg}={dst} - src={src} => diff={dst - src} CC={(_fpu.FPSR >> 24) & 0xF:X}\n");
+                if (FpuTraceActive) _cpu.DiagnosticOutput?.Invoke($"[FPU] PC=${_fpu.FPIAR:X8} FCMP FP{dstReg}={dst} - src={src} => diff={dst - src} CC={(_fpu.FPSR >> 24) & 0xF:X}\n");
                 return; // Don't write result
 
             case 0x3A: // FTST
                 _fpu.SetConditionCodes(src);
-                FpuTrace($"[FPU] PC=${_fpu.FPIAR:X8} FTST src={src} CC={(_fpu.FPSR >> 24) & 0xF:X}\n");
+                if (FpuTraceActive) _cpu.DiagnosticOutput?.Invoke($"[FPU] PC=${_fpu.FPIAR:X8} FTST src={src} CC={(_fpu.FPSR >> 24) & 0xF:X}\n");
                 return; // Don't write result
 
             default:
@@ -528,7 +524,7 @@ public class FpuInstructionDecoder
 
         _fpu.FP[dstReg] = result;
         _fpu.SetConditionCodes(result);
-        FpuTrace($"[FPU] PC=${_fpu.FPIAR:X8} op={op:X2} FP{dstReg}: src={src} dst={dst} => {result}\n");
+        if (FpuTraceActive) _cpu.DiagnosticOutput?.Invoke($"[FPU] PC=${_fpu.FPIAR:X8} op={op:X2} FP{dstReg}: src={src} dst={dst} => {result}\n");
     }
 
     private void ExecuteFBcc(ushort opcode, bool longDisp)
@@ -547,7 +543,7 @@ public class FpuInstructionDecoder
         }
 
         bool taken = _fpu.EvaluateCondition(condition);
-        FpuTrace($"[FPU] PC=${_fpu.FPIAR:X8} FBcc cond={condition:X2} CC={(_fpu.FPSR >> 24) & 0xF:X} taken={taken}\n");
+        if (FpuTraceActive) _cpu.DiagnosticOutput?.Invoke($"[FPU] PC=${_fpu.FPIAR:X8} FBcc cond={condition:X2} CC={(_fpu.FPSR >> 24) & 0xF:X} taken={taken}\n");
         if (taken)
         {
             _cpu.PC = (uint)(_cpu.PC - (longDisp ? 4 : 2) + disp);

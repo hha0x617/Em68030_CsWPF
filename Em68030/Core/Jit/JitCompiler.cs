@@ -33,6 +33,16 @@ public class JitCompiler
     private static readonly MethodInfo MiAluLogicalShiftRight =
         typeof(Alu).GetMethod("LogicalShiftRight", new[] { typeof(uint), typeof(int) })!;
 
+    // Phase 2: reflection for bailout support
+    private static readonly FieldInfo FiJitExecutedCount =
+        typeof(MC68030).GetField("_jitExecutedCount", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    private static readonly FieldInfo FiJitExecutedCycles =
+        typeof(MC68030).GetField("_jitExecutedCycles", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    private static readonly FieldInfo FiJitReadResult =
+        typeof(MC68030).GetField("_jitReadResult", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    private static readonly MethodInfo MiTryReadLongCached =
+        typeof(MC68030).GetMethod("TryReadLongCached", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
     /// <summary>Maximum instructions per block.</summary>
     private const int MaxBlockLength = 64;
     /// <summary>Minimum instructions per block (skip compiling very short blocks).</summary>
@@ -42,11 +52,15 @@ public class JitCompiler
     /// Try to compile a basic block starting at startPC / startPhysAddr.
     /// Returns null if the first instruction is not compilable.
     /// </summary>
+    // Scanned instruction data
+    private record struct ScannedInsn(ushort Opcode, ushort ExtWord, InsnKind Kind, byte ByteLength);
+
     public CompiledBlock? TryCompile(MC68030 cpu, uint startPC, uint startPhysAddr)
     {
-        // Phase 1: Scan forward to find the extent of the basic block.
-        var opcodes = new List<ushort>();
+        // Phase 1: Scan forward
+        var insns = new List<ScannedInsn>();
         uint scanPA = startPhysAddr;
+        int totalBytes = 0;
 
         for (int i = 0; i < MaxBlockLength; i++)
         {
@@ -58,70 +72,112 @@ public class JitCompiler
             if (kind == InsnKind.Unsupported)
                 break;
 
-            // Backward branches must NOT be included in JIT blocks.
-            // The MainViewModel loop detector checks for same-PC after each ExecuteNextFast() call.
-            // If a JIT block contains a backward branch to its own start, the block returns the
-            // same PC every time, causing false infinite-loop detection on legitimate polling loops.
-            // Leaving backward branches to the interpreter ensures PC varies per call.
-            if (kind == InsnKind.Branch || kind == InsnKind.BranchAlways)
+            ushort extWord = 0;
+            byte byteLen = 2;
+            bool isMultiWord = kind is InsnKind.LeaD16AnAr or InsnKind.LeaD8AnXnAr
+                            or InsnKind.BranchW or InsnKind.BranchAlwaysW
+                            or InsnKind.MoveLD16AnDm or InsnKind.MoveLDmD16An;
+            if (isMultiWord)
             {
-                int disp8 = (sbyte)(opcode & 0xFF);
-                // PC after fetch = startPC + (opcodes.Count * 2) + 2
-                // target = PC_after_fetch + disp8
-                uint pcAfterFetch = startPC + (uint)(opcodes.Count * 2) + 2;
-                uint target = (uint)(pcAfterFetch + disp8);
-                if (target <= startPC)
-                    break; // Backward branch — terminate block before it (not included)
-
-                opcodes.Add(opcode);
-                scanPA += 2;
-                break; // Forward branch — include and terminate
+                try { extWord = cpu.Memory.ReadWord(scanPA + 2); }
+                catch { break; }
+                byteLen = 4;
+                if (kind == InsnKind.LeaD8AnXnAr && (extWord & 0x0100) != 0)
+                    break; // full extension word not supported
             }
 
-            opcodes.Add(opcode);
-            scanPA += 2;
+            // RTS terminates the block
+            if (kind == InsnKind.Rts)
+            {
+                insns.Add(new(opcode, extWord, kind, byteLen));
+                totalBytes += byteLen;
+                break;
+            }
+
+            bool isBranch = kind is InsnKind.Branch or InsnKind.BranchAlways
+                         or InsnKind.BranchW or InsnKind.BranchAlwaysW;
+            if (isBranch)
+            {
+                uint pcAfterFetch = startPC + (uint)totalBytes + 2;
+                int disp = kind is InsnKind.BranchW or InsnKind.BranchAlwaysW
+                    ? (short)extWord
+                    : (sbyte)(opcode & 0xFF);
+                uint target = (uint)(pcAfterFetch + disp);
+                if (target <= startPC)
+                    break;
+
+                insns.Add(new(opcode, extWord, kind, byteLen));
+                totalBytes += byteLen;
+                break;
+            }
+
+            insns.Add(new(opcode, extWord, kind, byteLen));
+            totalBytes += byteLen;
+            scanPA += byteLen;
         }
 
-        if (opcodes.Count == 0)
+        if (insns.Count == 0)
             return null;
 
-        // Phase 2: Dead flag elimination — find which instructions need flag updates
-        var needsFlags = new bool[opcodes.Count];
-        // Last instruction always needs flags (successor may read them)
-        needsFlags[opcodes.Count - 1] = true;
-        // Walk backwards: if an instruction overwrites all of NZVC, earlier ones don't need to set them
+        // Phase 2: Dead flag elimination
+        var needsFlags = new bool[insns.Count];
+        needsFlags[insns.Count - 1] = true;
         bool flagsLive = true;
-        for (int i = opcodes.Count - 1; i >= 0; i--)
+        for (int i = insns.Count - 1; i >= 0; i--)
         {
-            var kind = Classify(opcodes[i]);
-            if (kind == InsnKind.Branch || kind == InsnKind.BranchAlways)
+            var kind = insns[i].Kind;
+            if (kind is InsnKind.Branch or InsnKind.BranchAlways
+                     or InsnKind.BranchW or InsnKind.BranchAlwaysW)
             {
-                // Branches read flags (Bcc) or don't touch them (BRA); flags are live before a Bcc
-                needsFlags[i] = false; // branch itself doesn't set flags
-                flagsLive = kind == InsnKind.Branch; // Bcc reads flags, so prior insn must set them
+                needsFlags[i] = false;
+                flagsLive = kind is InsnKind.Branch or InsnKind.BranchW;
             }
-            else if (kind == InsnKind.Nop || kind == InsnKind.AddqAn || kind == InsnKind.SubqAn
-                     || kind == InsnKind.MoveaLDnAn || kind == InsnKind.MoveaLAnAm
-                     || kind == InsnKind.ExgDnDm || kind == InsnKind.ExgAnAm || kind == InsnKind.ExgDnAn)
+            else if (kind is InsnKind.Nop or InsnKind.AddqAn or InsnKind.SubqAn
+                     or InsnKind.MoveaLDnAn or InsnKind.MoveaLAnAm
+                     or InsnKind.ExgDnDm or InsnKind.ExgAnAm or InsnKind.ExgDnAn
+                     or InsnKind.LeaAnAr or InsnKind.LeaD16AnAr or InsnKind.LeaD8AnXnAr
+                     or InsnKind.MoveLDmIndAn or InsnKind.MoveLDmD16An or InsnKind.Rts)
             {
-                needsFlags[i] = false; // NOP/ADDQ An/SUBQ An/MOVEA/EXG don't touch flags
+                needsFlags[i] = false;
+            }
+            else if (kind == InsnKind.BtstDnDm)
+            {
+                needsFlags[i] = flagsLive;
+                // BTST only changes Z — don't kill prior flag setters
             }
             else
             {
-                // Arithmetic/logic/move: sets NZVC
                 needsFlags[i] = flagsLive;
-                // These instructions overwrite NZVC, so unless they're a CMP (which is flagsOnly),
-                // prior flag-setting is dead
                 flagsLive = false;
             }
         }
-        // But: if the very first position has flagsLive=false from the backward pass,
-        // that's fine — it means a later instruction will overwrite.
 
-        // Phase 3: Emit IL
-        int byteLen = opcodes.Count * 2;
+        // Phase 3: Compute cumulative cycles, instrPCs, RegisterOnly
+        int byteLen2 = totalBytes;
         uint blockStartPC = startPC;
 
+        int totalCyclesComputed = 0;
+        var cumulativeCycles = new int[insns.Count + 1];
+        var instrPCs = new uint[insns.Count];
+        bool registerOnly = true;
+        {
+            uint instrPC = startPC;
+            for (int i = 0; i < insns.Count; i++)
+            {
+                cumulativeCycles[i] = totalCyclesComputed;
+                instrPCs[i] = instrPC;
+                totalCyclesComputed += InstructionDecoder.GetCycles(insns[i].Opcode);
+                instrPC += insns[i].ByteLength;
+                var k = insns[i].Kind;
+                if (k is InsnKind.MoveLIndAnDm or InsnKind.MoveLPostIncAnDm
+                    or InsnKind.MoveLDmIndAn or InsnKind.MoveLD16AnDm
+                    or InsnKind.MoveLDmD16An or InsnKind.Rts)
+                    registerOnly = false;
+            }
+            cumulativeCycles[insns.Count] = totalCyclesComputed;
+        }
+
+        // Phase 4: Emit IL
         var dm = new DynamicMethod(
             $"JitBlock_{startPhysAddr:X8}",
             typeof(uint),                    // return type = next PC
@@ -136,6 +192,7 @@ public class JitCompiler
         var locCCR = il.DeclareLocal(typeof(byte));    // local1: current CCR
         var locTmp = il.DeclareLocal(typeof(uint));    // local2: temp
         var locCcrOut = il.DeclareLocal(typeof(byte)); // local3: ccr output from Alu
+        var locAddr = il.DeclareLocal(typeof(uint));   // local4: memory address (Phase 2)
 
         // Load cpu.D array into local
         il.Emit(OpCodes.Ldarg_0);
@@ -148,11 +205,13 @@ public class JitCompiler
         il.Emit(OpCodes.Stloc, locCCR);
 
         uint pc = blockStartPC;
-        for (int i = 0; i < opcodes.Count; i++)
+        for (int i = 0; i < insns.Count; i++)
         {
-            pc += 2; // PC advances past opcode (same as FetchWord)
-            ushort opcode = opcodes[i];
-            var kind = Classify(opcode);
+            var insn = insns[i];
+            pc += insn.ByteLength;
+            ushort opcode = insn.Opcode;
+            ushort extWord = insn.ExtWord;
+            var kind = insn.Kind;
 
             switch (kind)
             {
@@ -244,11 +303,116 @@ public class JitCompiler
                 case InsnKind.NotLDn:
                     EmitNotLDn(il, locD, locCCR, locTmp, opcode, needsFlags[i]);
                     break;
+                // Phase 1A: LEA
+                case InsnKind.LeaAnAr:
+                    EmitLeaAnAr(il, opcode);
+                    break;
+                case InsnKind.LeaD16AnAr:
+                    EmitLeaD16AnAr(il, opcode, extWord);
+                    break;
+                case InsnKind.LeaD8AnXnAr:
+                    EmitLeaD8AnXnAr(il, locD, locTmp, opcode, extWord);
+                    break;
+                // Phase 1B: Bcc.W/BRA.W
+                case InsnKind.BranchAlwaysW:
+                {
+                    short disp16 = (short)extWord;
+                    uint pcAfterOpcode = pc - 2; // displacement relative to opcode_addr + 2
+                    pc = (uint)(pcAfterOpcode + disp16);
+                    // Fall through to return with updated pc (like BRA.B)
+                    break;
+                }
+                case InsnKind.BranchW:
+                {
+                    int cond = (opcode >> 8) & 0xF;
+                    short disp16 = (short)extWord;
+                    uint pcAfterOpcode = pc - 2;
+                    uint targetPC = (uint)(pcAfterOpcode + disp16);
+
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(OpCodes.Ldloc, locCCR);
+                    il.Emit(OpCodes.Callvirt, MiSetCCR);
+
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(OpCodes.Ldc_I4, cond);
+                    il.Emit(OpCodes.Callvirt, MiEvalCond);
+
+                    var lblNotTaken = il.DefineLabel();
+                    il.Emit(OpCodes.Brfalse, lblNotTaken);
+
+                    if (!registerOnly)
+                        EmitSetFullExecution(il, insns.Count, totalCyclesComputed);
+                    il.Emit(OpCodes.Ldc_I4, (int)targetPC);
+                    il.Emit(OpCodes.Conv_U4);
+                    il.Emit(OpCodes.Ret);
+
+                    il.MarkLabel(lblNotTaken);
+                    break;
+                }
+                // Phase 1C: MULU/MULS
+                case InsnKind.MuluWDnDm:
+                    EmitMuluMuls(il, locD, locCCR, locTmp, opcode, needsFlags[i], signed: false);
+                    break;
+                case InsnKind.MulsWDnDm:
+                    EmitMuluMuls(il, locD, locCCR, locTmp, opcode, needsFlags[i], signed: true);
+                    break;
+                // Phase 1D: BTST
+                case InsnKind.BtstDnDm:
+                    EmitBtstDnDm(il, locD, locCCR, opcode, needsFlags[i]);
+                    break;
+                // Phase 1E: Byte/Word operations
+                case InsnKind.AddBDnDm: case InsnKind.AddWDnDm:
+                    EmitAluBWDnDm(il, locD, locCCR, locTmp, opcode, needsFlags[i],
+                        kind == InsnKind.AddBDnDm ? 0 : 1, isAdd: true);
+                    break;
+                case InsnKind.SubBDnDm: case InsnKind.SubWDnDm:
+                    EmitAluBWDnDm(il, locD, locCCR, locTmp, opcode, needsFlags[i],
+                        kind == InsnKind.SubBDnDm ? 0 : 1, isAdd: false);
+                    break;
+                case InsnKind.CmpBDnDm: case InsnKind.CmpWDnDm:
+                    EmitCmpBWDnDm(il, locD, locCCR, locTmp, opcode,
+                        kind == InsnKind.CmpBDnDm ? 0 : 1);
+                    break;
+                case InsnKind.AndBDnDm: case InsnKind.AndWDnDm:
+                    EmitLogicBWDnDm(il, locD, locCCR, locTmp, opcode, needsFlags[i],
+                        kind == InsnKind.AndBDnDm ? 0 : 1, LogicOp.And);
+                    break;
+                case InsnKind.OrBDnDm: case InsnKind.OrWDnDm:
+                    EmitLogicBWDnDm(il, locD, locCCR, locTmp, opcode, needsFlags[i],
+                        kind == InsnKind.OrBDnDm ? 0 : 1, LogicOp.Or);
+                    break;
+                case InsnKind.EorBDnDm: case InsnKind.EorWDnDm:
+                    EmitLogicBWDnDm(il, locD, locCCR, locTmp, opcode, needsFlags[i],
+                        kind == InsnKind.EorBDnDm ? 0 : 1, LogicOp.Eor);
+                    break;
+                case InsnKind.AddqBDn: case InsnKind.AddqWDn:
+                    EmitAddqSubqBWDn(il, locD, locCCR, locTmp, opcode, needsFlags[i],
+                        kind == InsnKind.AddqBDn ? 0 : 1, isAdd: true);
+                    break;
+                case InsnKind.SubqBDn: case InsnKind.SubqWDn:
+                    EmitAddqSubqBWDn(il, locD, locCCR, locTmp, opcode, needsFlags[i],
+                        kind == InsnKind.SubqBDn ? 0 : 1, isAdd: false);
+                    break;
+                case InsnKind.ClrBDn: case InsnKind.ClrWDn:
+                    EmitClrBWDn(il, locD, locCCR, opcode, needsFlags[i],
+                        kind == InsnKind.ClrBDn ? 0 : 1);
+                    break;
+                case InsnKind.TstBDn: case InsnKind.TstWDn:
+                    EmitTstBWDn(il, locD, locCCR, opcode, needsFlags[i],
+                        kind == InsnKind.TstBDn ? 0 : 1);
+                    break;
+                case InsnKind.NegBDn: case InsnKind.NegWDn:
+                    EmitNegBWDn(il, locD, locCCR, locTmp, opcode, needsFlags[i],
+                        kind == InsnKind.NegBDn ? 0 : 1);
+                    break;
+                case InsnKind.NotBDn: case InsnKind.NotWDn:
+                    EmitNotBWDn(il, locD, locCCR, locTmp, opcode, needsFlags[i],
+                        kind == InsnKind.NotBDn ? 0 : 1);
+                    break;
                 case InsnKind.BranchAlways:
                 {
                     int disp8 = (sbyte)(opcode & 0xFF);
                     pc = (uint)(pc + disp8);
-                    // BRA.B: just fall through to return with updated pc
                     break;
                 }
                 case InsnKind.Branch:
@@ -257,12 +421,10 @@ public class JitCompiler
                     int disp8 = (sbyte)(opcode & 0xFF);
                     uint targetPC = (uint)(pc + disp8);
 
-                    // Write back CCR before evaluating condition
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldloc, locCCR);
                     il.Emit(OpCodes.Callvirt, MiSetCCR);
 
-                    // if (cpu.EvaluateCondition(cond)) return targetPC; else return pc;
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldc_I4, cond);
                     il.Emit(OpCodes.Callvirt, MiEvalCond);
@@ -270,42 +432,89 @@ public class JitCompiler
                     var lblNotTaken = il.DefineLabel();
                     il.Emit(OpCodes.Brfalse, lblNotTaken);
 
-                    // Taken: return targetPC
+                    if (!registerOnly)
+                        EmitSetFullExecution(il, insns.Count, totalCyclesComputed);
                     il.Emit(OpCodes.Ldc_I4, (int)targetPC);
                     il.Emit(OpCodes.Conv_U4);
                     il.Emit(OpCodes.Ret);
 
-                    // Not taken: continue to return fallthrough pc
                     il.MarkLabel(lblNotTaken);
                     break;
                 }
                 case InsnKind.Nop:
-                    // Nothing to emit
                     break;
+
+                // Phase 2: Memory access instructions
+                case InsnKind.MoveLIndAnDm:
+                {
+                    int srcReg = opcode & 7;
+                    int dstReg = (opcode >> 9) & 7;
+                    EmitMemoryRead(il, locD, locCCR, locTmp, locAddr, srcReg, dstReg,
+                        needsFlags[i], i, cumulativeCycles[i], instrPCs[i], addDisp: 0, postInc: false);
+                    break;
+                }
+                case InsnKind.MoveLPostIncAnDm:
+                {
+                    int srcReg = opcode & 7;
+                    int dstReg = (opcode >> 9) & 7;
+                    EmitMemoryRead(il, locD, locCCR, locTmp, locAddr, srcReg, dstReg,
+                        needsFlags[i], i, cumulativeCycles[i], instrPCs[i], addDisp: 0, postInc: true);
+                    break;
+                }
+                case InsnKind.MoveLD16AnDm:
+                {
+                    int srcReg = opcode & 7;
+                    int dstReg = (opcode >> 9) & 7;
+                    short disp16 = (short)extWord;
+                    EmitMemoryRead(il, locD, locCCR, locTmp, locAddr, srcReg, dstReg,
+                        needsFlags[i], i, cumulativeCycles[i], instrPCs[i], addDisp: disp16, postInc: false);
+                    break;
+                }
+                case InsnKind.MoveLDmIndAn:
+                case InsnKind.MoveLDmD16An:
+                {
+                    // Writes always bail out (no write page cache)
+                    EmitAlwaysBailout(il, locCCR, i, cumulativeCycles[i], instrPCs[i]);
+                    break;
+                }
+                case InsnKind.Rts:
+                {
+                    // RTS: PC = ReadLong(A7); A7 += 4
+                    EmitRts(il, locCCR, locAddr, i, cumulativeCycles[i], instrPCs[i],
+                        insns.Count, totalCyclesComputed);
+                    // RTS terminates block — skip normal exit below
+                    goto emitDelegate;
+                }
             }
         }
 
-        // Write back CCR to cpu (unless last instruction was Bcc which already wrote it back)
-        var lastKind = Classify(opcodes[^1]);
-        if (lastKind != InsnKind.Branch)
+        // Write back CCR (unless last was Bcc which already wrote it)
+        var lastKind = insns[^1].Kind;
+        if (lastKind is not (InsnKind.Branch or InsnKind.BranchW))
         {
             il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Ldloc, locCCR);
             il.Emit(OpCodes.Callvirt, MiSetCCR);
         }
 
-        // Return next PC
+        // For non-register-only blocks, set bailout side-channel to full execution
+        if (!registerOnly)
+        {
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldc_I4, insns.Count);
+            il.Emit(OpCodes.Stfld, FiJitExecutedCount);
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldc_I4, totalCyclesComputed);
+            il.Emit(OpCodes.Stfld, FiJitExecutedCycles);
+        }
+
         il.Emit(OpCodes.Ldc_I4, (int)pc);
         il.Emit(OpCodes.Conv_U4);
         il.Emit(OpCodes.Ret);
 
-        // Compute total cycles from cycle table
-        int totalCycles = 0;
-        foreach (var op in opcodes)
-            totalCycles += InstructionDecoder.GetCycles(op);
-
+    emitDelegate:
         var del = (Func<MC68030, uint>)dm.CreateDelegate(typeof(Func<MC68030, uint>));
-        return new CompiledBlock(startPhysAddr, opcodes.Count, totalCycles, byteLen, del);
+        return new CompiledBlock(startPhysAddr, insns.Count, totalCyclesComputed, byteLen2, registerOnly, del);
     }
 
     // ================================================================
@@ -315,134 +524,179 @@ public class JitCompiler
     private enum InsnKind
     {
         Unsupported,
-        Moveq,          // MOVEQ #imm,Dn
-        MoveLDnDm,      // MOVE.L Dn,Dm
-        AddLDnDm,       // ADD.L Dn,Dm (EA→Dn form)
-        SubLDnDm,       // SUB.L Dn,Dm (EA→Dn form)
-        CmpLDnDm,       // CMP.L Dn,Dm
-        AndLDnDm,       // AND.L Dn,Dm (EA→Dn form)
-        OrLDnDm,        // OR.L Dn,Dm (EA→Dn form)
-        EorLDnDm,       // EOR.L Dn,Dm (Dn→EA form, EA=Dn)
-        BranchAlways,   // BRA.B disp8
-        Branch,         // Bcc.B disp8
-        Nop,            // NOP (0x4E71)
-        AddqLDn,        // ADDQ.L #imm, Dn
-        SubqLDn,        // SUBQ.L #imm, Dn
-        AddqAn,         // ADDQ #imm, An (no flags)
-        SubqAn,         // SUBQ #imm, An (no flags)
-        ClrLDn,         // CLR.L Dn (D[reg]=0, Z=1)
-        TstLDn,         // TST.L Dn (test D[reg], set NZ)
-        MoveLAnDn,      // MOVE.L An,Dn (D[dst]=A[src], set NZ)
-        MoveaLDnAn,     // MOVEA.L Dn,An (A[dst]=D[src], no flags)
-        MoveaLAnAm,     // MOVEA.L An,Am (A[dst]=A[src], no flags)
-        AslImmLDn,      // ASL.L #imm, Dn
-        AsrImmLDn,      // ASR.L #imm, Dn
-        LslImmLDn,      // LSL.L #imm, Dn
-        LsrImmLDn,      // LSR.L #imm, Dn
-        ExgDnDm,        // EXG Dn,Dm
-        ExgAnAm,        // EXG An,Am
-        ExgDnAn,        // EXG Dn,An
-        SwapDn,         // SWAP Dn
-        ExtWDn,         // EXT.W Dn
-        ExtLDn,         // EXT.L Dn
-        ExtbLDn,        // EXTB.L Dn
-        NegLDn,         // NEG.L Dn
-        NotLDn,         // NOT.L Dn
+        Moveq, MoveLDnDm,
+        AddLDnDm, SubLDnDm, CmpLDnDm, AndLDnDm, OrLDnDm, EorLDnDm,
+        BranchAlways, Branch, Nop,
+        AddqLDn, SubqLDn, AddqAn, SubqAn,
+        ClrLDn, TstLDn, MoveLAnDn, MoveaLDnAn, MoveaLAnAm,
+        AslImmLDn, AsrImmLDn, LslImmLDn, LsrImmLDn,
+        ExgDnDm, ExgAnAm, ExgDnAn,
+        SwapDn, ExtWDn, ExtLDn, ExtbLDn, NegLDn, NotLDn,
+        // Phase 1A: LEA
+        LeaAnAr, LeaD16AnAr, LeaD8AnXnAr,
+        // Phase 1B: 16-bit displacement branches
+        BranchW, BranchAlwaysW,
+        // Phase 1C: Multiply
+        MuluWDnDm, MulsWDnDm,
+        // Phase 1D: Bit test
+        BtstDnDm,
+        // Phase 1E: Byte/Word variants
+        AddBDnDm, AddWDnDm, SubBDnDm, SubWDnDm,
+        CmpBDnDm, CmpWDnDm,
+        AndBDnDm, AndWDnDm, OrBDnDm, OrWDnDm, EorBDnDm, EorWDnDm,
+        AddqBDn, AddqWDn, SubqBDn, SubqWDn,
+        ClrBDn, ClrWDn, TstBDn, TstWDn,
+        NegBDn, NegWDn, NotBDn, NotWDn,
+        // Phase 2: Memory access instructions
+        MoveLIndAnDm, MoveLPostIncAnDm, MoveLDmIndAn,
+        MoveLD16AnDm, MoveLDmD16An, Rts,
     }
 
     private static InsnKind Classify(ushort opcode)
     {
-        // NOP: 0x4E71
         if (opcode == 0x4E71)
             return InsnKind.Nop;
+        if (opcode == 0x4E75)
+            return InsnKind.Rts;
 
         int group = (opcode >> 12) & 0xF;
 
         switch (group)
         {
-            case 0x7: // MOVEQ: 0111 rrr 0 iiiiiiii
+            case 0x0: // BTST Dn,Dm
+            {
+                int eaMode = (opcode >> 3) & 7;
+                if ((opcode & 0x01C0) == 0x0100 && eaMode == 0)
+                    return InsnKind.BtstDnDm;
+                break;
+            }
+
+            case 0x7:
                 if ((opcode & 0x0100) == 0)
                     return InsnKind.Moveq;
                 break;
 
-            case 0x2: // MOVE.L — register-only variants
+            case 0x2:
             {
                 int srcMode = (opcode >> 3) & 7;
                 int dstMode = (opcode >> 6) & 7;
-                if (srcMode == 0 && dstMode == 0)
-                    return InsnKind.MoveLDnDm;
-                if (srcMode == 1 && dstMode == 0)
-                    return InsnKind.MoveLAnDn;
-                if (srcMode == 0 && dstMode == 1)
-                    return InsnKind.MoveaLDnAn;
-                if (srcMode == 1 && dstMode == 1)
-                    return InsnKind.MoveaLAnAm;
+                if (srcMode == 0 && dstMode == 0) return InsnKind.MoveLDnDm;
+                if (srcMode == 1 && dstMode == 0) return InsnKind.MoveLAnDn;
+                if (srcMode == 0 && dstMode == 1) return InsnKind.MoveaLDnAn;
+                if (srcMode == 1 && dstMode == 1) return InsnKind.MoveaLAnAm;
+                // Phase 2: Memory access MOVE.L
+                if (srcMode == 2 && dstMode == 0) return InsnKind.MoveLIndAnDm;
+                if (srcMode == 3 && dstMode == 0) return InsnKind.MoveLPostIncAnDm;
+                if (srcMode == 0 && dstMode == 2) return InsnKind.MoveLDmIndAn;
+                if (srcMode == 5 && dstMode == 0) return InsnKind.MoveLD16AnDm;
+                if (srcMode == 0 && dstMode == 5) return InsnKind.MoveLDmD16An;
                 break;
             }
 
-            case 0x4: // CLR.L Dn / TST.L Dn / SWAP / EXT / NEG / NOT
+            case 0x4:
             {
                 int eaMode = (opcode >> 3) & 7;
-                if ((opcode & 0xFFC0) == 0x4280 && eaMode == 0)
-                    return InsnKind.ClrLDn;
-                if ((opcode & 0xFFC0) == 0x4A80 && eaMode == 0)
-                    return InsnKind.TstLDn;
-                if ((opcode & 0xFFF8) == 0x4840)
-                    return InsnKind.SwapDn;
-                if ((opcode & 0xFFF8) == 0x4880)
-                    return InsnKind.ExtWDn;
-                if ((opcode & 0xFFF8) == 0x48C0)
-                    return InsnKind.ExtLDn;
-                if ((opcode & 0xFFF8) == 0x49C0)
-                    return InsnKind.ExtbLDn;
-                if ((opcode & 0xFFC0) == 0x4480 && eaMode == 0)
-                    return InsnKind.NegLDn;
-                if ((opcode & 0xFFC0) == 0x4680 && eaMode == 0)
-                    return InsnKind.NotLDn;
+                // LEA: 0100 rrr 111 mmm rrr
+                if ((opcode & 0xF1C0) == 0x41C0)
+                {
+                    if (eaMode == 2) return InsnKind.LeaAnAr;
+                    if (eaMode == 5) return InsnKind.LeaD16AnAr;
+                    if (eaMode == 6) return InsnKind.LeaD8AnXnAr;
+                    // Don't break — eaMode=0 overlaps with EXTB.L etc.
+                }
+                // CLR: size in bits 7-6
+                if ((opcode & 0xFF00) == 0x4200 && eaMode == 0)
+                {
+                    int sz = (opcode >> 6) & 3;
+                    if (sz == 0) return InsnKind.ClrBDn;
+                    if (sz == 1) return InsnKind.ClrWDn;
+                    if (sz == 2) return InsnKind.ClrLDn;
+                }
+                // TST: size in bits 7-6
+                if ((opcode & 0xFF00) == 0x4A00 && eaMode == 0)
+                {
+                    int sz = (opcode >> 6) & 3;
+                    if (sz == 0) return InsnKind.TstBDn;
+                    if (sz == 1) return InsnKind.TstWDn;
+                    if (sz == 2) return InsnKind.TstLDn;
+                }
+                if ((opcode & 0xFFF8) == 0x4840) return InsnKind.SwapDn;
+                if ((opcode & 0xFFF8) == 0x4880) return InsnKind.ExtWDn;
+                if ((opcode & 0xFFF8) == 0x48C0) return InsnKind.ExtLDn;
+                if ((opcode & 0xFFF8) == 0x49C0) return InsnKind.ExtbLDn;
+                // NEG: size in bits 7-6
+                if ((opcode & 0xFF00) == 0x4400 && eaMode == 0)
+                {
+                    int sz = (opcode >> 6) & 3;
+                    if (sz == 0) return InsnKind.NegBDn;
+                    if (sz == 1) return InsnKind.NegWDn;
+                    if (sz == 2) return InsnKind.NegLDn;
+                }
+                // NOT: size in bits 7-6
+                if ((opcode & 0xFF00) == 0x4600 && eaMode == 0)
+                {
+                    int sz = (opcode >> 6) & 3;
+                    if (sz == 0) return InsnKind.NotBDn;
+                    if (sz == 1) return InsnKind.NotWDn;
+                    if (sz == 2) return InsnKind.NotLDn;
+                }
                 break;
             }
 
-            case 0xD: // ADD: 1101 ddd ooo mmm rrr
-            {
-                int opMode = (opcode >> 6) & 7;
-                int eaMode = (opcode >> 3) & 7;
-                // ADD.L EA,Dn: opMode=010 (=2), EA=Dn (eaMode=0)
-                if (opMode == 2 && eaMode == 0)
-                    return InsnKind.AddLDnDm;
-                break;
-            }
-
-            case 0x9: // SUB: 1001 ddd ooo mmm rrr
-            {
-                int opMode = (opcode >> 6) & 7;
-                int eaMode = (opcode >> 3) & 7;
-                // SUB.L EA,Dn: opMode=010 (=2), EA=Dn (eaMode=0)
-                if (opMode == 2 && eaMode == 0)
-                    return InsnKind.SubLDnDm;
-                break;
-            }
-
-            case 0xB: // CMP/EOR: 1011 ddd ooo mmm rrr
-            {
-                int opMode = (opcode >> 6) & 7;
-                int eaMode = (opcode >> 3) & 7;
-                // CMP.L EA,Dn: opMode=010 (=2), EA=Dn (eaMode=0)
-                if (opMode == 2 && eaMode == 0)
-                    return InsnKind.CmpLDnDm;
-                // EOR.L Dn,EA: opMode=110 (=6), EA=Dn (eaMode=0)
-                if (opMode == 6 && eaMode == 0)
-                    return InsnKind.EorLDnDm;
-                break;
-            }
-
-            case 0xC: // AND / EXG: 1100 ddd ooo mmm rrr
+            case 0xD:
             {
                 int opMode = (opcode >> 6) & 7;
                 int eaMode = (opcode >> 3) & 7;
-                // AND.L EA,Dn: opMode=010 (=2), EA=Dn (eaMode=0)
-                if (opMode == 2 && eaMode == 0)
-                    return InsnKind.AndLDnDm;
-                // EXG: opMode 5 = Dn↔Dn or An↔An, opMode 6 = Dn↔An
+                if (eaMode == 0)
+                {
+                    if (opMode == 0) return InsnKind.AddBDnDm;
+                    if (opMode == 1) return InsnKind.AddWDnDm;
+                    if (opMode == 2) return InsnKind.AddLDnDm;
+                }
+                break;
+            }
+
+            case 0x9:
+            {
+                int opMode = (opcode >> 6) & 7;
+                int eaMode = (opcode >> 3) & 7;
+                if (eaMode == 0)
+                {
+                    if (opMode == 0) return InsnKind.SubBDnDm;
+                    if (opMode == 1) return InsnKind.SubWDnDm;
+                    if (opMode == 2) return InsnKind.SubLDnDm;
+                }
+                break;
+            }
+
+            case 0xB:
+            {
+                int opMode = (opcode >> 6) & 7;
+                int eaMode = (opcode >> 3) & 7;
+                if (eaMode == 0)
+                {
+                    if (opMode == 0) return InsnKind.CmpBDnDm;
+                    if (opMode == 1) return InsnKind.CmpWDnDm;
+                    if (opMode == 2) return InsnKind.CmpLDnDm;
+                    if (opMode == 4) return InsnKind.EorBDnDm;
+                    if (opMode == 5) return InsnKind.EorWDnDm;
+                    if (opMode == 6) return InsnKind.EorLDnDm;
+                }
+                break;
+            }
+
+            case 0xC:
+            {
+                int opMode = (opcode >> 6) & 7;
+                int eaMode = (opcode >> 3) & 7;
+                if (eaMode == 0)
+                {
+                    if (opMode == 0) return InsnKind.AndBDnDm;
+                    if (opMode == 1) return InsnKind.AndWDnDm;
+                    if (opMode == 2) return InsnKind.AndLDnDm;
+                }
+                if (opMode == 3 && eaMode == 0) return InsnKind.MuluWDnDm;
+                if (opMode == 7 && eaMode == 0) return InsnKind.MulsWDnDm;
                 int mode = (opcode >> 3) & 7;
                 if (opMode == 5 && mode == 0) return InsnKind.ExgDnDm;
                 if (opMode == 5 && mode == 1) return InsnKind.ExgAnAm;
@@ -450,36 +704,43 @@ public class JitCompiler
                 break;
             }
 
-            case 0x8: // OR: 1000 ddd ooo mmm rrr
+            case 0x8:
             {
                 int opMode = (opcode >> 6) & 7;
                 int eaMode = (opcode >> 3) & 7;
-                // OR.L EA,Dn: opMode=010 (=2), EA=Dn (eaMode=0)
-                if (opMode == 2 && eaMode == 0)
-                    return InsnKind.OrLDnDm;
+                if (eaMode == 0)
+                {
+                    if (opMode == 0) return InsnKind.OrBDnDm;
+                    if (opMode == 1) return InsnKind.OrWDnDm;
+                    if (opMode == 2) return InsnKind.OrLDnDm;
+                }
                 break;
             }
 
-            case 0x5: // ADDQ / SUBQ: 0101 qqq s ss mmm rrr
+            case 0x5:
             {
                 int size = (opcode >> 6) & 3;
-                if (size == 3) break; // size==3 is Scc/DBcc
+                if (size == 3) break;
                 int eaMode = (opcode >> 3) & 7;
                 bool isSub = (opcode & 0x0100) != 0;
-                if (eaMode == 0 && size == 2) // Dn, .L only
-                    return isSub ? InsnKind.SubqLDn : InsnKind.AddqLDn;
-                if (eaMode == 1) // An, any size (always 32-bit)
+                if (eaMode == 0)
+                {
+                    if (size == 0) return isSub ? InsnKind.SubqBDn : InsnKind.AddqBDn;
+                    if (size == 1) return isSub ? InsnKind.SubqWDn : InsnKind.AddqWDn;
+                    if (size == 2) return isSub ? InsnKind.SubqLDn : InsnKind.AddqLDn;
+                }
+                if (eaMode == 1)
                     return isSub ? InsnKind.SubqAn : InsnKind.AddqAn;
                 break;
             }
 
-            case 0xE: // Shift: 1110 ccc d ss ir tt rrr
+            case 0xE:
             {
                 int sizeField = (opcode >> 6) & 3;
-                if (sizeField != 2) break;        // .L only
-                if ((opcode & 0x0020) != 0) break; // immediate count only (ir=0)
+                if (sizeField != 2) break;
+                if ((opcode & 0x0020) != 0) break;
                 int shiftType = (opcode >> 3) & 3;
-                if (shiftType > 1) break;         // ASL/ASR, LSL/LSR only
+                if (shiftType > 1) break;
                 bool isLeft = (opcode & 0x0100) != 0;
                 if (shiftType == 0)
                     return isLeft ? InsnKind.AslImmLDn : InsnKind.AsrImmLDn;
@@ -487,17 +748,18 @@ public class JitCompiler
                     return isLeft ? InsnKind.LslImmLDn : InsnKind.LsrImmLDn;
             }
 
-            case 0x6: // Bcc / BRA / BSR
+            case 0x6:
             {
                 int cond = (opcode >> 8) & 0xF;
                 int disp8 = opcode & 0xFF;
-                // Only 8-bit displacement (not 0x00=16-bit ext, not 0xFF=32-bit ext)
-                if (disp8 == 0x00 || disp8 == 0xFF)
-                    break;
-                if (cond == 1) // BSR — not supported (pushes return address)
-                    break;
-                if (cond == 0)
-                    return InsnKind.BranchAlways;
+                if (cond == 1) break;
+                if (disp8 == 0xFF) break;
+                if (disp8 == 0x00)
+                {
+                    if (cond == 0) return InsnKind.BranchAlwaysW;
+                    return InsnKind.BranchW;
+                }
+                if (cond == 0) return InsnKind.BranchAlways;
                 return InsnKind.Branch;
             }
         }
@@ -1218,6 +1480,600 @@ public class JitCompiler
         }
     }
 
+    // ================================================================
+    // Phase 1A: LEA emission helpers
+    // ================================================================
+
+    /// <summary>LEA (An),Ar — A[dst] = A[src]</summary>
+    private static void EmitLeaAnAr(ILGenerator il, ushort opcode)
+    {
+        int src = opcode & 7;
+        int dst = (opcode >> 9) & 7;
+        // A[dst] = A[src]
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Callvirt, MiGetA);
+        il.Emit(OpCodes.Dup);
+        il.Emit(OpCodes.Ldc_I4, src);
+        il.Emit(OpCodes.Ldelem_U4);
+        var locRes = il.DeclareLocal(typeof(uint));
+        il.Emit(OpCodes.Stloc, locRes);
+        il.Emit(OpCodes.Ldc_I4, dst);
+        il.Emit(OpCodes.Ldloc, locRes);
+        il.Emit(OpCodes.Stelem_I4);
+    }
+
+    /// <summary>LEA d16(An),Ar — A[dst] = A[src] + sign_ext(d16)</summary>
+    private static void EmitLeaD16AnAr(ILGenerator il, ushort opcode, ushort extWord)
+    {
+        int src = opcode & 7;
+        int dst = (opcode >> 9) & 7;
+        int d16 = (short)extWord;
+
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Callvirt, MiGetA);
+        il.Emit(OpCodes.Dup);
+        il.Emit(OpCodes.Ldc_I4, src);
+        il.Emit(OpCodes.Ldelem_U4);
+        il.Emit(OpCodes.Ldc_I4, d16);
+        il.Emit(OpCodes.Add);
+        var locRes = il.DeclareLocal(typeof(uint));
+        il.Emit(OpCodes.Stloc, locRes);
+        il.Emit(OpCodes.Ldc_I4, dst);
+        il.Emit(OpCodes.Ldloc, locRes);
+        il.Emit(OpCodes.Stelem_I4);
+    }
+
+    /// <summary>LEA d8(An,Xn),Ar — A[dst] = A[src] + Xn*scale + d8</summary>
+    private static void EmitLeaD8AnXnAr(ILGenerator il, LocalBuilder locD, LocalBuilder locTmp,
+        ushort opcode, ushort extWord)
+    {
+        int baseSrc = opcode & 7;
+        int dst = (opcode >> 9) & 7;
+        int d8 = (sbyte)(extWord & 0xFF);
+        int indexReg = (extWord >> 12) & 7;
+        bool indexIsAddr = (extWord & 0x8000) != 0;
+        bool indexIsLong = (extWord & 0x0800) != 0;
+        int scale = (extWord >> 9) & 3;
+
+        // Load base: A[baseSrc]
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Callvirt, MiGetA);
+        il.Emit(OpCodes.Ldc_I4, baseSrc);
+        il.Emit(OpCodes.Ldelem_U4);
+
+        // Load index register
+        if (indexIsAddr)
+        {
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Callvirt, MiGetA);
+            il.Emit(OpCodes.Ldc_I4, indexReg);
+            il.Emit(OpCodes.Ldelem_U4);
+        }
+        else
+        {
+            il.Emit(OpCodes.Ldloc, locD);
+            il.Emit(OpCodes.Ldc_I4, indexReg);
+            il.Emit(OpCodes.Ldelem_U4);
+        }
+
+        // Sign-extend from word if needed
+        if (!indexIsLong)
+        {
+            il.Emit(OpCodes.Conv_I2); // truncate to signed word
+            il.Emit(OpCodes.Conv_I4); // sign-extend to int32
+        }
+
+        // Apply scale
+        if (scale > 0)
+        {
+            il.Emit(OpCodes.Ldc_I4, scale);
+            il.Emit(OpCodes.Shl);
+        }
+
+        // base + index
+        il.Emit(OpCodes.Add);
+
+        // + d8
+        if (d8 != 0)
+        {
+            il.Emit(OpCodes.Ldc_I4, d8);
+            il.Emit(OpCodes.Add);
+        }
+
+        il.Emit(OpCodes.Stloc, locTmp);
+
+        // A[dst] = result
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Callvirt, MiGetA);
+        il.Emit(OpCodes.Ldc_I4, dst);
+        il.Emit(OpCodes.Ldloc, locTmp);
+        il.Emit(OpCodes.Stelem_I4);
+    }
+
+    // ================================================================
+    // Phase 1C: MULU/MULS emission
+    // ================================================================
+
+    private static void EmitMuluMuls(ILGenerator il, LocalBuilder locD, LocalBuilder locCCR,
+        LocalBuilder locTmp, ushort opcode, bool setFlags, bool signed)
+    {
+        int srcReg = opcode & 7;
+        int dstReg = (opcode >> 9) & 7;
+
+        // Load D[dst] low 16 bits
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, dstReg);
+        il.Emit(OpCodes.Ldelem_U4);
+        if (signed) il.Emit(OpCodes.Conv_I2); // sign-extend to int
+        else { il.Emit(OpCodes.Ldc_I4, 0xFFFF); il.Emit(OpCodes.And); }
+
+        // Load D[src] low 16 bits
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, srcReg);
+        il.Emit(OpCodes.Ldelem_U4);
+        if (signed) il.Emit(OpCodes.Conv_I2);
+        else { il.Emit(OpCodes.Ldc_I4, 0xFFFF); il.Emit(OpCodes.And); }
+
+        il.Emit(OpCodes.Mul);
+        il.Emit(OpCodes.Stloc, locTmp);
+
+        // D[dst] = result
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, dstReg);
+        il.Emit(OpCodes.Ldloc, locTmp);
+        il.Emit(OpCodes.Stelem_I4);
+
+        if (setFlags)
+        {
+            il.Emit(OpCodes.Ldloc, locTmp);
+            EmitSetNZVC_FromStack(il, locCCR);
+        }
+    }
+
+    // ================================================================
+    // Phase 1D: BTST emission
+    // ================================================================
+
+    private static void EmitBtstDnDm(ILGenerator il, LocalBuilder locD, LocalBuilder locCCR,
+        ushort opcode, bool setFlags)
+    {
+        if (!setFlags) return; // BTST only affects Z flag
+
+        int srcReg = (opcode >> 9) & 7; // bit number register
+        int dstReg = opcode & 7;        // test target
+
+        // bitNum = D[src] & 31
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, srcReg);
+        il.Emit(OpCodes.Ldelem_U4);
+        il.Emit(OpCodes.Ldc_I4, 31);
+        il.Emit(OpCodes.And);
+
+        // (D[dst] >> bitNum) & 1
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, dstReg);
+        il.Emit(OpCodes.Ldelem_U4);
+
+        // Need to swap: we want D[dst] >> bitNum, but stack has bitNum, D[dst]
+        // Use temp local
+        var locBitNum = il.DeclareLocal(typeof(int));
+        var locTarget = il.DeclareLocal(typeof(uint));
+        // Stack: bitNum, D[dst]
+        il.Emit(OpCodes.Stloc, locTarget);
+        il.Emit(OpCodes.Stloc, locBitNum);
+
+        il.Emit(OpCodes.Ldloc, locTarget);
+        il.Emit(OpCodes.Ldloc, locBitNum);
+        il.Emit(OpCodes.Shr_Un);
+        il.Emit(OpCodes.Ldc_I4_1);
+        il.Emit(OpCodes.And);
+
+        // If bit is set → Z=0; if clear → Z=1
+        var lblBitSet = il.DefineLabel();
+        var lblDone = il.DefineLabel();
+        il.Emit(OpCodes.Brtrue, lblBitSet);
+
+        // Bit clear: set Z
+        il.Emit(OpCodes.Ldloc, locCCR);
+        il.Emit(OpCodes.Ldc_I4, 0x04);
+        il.Emit(OpCodes.Or);
+        il.Emit(OpCodes.Conv_U1);
+        il.Emit(OpCodes.Stloc, locCCR);
+        il.Emit(OpCodes.Br, lblDone);
+
+        // Bit set: clear Z
+        il.MarkLabel(lblBitSet);
+        il.Emit(OpCodes.Ldloc, locCCR);
+        il.Emit(OpCodes.Ldc_I4, ~0x04);
+        il.Emit(OpCodes.And);
+        il.Emit(OpCodes.Conv_U1);
+        il.Emit(OpCodes.Stloc, locCCR);
+
+        il.MarkLabel(lblDone);
+    }
+
+    // ================================================================
+    // Phase 1E: Byte/Word ALU emission helpers
+    // ================================================================
+
+    private static readonly MethodInfo MiAluAddByte = typeof(Alu).GetMethod("AddByte",
+        new[] { typeof(byte), typeof(byte), typeof(byte), typeof(bool) })!;
+    private static readonly MethodInfo MiAluAddWord = typeof(Alu).GetMethod("AddWord",
+        new[] { typeof(ushort), typeof(ushort), typeof(byte), typeof(bool) })!;
+    private static readonly MethodInfo MiAluSubByte = typeof(Alu).GetMethod("SubByte",
+        new[] { typeof(byte), typeof(byte), typeof(byte), typeof(bool) })!;
+    private static readonly MethodInfo MiAluSubWord = typeof(Alu).GetMethod("SubWord",
+        new[] { typeof(ushort), typeof(ushort), typeof(byte), typeof(bool) })!;
+
+    /// <summary>ADD.B/W or SUB.B/W Dn,Dm — preserves upper bits</summary>
+    private static void EmitAluBWDnDm(ILGenerator il, LocalBuilder locD, LocalBuilder locCCR,
+        LocalBuilder locTmp, ushort opcode, bool setFlags, int size, bool isAdd)
+    {
+        int srcReg = opcode & 7;
+        int dstReg = (opcode >> 9) & 7;
+        bool isByte = size == 0;
+        uint mask = isByte ? 0xFFFFFF00u : 0xFFFF0000u;
+
+        // Call Alu.AddByte/AddWord/SubByte/SubWord(D[dst], D[src], CCR, false)
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, dstReg);
+        il.Emit(OpCodes.Ldelem_U4);
+        if (isByte) il.Emit(OpCodes.Conv_U1); else il.Emit(OpCodes.Conv_U2);
+
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, srcReg);
+        il.Emit(OpCodes.Ldelem_U4);
+        if (isByte) il.Emit(OpCodes.Conv_U1); else il.Emit(OpCodes.Conv_U2);
+
+        il.Emit(OpCodes.Ldloc, locCCR);
+        il.Emit(OpCodes.Ldc_I4_0); // withExtend = false
+
+        var mi = isAdd ? (isByte ? MiAluAddByte : MiAluAddWord) : (isByte ? MiAluSubByte : MiAluSubWord);
+        il.Emit(OpCodes.Call, mi);
+
+        var tupleType = isByte ? typeof(ValueTuple<byte, byte>) : typeof(ValueTuple<ushort, byte>);
+        var locTuple = il.DeclareLocal(tupleType);
+        il.Emit(OpCodes.Stloc, locTuple);
+
+        // D[dst] = (D[dst] & mask) | result
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, dstReg);
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, dstReg);
+        il.Emit(OpCodes.Ldelem_U4);
+        il.Emit(OpCodes.Ldc_I4, unchecked((int)mask));
+        il.Emit(OpCodes.And);
+        il.Emit(OpCodes.Ldloca, locTuple);
+        il.Emit(OpCodes.Ldfld, tupleType.GetField("Item1")!);
+        il.Emit(OpCodes.Or);
+        il.Emit(OpCodes.Stelem_I4);
+
+        if (setFlags)
+        {
+            il.Emit(OpCodes.Ldloca, locTuple);
+            il.Emit(OpCodes.Ldfld, tupleType.GetField("Item2")!);
+            il.Emit(OpCodes.Stloc, locCCR);
+        }
+    }
+
+    /// <summary>CMP.B/W Dn,Dm — compare only, no register update</summary>
+    private static void EmitCmpBWDnDm(ILGenerator il, LocalBuilder locD, LocalBuilder locCCR,
+        LocalBuilder locTmp, ushort opcode, int size)
+    {
+        int srcReg = opcode & 7;
+        int dstReg = (opcode >> 9) & 7;
+        bool isByte = size == 0;
+
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, dstReg);
+        il.Emit(OpCodes.Ldelem_U4);
+        if (isByte) il.Emit(OpCodes.Conv_U1); else il.Emit(OpCodes.Conv_U2);
+
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, srcReg);
+        il.Emit(OpCodes.Ldelem_U4);
+        if (isByte) il.Emit(OpCodes.Conv_U1); else il.Emit(OpCodes.Conv_U2);
+
+        il.Emit(OpCodes.Ldloc, locCCR);
+        il.Emit(OpCodes.Ldc_I4_0);
+        il.Emit(OpCodes.Call, isByte ? MiAluSubByte : MiAluSubWord);
+
+        var tupleType = isByte ? typeof(ValueTuple<byte, byte>) : typeof(ValueTuple<ushort, byte>);
+        var locTuple = il.DeclareLocal(tupleType);
+        il.Emit(OpCodes.Stloc, locTuple);
+
+        // CCR = (CCR & 0x10) | (newCcr & 0x0F)
+        il.Emit(OpCodes.Ldloc, locCCR);
+        il.Emit(OpCodes.Ldc_I4, 0x10);
+        il.Emit(OpCodes.And);
+        il.Emit(OpCodes.Ldloca, locTuple);
+        il.Emit(OpCodes.Ldfld, tupleType.GetField("Item2")!);
+        il.Emit(OpCodes.Ldc_I4, 0x0F);
+        il.Emit(OpCodes.And);
+        il.Emit(OpCodes.Or);
+        il.Emit(OpCodes.Conv_U1);
+        il.Emit(OpCodes.Stloc, locCCR);
+    }
+
+    /// <summary>AND/OR/EOR .B/.W Dn,Dm — byte/word logic</summary>
+    private static void EmitLogicBWDnDm(ILGenerator il, LocalBuilder locD, LocalBuilder locCCR,
+        LocalBuilder locTmp, ushort opcode, bool setFlags, int size, LogicOp op)
+    {
+        bool isByte = size == 0;
+        uint mask = isByte ? 0xFFFFFF00u : 0xFFFF0000u;
+        int signBit = isByte ? 0x80 : 0x8000;
+        int valMask = isByte ? 0xFF : 0xFFFF;
+
+        int srcReg, dstReg;
+        if (op == LogicOp.Eor)
+        {
+            srcReg = (opcode >> 9) & 7; dstReg = opcode & 7;
+        }
+        else
+        {
+            srcReg = opcode & 7; dstReg = (opcode >> 9) & 7;
+        }
+
+        // Load D[dst] low bits
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, dstReg);
+        il.Emit(OpCodes.Ldelem_U4);
+        il.Emit(OpCodes.Ldc_I4, valMask);
+        il.Emit(OpCodes.And);
+
+        // Load D[src] low bits
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, srcReg);
+        il.Emit(OpCodes.Ldelem_U4);
+        il.Emit(OpCodes.Ldc_I4, valMask);
+        il.Emit(OpCodes.And);
+
+        switch (op)
+        {
+            case LogicOp.And: il.Emit(OpCodes.And); break;
+            case LogicOp.Or: il.Emit(OpCodes.Or); break;
+            case LogicOp.Eor: il.Emit(OpCodes.Xor); break;
+        }
+        il.Emit(OpCodes.Stloc, locTmp);
+
+        // D[dst] = (D[dst] & mask) | result
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, dstReg);
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, dstReg);
+        il.Emit(OpCodes.Ldelem_U4);
+        il.Emit(OpCodes.Ldc_I4, unchecked((int)mask));
+        il.Emit(OpCodes.And);
+        il.Emit(OpCodes.Ldloc, locTmp);
+        il.Emit(OpCodes.Or);
+        il.Emit(OpCodes.Stelem_I4);
+
+        if (setFlags)
+        {
+            il.Emit(OpCodes.Ldloc, locTmp);
+            if (isByte)
+                EmitSetNZVC_FromStack_Byte(il, locCCR);
+            else
+                EmitSetNZVC_FromStack_Word(il, locCCR);
+        }
+    }
+
+    /// <summary>ADDQ/SUBQ .B/.W #imm,Dn</summary>
+    private static void EmitAddqSubqBWDn(ILGenerator il, LocalBuilder locD, LocalBuilder locCCR,
+        LocalBuilder locTmp, ushort opcode, bool setFlags, int size, bool isAdd)
+    {
+        int dstReg = opcode & 7;
+        int data = (opcode >> 9) & 7;
+        if (data == 0) data = 8;
+        bool isByte = size == 0;
+        uint mask = isByte ? 0xFFFFFF00u : 0xFFFF0000u;
+
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, dstReg);
+        il.Emit(OpCodes.Ldelem_U4);
+        if (isByte) il.Emit(OpCodes.Conv_U1); else il.Emit(OpCodes.Conv_U2);
+
+        il.Emit(OpCodes.Ldc_I4, data);
+        if (isByte) il.Emit(OpCodes.Conv_U1); else il.Emit(OpCodes.Conv_U2);
+
+        il.Emit(OpCodes.Ldloc, locCCR);
+        il.Emit(OpCodes.Ldc_I4_0);
+
+        var mi = isAdd ? (isByte ? MiAluAddByte : MiAluAddWord) : (isByte ? MiAluSubByte : MiAluSubWord);
+        il.Emit(OpCodes.Call, mi);
+
+        var tupleType = isByte ? typeof(ValueTuple<byte, byte>) : typeof(ValueTuple<ushort, byte>);
+        var locTuple = il.DeclareLocal(tupleType);
+        il.Emit(OpCodes.Stloc, locTuple);
+
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, dstReg);
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, dstReg);
+        il.Emit(OpCodes.Ldelem_U4);
+        il.Emit(OpCodes.Ldc_I4, unchecked((int)mask));
+        il.Emit(OpCodes.And);
+        il.Emit(OpCodes.Ldloca, locTuple);
+        il.Emit(OpCodes.Ldfld, tupleType.GetField("Item1")!);
+        il.Emit(OpCodes.Or);
+        il.Emit(OpCodes.Stelem_I4);
+
+        if (setFlags)
+        {
+            il.Emit(OpCodes.Ldloca, locTuple);
+            il.Emit(OpCodes.Ldfld, tupleType.GetField("Item2")!);
+            il.Emit(OpCodes.Stloc, locCCR);
+        }
+    }
+
+    /// <summary>CLR.B/W Dn</summary>
+    private static void EmitClrBWDn(ILGenerator il, LocalBuilder locD, LocalBuilder locCCR,
+        ushort opcode, bool setFlags, int size)
+    {
+        int reg = opcode & 7;
+        bool isByte = size == 0;
+        uint mask = isByte ? 0xFFFFFF00u : 0xFFFF0000u;
+
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, reg);
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, reg);
+        il.Emit(OpCodes.Ldelem_U4);
+        il.Emit(OpCodes.Ldc_I4, unchecked((int)mask));
+        il.Emit(OpCodes.And);
+        il.Emit(OpCodes.Stelem_I4);
+
+        if (setFlags)
+        {
+            il.Emit(OpCodes.Ldloc, locCCR);
+            il.Emit(OpCodes.Ldc_I4, 0x10);
+            il.Emit(OpCodes.And);
+            il.Emit(OpCodes.Ldc_I4, 0x04);
+            il.Emit(OpCodes.Or);
+            il.Emit(OpCodes.Conv_U1);
+            il.Emit(OpCodes.Stloc, locCCR);
+        }
+    }
+
+    /// <summary>TST.B/W Dn</summary>
+    private static void EmitTstBWDn(ILGenerator il, LocalBuilder locD, LocalBuilder locCCR,
+        ushort opcode, bool setFlags, int size)
+    {
+        if (!setFlags) return;
+        int reg = opcode & 7;
+        bool isByte = size == 0;
+
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, reg);
+        il.Emit(OpCodes.Ldelem_U4);
+        if (isByte)
+            EmitSetNZVC_FromStack_Byte(il, locCCR);
+        else
+            EmitSetNZVC_FromStack_Word(il, locCCR);
+    }
+
+    /// <summary>NEG.B/W Dn</summary>
+    private static void EmitNegBWDn(ILGenerator il, LocalBuilder locD, LocalBuilder locCCR,
+        LocalBuilder locTmp, ushort opcode, bool setFlags, int size)
+    {
+        int reg = opcode & 7;
+        bool isByte = size == 0;
+        uint mask = isByte ? 0xFFFFFF00u : 0xFFFF0000u;
+
+        // Call Alu.SubByte/SubWord(0, D[reg], CCR, false)
+        if (isByte) il.Emit(OpCodes.Ldc_I4_0); else il.Emit(OpCodes.Ldc_I4_0);
+        if (isByte) il.Emit(OpCodes.Conv_U1); else il.Emit(OpCodes.Conv_U2);
+
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, reg);
+        il.Emit(OpCodes.Ldelem_U4);
+        if (isByte) il.Emit(OpCodes.Conv_U1); else il.Emit(OpCodes.Conv_U2);
+
+        il.Emit(OpCodes.Ldloc, locCCR);
+        il.Emit(OpCodes.Ldc_I4_0);
+        il.Emit(OpCodes.Call, isByte ? MiAluSubByte : MiAluSubWord);
+
+        var tupleType = isByte ? typeof(ValueTuple<byte, byte>) : typeof(ValueTuple<ushort, byte>);
+        var locTuple = il.DeclareLocal(tupleType);
+        il.Emit(OpCodes.Stloc, locTuple);
+
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, reg);
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, reg);
+        il.Emit(OpCodes.Ldelem_U4);
+        il.Emit(OpCodes.Ldc_I4, unchecked((int)mask));
+        il.Emit(OpCodes.And);
+        il.Emit(OpCodes.Ldloca, locTuple);
+        il.Emit(OpCodes.Ldfld, tupleType.GetField("Item1")!);
+        il.Emit(OpCodes.Or);
+        il.Emit(OpCodes.Stelem_I4);
+
+        if (setFlags)
+        {
+            il.Emit(OpCodes.Ldloca, locTuple);
+            il.Emit(OpCodes.Ldfld, tupleType.GetField("Item2")!);
+            il.Emit(OpCodes.Stloc, locCCR);
+        }
+    }
+
+    /// <summary>NOT.B/W Dn</summary>
+    private static void EmitNotBWDn(ILGenerator il, LocalBuilder locD, LocalBuilder locCCR,
+        LocalBuilder locTmp, ushort opcode, bool setFlags, int size)
+    {
+        int reg = opcode & 7;
+        bool isByte = size == 0;
+        uint mask = isByte ? 0xFFFFFF00u : 0xFFFF0000u;
+        int valMask = isByte ? 0xFF : 0xFFFF;
+
+        // val = ~D[reg] & mask
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, reg);
+        il.Emit(OpCodes.Ldelem_U4);
+        il.Emit(OpCodes.Not);
+        il.Emit(OpCodes.Ldc_I4, valMask);
+        il.Emit(OpCodes.And);
+        il.Emit(OpCodes.Stloc, locTmp);
+
+        // D[reg] = (D[reg] & upper_mask) | val
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, reg);
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, reg);
+        il.Emit(OpCodes.Ldelem_U4);
+        il.Emit(OpCodes.Ldc_I4, unchecked((int)mask));
+        il.Emit(OpCodes.And);
+        il.Emit(OpCodes.Ldloc, locTmp);
+        il.Emit(OpCodes.Or);
+        il.Emit(OpCodes.Stelem_I4);
+
+        if (setFlags)
+        {
+            il.Emit(OpCodes.Ldloc, locTmp);
+            if (isByte)
+                EmitSetNZVC_FromStack_Byte(il, locCCR);
+            else
+                EmitSetNZVC_FromStack_Word(il, locCCR);
+        }
+    }
+
+    /// <summary>
+    /// Helper: with a uint8 value on the stack (as uint), compute NZ flags for 8-bit result.
+    /// </summary>
+    private static void EmitSetNZVC_FromStack_Byte(ILGenerator il, LocalBuilder locCCR)
+    {
+        var locVal = il.DeclareLocal(typeof(uint));
+        il.Emit(OpCodes.Stloc, locVal);
+
+        il.Emit(OpCodes.Ldloc, locCCR);
+        il.Emit(OpCodes.Ldc_I4, 0x10);
+        il.Emit(OpCodes.And);
+
+        il.Emit(OpCodes.Ldloc, locVal);
+        il.Emit(OpCodes.Ldc_I4, 0xFF);
+        il.Emit(OpCodes.And);
+        var lblNotZero = il.DefineLabel();
+        var lblDone = il.DefineLabel();
+        il.Emit(OpCodes.Brtrue, lblNotZero);
+        il.Emit(OpCodes.Ldc_I4, 0x04);
+        il.Emit(OpCodes.Or);
+        il.Emit(OpCodes.Br, lblDone);
+
+        il.MarkLabel(lblNotZero);
+        il.Emit(OpCodes.Ldloc, locVal);
+        il.Emit(OpCodes.Ldc_I4, 0x80);
+        il.Emit(OpCodes.And);
+        var lblNotNeg = il.DefineLabel();
+        il.Emit(OpCodes.Brfalse, lblNotNeg);
+        il.Emit(OpCodes.Ldc_I4, 0x08);
+        il.Emit(OpCodes.Or);
+        il.MarkLabel(lblNotNeg);
+
+        il.MarkLabel(lblDone);
+        il.Emit(OpCodes.Conv_U1);
+        il.Emit(OpCodes.Stloc, locCCR);
+    }
+
     /// <summary>
     /// Helper: with a uint value on the evaluation stack, compute NZ flags (V=0, C=0),
     /// preserve X bit, and store into locCCR.
@@ -1301,5 +2157,172 @@ public class JitCompiler
         il.MarkLabel(lblDone);
         il.Emit(OpCodes.Conv_U1);
         il.Emit(OpCodes.Stloc, locCCR);
+    }
+
+    // ================================================================
+    // Phase 2: Memory access IL emission helpers
+    // ================================================================
+
+    /// <summary>Emit IL to set _jitExecutedCount and _jitExecutedCycles for full execution.</summary>
+    private static void EmitSetFullExecution(ILGenerator il, int instrCount, int totalCycles)
+    {
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldc_I4, instrCount);
+        il.Emit(OpCodes.Stfld, FiJitExecutedCount);
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldc_I4, totalCycles);
+        il.Emit(OpCodes.Stfld, FiJitExecutedCycles);
+    }
+
+    /// <summary>Emit bailout: write CCR, set executedCount/Cycles, return instrPC.</summary>
+    private static void EmitBailout(ILGenerator il, LocalBuilder locCCR,
+        int instrIndex, int cumCycles, uint instrPC)
+    {
+        // Write back CCR
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldloc, locCCR);
+        il.Emit(OpCodes.Callvirt, MiSetCCR);
+        // Set executed count
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldc_I4, instrIndex);
+        il.Emit(OpCodes.Stfld, FiJitExecutedCount);
+        // Set executed cycles
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldc_I4, cumCycles);
+        il.Emit(OpCodes.Stfld, FiJitExecutedCycles);
+        // Return instrPC
+        il.Emit(OpCodes.Ldc_I4, (int)instrPC);
+        il.Emit(OpCodes.Conv_U4);
+        il.Emit(OpCodes.Ret);
+    }
+
+    /// <summary>Emit always-bailout (for write instructions).</summary>
+    private static void EmitAlwaysBailout(ILGenerator il, LocalBuilder locCCR,
+        int instrIndex, int cumCycles, uint instrPC)
+    {
+        EmitBailout(il, locCCR, instrIndex, cumCycles, instrPC);
+    }
+
+    /// <summary>
+    /// Emit MOVE.L memory read: (An), (An)+, or d16(An) → Dm.
+    /// Calls TryReadLongCached; on miss → bailout.
+    /// </summary>
+    private static void EmitMemoryRead(ILGenerator il, LocalBuilder locD, LocalBuilder locCCR,
+        LocalBuilder locTmp, LocalBuilder locAddr,
+        int srcReg, int dstReg, bool needsFlags,
+        int instrIndex, int cumCycles, uint instrPC,
+        int addDisp, bool postInc)
+    {
+        var lblBailout = il.DefineLabel();
+        var lblContinue = il.DefineLabel();
+
+        // Compute address: cpu.A[srcReg] + addDisp
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Callvirt, MiGetA);
+        il.Emit(OpCodes.Ldc_I4, srcReg);
+        il.Emit(OpCodes.Ldelem_U4);
+        if (addDisp != 0)
+        {
+            il.Emit(OpCodes.Ldc_I4, addDisp);
+            il.Emit(OpCodes.Add);
+        }
+        il.Emit(OpCodes.Stloc, locAddr);
+
+        // Call cpu.TryReadLongCached(addr)
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldloc, locAddr);
+        il.Emit(OpCodes.Call, MiTryReadLongCached);
+        il.Emit(OpCodes.Brfalse, lblBailout);
+
+        // Cache hit: load result from cpu._jitReadResult
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldfld, FiJitReadResult);
+        il.Emit(OpCodes.Stloc, locTmp);
+
+        // Store to D[dstReg]
+        il.Emit(OpCodes.Ldloc, locD);
+        il.Emit(OpCodes.Ldc_I4, dstReg);
+        il.Emit(OpCodes.Ldloc, locTmp);
+        il.Emit(OpCodes.Stelem_I4);
+
+        // Post-increment: A[srcReg] += 4
+        if (postInc)
+        {
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Callvirt, MiGetA);
+            il.Emit(OpCodes.Ldc_I4, srcReg);
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Callvirt, MiGetA);
+            il.Emit(OpCodes.Ldc_I4, srcReg);
+            il.Emit(OpCodes.Ldelem_U4);
+            il.Emit(OpCodes.Ldc_I4, 4);
+            il.Emit(OpCodes.Add);
+            il.Emit(OpCodes.Stelem_I4);
+        }
+
+        // Update flags if needed
+        if (needsFlags)
+        {
+            il.Emit(OpCodes.Ldloc, locTmp);
+            EmitSetNZVC_FromStack(il, locCCR);
+        }
+
+        il.Emit(OpCodes.Br, lblContinue);
+
+        // Bailout path
+        il.MarkLabel(lblBailout);
+        EmitBailout(il, locCCR, instrIndex, cumCycles, instrPC);
+
+        il.MarkLabel(lblContinue);
+    }
+
+    /// <summary>
+    /// Emit RTS: PC = ReadLong(A7); A7 += 4. Uses TryReadLongCached for stack read.
+    /// RTS is a block terminator — emits its own ret.
+    /// </summary>
+    private static void EmitRts(ILGenerator il, LocalBuilder locCCR, LocalBuilder locAddr,
+        int instrIndex, int cumCycles, uint instrPC,
+        int totalInstrCount, int totalCycles)
+    {
+        var lblBailout = il.DefineLabel();
+
+        // addr = cpu.A[7]
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Callvirt, MiGetA);
+        il.Emit(OpCodes.Ldc_I4, 7);
+        il.Emit(OpCodes.Ldelem_U4);
+        il.Emit(OpCodes.Stloc, locAddr);
+
+        // Call cpu.TryReadLongCached(addr)
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldloc, locAddr);
+        il.Emit(OpCodes.Call, MiTryReadLongCached);
+        il.Emit(OpCodes.Brfalse, lblBailout);
+
+        // Cache hit: A7 += 4
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Callvirt, MiGetA);
+        il.Emit(OpCodes.Ldc_I4, 7);
+        il.Emit(OpCodes.Ldloc, locAddr);
+        il.Emit(OpCodes.Ldc_I4, 4);
+        il.Emit(OpCodes.Add);
+        il.Emit(OpCodes.Stelem_I4);
+
+        // Write back CCR
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldloc, locCCR);
+        il.Emit(OpCodes.Callvirt, MiSetCCR);
+
+        // Set full execution counts
+        EmitSetFullExecution(il, totalInstrCount, totalCycles);
+
+        // Return new PC from _jitReadResult
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldfld, FiJitReadResult);
+        il.Emit(OpCodes.Ret);
+
+        // Bailout path
+        il.MarkLabel(lblBailout);
+        EmitBailout(il, locCCR, instrIndex, cumCycles, instrPC);
     }
 }

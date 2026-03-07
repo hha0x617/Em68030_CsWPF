@@ -40,6 +40,13 @@ public class JitCache
         BlockCount++;
     }
 
+    public void RemoveBlock(uint physAddr)
+    {
+        int idx = (int)((physAddr >> 1) & BlockCacheMask);
+        if (_blockCache[idx] != null && _blockCache[idx]!.PhysicalAddress == physAddr)
+            _blockCache[idx] = null;
+    }
+
     /// <summary>
     /// Invalidate all compiled blocks (MMU flush, privilege change, reset).
     /// </summary>

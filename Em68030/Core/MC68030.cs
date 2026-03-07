@@ -75,6 +75,14 @@ public class MC68030
     private uint _dataPageMask;   // Page size - 1
     private bool _dataCacheValid;
 
+    // JIT bailout side-channel: set by compiled delegates for non-register-only blocks
+    internal int _jitExecutedCount;
+    internal int _jitExecutedCycles;
+    internal uint _jitReadResult;
+
+    /// <summary>Bailout blacklist threshold: blocks exceeding this bailout count are evicted.</summary>
+    public const ushort JitBailoutBlacklistThreshold = 64;
+
     // External interrupt support
     private int _pendingIPL = 0;
     private int _pendingVector = -1; // -1 = use autovector
@@ -493,6 +501,32 @@ public class MC68030
 
     public void InvalidateDataCache() { _dataCacheValid = false; }
 
+    /// <summary>Set up data page cache for testing.</summary>
+    public void SetupDataCache(uint va, uint pa, uint mask)
+    {
+        _dataPageVA = va & ~mask;
+        _dataPagePA = pa & ~mask;
+        _dataPageMask = mask;
+        _dataCacheValid = true;
+    }
+
+    /// <summary>
+    /// Try to read a longword via data page cache. Used by JIT-compiled code.
+    /// Returns true on cache hit (result in _jitReadResult), false on miss.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool TryReadLongCached(uint addr)
+    {
+        if (_dataCacheValid
+            && (addr & ~_dataPageMask) == _dataPageVA
+            && (addr & _dataPageMask) + 3 <= _dataPageMask)
+        {
+            _jitReadResult = Memory.ReadLong(_dataPagePA + (addr & _dataPageMask));
+            return true;
+        }
+        return false;
+    }
+
     /// <summary>
     /// Take the deferred register snapshot (called by group decoders before register modification).
     /// </summary>
@@ -690,9 +724,41 @@ public class MC68030
     private bool ExecuteNextJit(CompiledBlock block)
     {
         PC = block.Execute(this);
-        CycleCount += block.TotalCycles;
-        InstructionCount += block.InstructionCount;
-        _tickDivider += block.InstructionCount - 1;
+
+        int executedCount, executedCycles;
+        if (block.RegisterOnly)
+        {
+            executedCount = block.InstructionCount;
+            executedCycles = block.TotalCycles;
+        }
+        else
+        {
+            executedCount = _jitExecutedCount;
+            executedCycles = _jitExecutedCycles;
+        }
+
+        CycleCount += executedCycles;
+        InstructionCount += executedCount;
+        _tickDivider += executedCount - 1;
+
+        if (!block.RegisterOnly && executedCount < block.InstructionCount)
+        {
+            // Bailout — track frequency and blacklist if too frequent
+            if (++block.BailoutCount >= JitBailoutBlacklistThreshold)
+            {
+                JitCache.RemoveBlock(block.PhysicalAddress);
+                JitCache.MarkUncompilable(block.PhysicalAddress);
+            }
+
+            if (executedCount == 0)
+            {
+                // First instruction bailed out — fall through to interpreter
+                _tickDivider++;
+                var opcode = _decoder.ExecuteNext();
+                CycleCount += InstructionDecoder.GetCycles(opcode);
+                InstructionCount++;
+            }
+        }
         return true;
     }
 

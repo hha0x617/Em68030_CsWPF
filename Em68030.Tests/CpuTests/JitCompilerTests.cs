@@ -389,8 +389,8 @@ public class JitCompilerTests : IClassFixture<CpuTestFixture>
     public void JitCache_InvalidateAll()
     {
         var cache = new JitCache();
-        cache.AddBlock(0x1000, new CompiledBlock(0x1000, 1, 4, 2, _ => 0));
-        cache.AddBlock(0x2000, new CompiledBlock(0x2000, 1, 4, 2, _ => 0));
+        cache.AddBlock(0x1000, new CompiledBlock(0x1000, 1, 4, 2, true, _ => 0));
+        cache.AddBlock(0x2000, new CompiledBlock(0x2000, 1, 4, 2, true, _ => 0));
 
         cache.InvalidateAll();
         Assert.Null(cache.TryGetBlock(0x1000));
@@ -415,8 +415,8 @@ public class JitCompilerTests : IClassFixture<CpuTestFixture>
     {
         ResetCpu();
         uint addr = 0x1000;
-        // RTS = 0x4E75 (not supported — memory access via stack)
-        Mem.WriteWord(addr, 0x4E75);
+        // ILLEGAL = 0x4AFC (not supported)
+        Mem.WriteWord(addr, 0x4AFC);
 
         var compiler = new JitCompiler();
         var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
@@ -433,8 +433,8 @@ public class JitCompilerTests : IClassFixture<CpuTestFixture>
         Mem.WriteWord(addr, 0x7001);
         // MOVEQ #2,D1
         Mem.WriteWord(addr + 2, 0x7202);
-        // RTS (unsupported) — block ends before this
-        Mem.WriteWord(addr + 4, 0x4E75);
+        // ILLEGAL (unsupported) — block ends before this
+        Mem.WriteWord(addr + 4, 0x4AFC);
 
         var compiler = new JitCompiler();
         var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
@@ -713,23 +713,37 @@ public class JitCompilerTests : IClassFixture<CpuTestFixture>
     // ================================================================
 
     [Fact]
-    public void AddqDn_ByteSize_Unsupported()
+    public void AddqDn_ByteSize_Supported()
     {
         ResetCpu();
         // ADDQ.B #1, D0: 0x5200 (size=0=byte)
         Mem.WriteWord(0x1000, 0x5200);
+        Mem.WriteWord(0x1002, 0x4E71); // NOP
         var compiler = new JitCompiler();
-        Assert.Null(compiler.TryCompile(Cpu, 0x1000, 0x1000));
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x123456FE;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0x123456FFu, Cpu.D[0]);
     }
 
     [Fact]
-    public void AddqDn_WordSize_Unsupported()
+    public void AddqDn_WordSize_Supported()
     {
         ResetCpu();
         // ADDQ.W #1, D0: 0x5240 (size=1=word)
         Mem.WriteWord(0x1000, 0x5240);
+        Mem.WriteWord(0x1002, 0x4E71); // NOP
         var compiler = new JitCompiler();
-        Assert.Null(compiler.TryCompile(Cpu, 0x1000, 0x1000));
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x12340001;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0x12340002u, Cpu.D[0]);
     }
 
     [Fact]
@@ -870,23 +884,39 @@ public class JitCompilerTests : IClassFixture<CpuTestFixture>
     }
 
     [Fact]
-    public void ClrLDn_ByteSize_Unsupported()
+    public void ClrBDn_Supported()
     {
         ResetCpu();
         // CLR.B D0: 0x4200
         Mem.WriteWord(0x1000, 0x4200);
+        Mem.WriteWord(0x1002, 0x4E71); // NOP
         var compiler = new JitCompiler();
-        Assert.Null(compiler.TryCompile(Cpu, 0x1000, 0x1000));
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0xAABBCCDD;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0xAABBCC00u, Cpu.D[0]);
+        Assert.True(Cpu.FlagZ);
     }
 
     [Fact]
-    public void ClrLDn_WordSize_Unsupported()
+    public void ClrWDn_Supported()
     {
         ResetCpu();
         // CLR.W D0: 0x4240
         Mem.WriteWord(0x1000, 0x4240);
+        Mem.WriteWord(0x1002, 0x4E71); // NOP
         var compiler = new JitCompiler();
-        Assert.Null(compiler.TryCompile(Cpu, 0x1000, 0x1000));
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0xAABBCCDD;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0xAABB0000u, Cpu.D[0]);
+        Assert.True(Cpu.FlagZ);
     }
 
     [Fact]
@@ -977,23 +1007,39 @@ public class JitCompilerTests : IClassFixture<CpuTestFixture>
     }
 
     [Fact]
-    public void TstLDn_ByteSize_Unsupported()
+    public void TstBDn_Supported()
     {
         ResetCpu();
         // TST.B D0: 0x4A00
         Mem.WriteWord(0x1000, 0x4A00);
+        Mem.WriteWord(0x1002, 0x4E71); // NOP
         var compiler = new JitCompiler();
-        Assert.Null(compiler.TryCompile(Cpu, 0x1000, 0x1000));
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0xAABBCC80;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.True(Cpu.FlagN);
+        Assert.False(Cpu.FlagZ);
     }
 
     [Fact]
-    public void TstLDn_WordSize_Unsupported()
+    public void TstWDn_Supported()
     {
         ResetCpu();
         // TST.W D0: 0x4A40
         Mem.WriteWord(0x1000, 0x4A40);
+        Mem.WriteWord(0x1002, 0x4E71); // NOP
         var compiler = new JitCompiler();
-        Assert.Null(compiler.TryCompile(Cpu, 0x1000, 0x1000));
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0xAABB0000;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.False(Cpu.FlagN);
+        Assert.True(Cpu.FlagZ);
     }
 
     [Fact]
@@ -1711,5 +1757,1144 @@ public class JitCompilerTests : IClassFixture<CpuTestFixture>
         // SUBQ.L #1,D0 → D0=9
         Assert.Equal(9u, Cpu.D[0]);
         Assert.Equal(1u, Cpu.D[1]);
+    }
+
+    // ================================================================
+    // Phase 1C: MULU.W / MULS.W
+    // ================================================================
+
+    [Fact]
+    public void MuluW_BasicMultiply()
+    {
+        ResetCpu();
+        // MULU.W D1,D0: 1100 000 011 000 001 = 0xC0C1
+        Mem.WriteWord(0x1000, 0xC0C1);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(1, block.InstructionCount);
+
+        Cpu.D[0] = 100;
+        Cpu.D[1] = 200;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(20000u, Cpu.D[0]);
+        Assert.False(Cpu.FlagN);
+        Assert.False(Cpu.FlagZ);
+    }
+
+    [Fact]
+    public void MuluW_ZeroResult()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0xC0C1); // MULU.W D1,D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0;
+        Cpu.D[1] = 12345;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0u, Cpu.D[0]);
+        Assert.True(Cpu.FlagZ);
+    }
+
+    [Fact]
+    public void MuluW_LargeValues()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0xC0C1); // MULU.W D1,D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        // 0xFFFF * 0xFFFF = 0xFFFE0001
+        Cpu.D[0] = 0x1234FFFF; // upper bits replaced
+        Cpu.D[1] = 0x5678FFFF;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0xFFFE0001u, Cpu.D[0]);
+        Assert.True(Cpu.FlagN);
+    }
+
+    [Fact]
+    public void MulsW_PositiveTimesNegative()
+    {
+        ResetCpu();
+        // MULS.W D1,D0: 1100 000 111 000 001 = 0xC1C1
+        Mem.WriteWord(0x1000, 0xC1C1);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 10;
+        Cpu.D[1] = 0xFFF6; // -10 as int16
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(unchecked((uint)-100), Cpu.D[0]); // 0xFFFFFF9C
+        Assert.True(Cpu.FlagN);
+        Assert.False(Cpu.FlagZ);
+    }
+
+    [Fact]
+    public void MulsW_NegativeTimesNegative()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0xC1C1); // MULS.W D1,D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0xFFF6; // -10
+        Cpu.D[1] = 0xFFEC; // -20
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(200u, Cpu.D[0]);
+        Assert.False(Cpu.FlagN);
+        Assert.False(Cpu.FlagZ);
+    }
+
+    [Fact]
+    public void MuluW_OnlyLow16BitsUsed()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0xC0C1); // MULU.W D1,D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0xABCD0003;
+        Cpu.D[1] = 0x12340007;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(21u, Cpu.D[0]);
+    }
+
+    // ================================================================
+    // Phase 1D: BTST Dn,Dm
+    // ================================================================
+
+    [Fact]
+    public void BtstDnDm_BitSet()
+    {
+        ResetCpu();
+        // BTST D1,D0: 0000 001 100 000 000 = 0x0300
+        Mem.WriteWord(0x1000, 0x0300);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x08; // bit 3 set
+        Cpu.D[1] = 3;
+        Cpu.FlagZ = true;
+        block.Execute(Cpu);
+        Assert.False(Cpu.FlagZ); // bit is set → Z=0
+    }
+
+    [Fact]
+    public void BtstDnDm_BitClear()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x0300); // BTST D1,D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x00;
+        Cpu.D[1] = 5;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.True(Cpu.FlagZ); // bit is clear → Z=1
+    }
+
+    [Fact]
+    public void BtstDnDm_Modulo32()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x0300); // BTST D1,D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x80000000; // bit 31 set
+        Cpu.D[1] = 63;         // 63 % 32 = 31
+        Cpu.FlagZ = true;
+        block.Execute(Cpu);
+        Assert.False(Cpu.FlagZ); // bit 31 is set
+    }
+
+    [Fact]
+    public void BtstDnDm_PreservesOtherFlags()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x0300); // BTST D1,D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0;
+        Cpu.D[1] = 0;
+        Cpu.SetCCR(0x1B); // X=1, N=1, V=1, C=1
+        block.Execute(Cpu);
+        byte ccr = Cpu.CCR;
+        Assert.True((ccr & 0x10) != 0);  // X preserved
+        Assert.True((ccr & 0x08) != 0);  // N preserved
+        Assert.True((ccr & 0x04) != 0);  // Z set (bit 0 is clear)
+        Assert.True((ccr & 0x02) != 0);  // V preserved
+        Assert.True((ccr & 0x01) != 0);  // C preserved
+    }
+
+    // ================================================================
+    // Phase 1A: LEA
+    // ================================================================
+
+    [Fact]
+    public void LeaAnAr_Simple()
+    {
+        ResetCpu();
+        // LEA (A2),A3: 0100 011 111 010 010 = 0x47D2
+        Mem.WriteWord(0x1000, 0x47D2);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(1, block.InstructionCount);
+
+        Cpu.A[2] = 0x12345678;
+        Cpu.A[3] = 0;
+        block.Execute(Cpu);
+        Assert.Equal(0x12345678u, Cpu.A[3]);
+    }
+
+    [Fact]
+    public void LeaD16AnAr_PositiveDisp()
+    {
+        ResetCpu();
+        // LEA d16(A0),A1: 0100 001 111 101 000 = 0x43E8
+        Mem.WriteWord(0x1000, 0x43E8);
+        Mem.WriteWord(0x1002, 0x0100); // d16 = 256
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(1, block.InstructionCount);
+        Assert.Equal(4, block.ByteLength);
+
+        Cpu.A[0] = 0x00001000;
+        Cpu.A[1] = 0;
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1004u, nextPC);
+        Assert.Equal(0x00001100u, Cpu.A[1]);
+    }
+
+    [Fact]
+    public void LeaD16AnAr_NegativeDisp()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x43E8); // LEA d16(A0),A1
+        Mem.WriteWord(0x1002, 0xFF00); // d16 = -256
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.A[0] = 0x00002000;
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1004u, nextPC);
+        Assert.Equal(0x00001F00u, Cpu.A[1]);
+    }
+
+    [Fact]
+    public void LeaD8AnXnAr_BasicIndex()
+    {
+        ResetCpu();
+        // LEA d8(A0,D1),A2: 0100 010 111 110 000 = 0x45F0
+        // Brief ext: D1.L, scale=1, d8=0x10
+        // extWord: 0 001 1 00 0 00010000 = 0x1810
+        Mem.WriteWord(0x1000, 0x45F0);
+        Mem.WriteWord(0x1002, 0x1810);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(4, block.ByteLength);
+
+        Cpu.A[0] = 0x00001000;
+        Cpu.D[1] = 0x00000020;
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1004u, nextPC);
+        Assert.Equal(0x00001030u, Cpu.A[2]); // 0x1000 + 0x20 + 0x10
+    }
+
+    [Fact]
+    public void LeaD8AnXnAr_Scale2()
+    {
+        ResetCpu();
+        // LEA d8(A0,D1*2),A2
+        // extWord: 0 001 1 01 0 00000000 = 0x1A00
+        Mem.WriteWord(0x1000, 0x45F0);
+        Mem.WriteWord(0x1002, 0x1A00);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.A[0] = 0x00001000;
+        Cpu.D[1] = 0x00000010;
+        block.Execute(Cpu);
+        Assert.Equal(0x00001020u, Cpu.A[2]); // 0x1000 + 0x10*2
+    }
+
+    [Fact]
+    public void LeaD8AnXnAr_AddrIndex()
+    {
+        ResetCpu();
+        // LEA d8(A0,A3),A2
+        // extWord: 1 011 1 00 0 00000100 = 0xB804
+        Mem.WriteWord(0x1000, 0x45F0);
+        Mem.WriteWord(0x1002, 0xB804);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.A[0] = 0x00001000;
+        Cpu.A[3] = 0x00000100;
+        block.Execute(Cpu);
+        Assert.Equal(0x00001104u, Cpu.A[2]); // 0x1000 + 0x100 + 4
+    }
+
+    [Fact]
+    public void LeaD8AnXnAr_WordIndex()
+    {
+        ResetCpu();
+        // LEA d8(A0,D1.W),A2
+        // extWord: 0 001 0 00 0 00000000 = 0x1000
+        Mem.WriteWord(0x1000, 0x45F0);
+        Mem.WriteWord(0x1002, 0x1000);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.A[0] = 0x00002000;
+        Cpu.D[1] = 0x0000FFF0; // as word = -16
+        block.Execute(Cpu);
+        Assert.Equal(0x00001FF0u, Cpu.A[2]); // 0x2000 + (-16)
+    }
+
+    [Fact]
+    public void Lea_DoesNotAffectFlags()
+    {
+        ResetCpu();
+        // LEA (A0),A1 followed by SUBQ.L #1,D0 — LEA should not affect flags
+        Mem.WriteWord(0x1000, 0x43D0); // LEA (A0),A1
+        Mem.WriteWord(0x1002, 0x5380); // SUBQ.L #1,D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(2, block.InstructionCount);
+    }
+
+    // ================================================================
+    // Phase 1B: Bcc.W / BRA.W
+    // ================================================================
+
+    [Fact]
+    public void BraW_ForwardBranch()
+    {
+        ResetCpu();
+        // BRA.W: 0x6000, followed by d16 displacement
+        Mem.WriteWord(0x1000, 0x6000);
+        Mem.WriteWord(0x1002, 0x0100); // d16=256 → target=0x1002+256=0x1102
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(1, block.InstructionCount);
+        Assert.Equal(4, block.ByteLength);
+
+        Cpu.SetCCR(0);
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1102u, nextPC);
+    }
+
+    [Fact]
+    public void BccW_ForwardBranchTaken()
+    {
+        ResetCpu();
+        // BEQ.W: 0x6700, followed by d16=0x0200 (512)
+        Mem.WriteWord(0x1000, 0x6700);
+        Mem.WriteWord(0x1002, 0x0200);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(1, block.InstructionCount);
+        Assert.Equal(4, block.ByteLength);
+
+        Cpu.FlagZ = true; // BEQ taken
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1202u, nextPC);
+    }
+
+    [Fact]
+    public void BccW_ForwardBranchNotTaken()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x6700); // BEQ.W
+        Mem.WriteWord(0x1002, 0x0200); // d16=512
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.SetCCR(0); // Z=0, BEQ not taken
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1004u, nextPC); // fallthrough
+    }
+
+    [Fact]
+    public void BraW_BackwardBranchRejected()
+    {
+        ResetCpu();
+        // BRA.W with backward displacement should terminate block before it
+        Mem.WriteWord(0x1000, 0x7000); // MOVEQ #0,D0
+        Mem.WriteWord(0x1002, 0x6000); // BRA.W
+        Mem.WriteWord(0x1004, 0xFFFC); // d16=-4 → target=0x1000
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        // Backward BRA.W should be excluded; block should contain only MOVEQ
+        Assert.Equal(1, block.InstructionCount);
+    }
+
+    [Fact]
+    public void BraW_BlockByteLength()
+    {
+        ResetCpu();
+        // MOVEQ + BRA.W = 2 + 4 = 6 bytes
+        Mem.WriteWord(0x1000, 0x7000); // MOVEQ #0,D0
+        Mem.WriteWord(0x1002, 0x6000); // BRA.W
+        Mem.WriteWord(0x1004, 0x0100); // d16=256
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(2, block.InstructionCount);
+        Assert.Equal(6, block.ByteLength);
+    }
+
+    // ================================================================
+    // Phase 1E: Byte/Word size register instructions
+    // ================================================================
+
+    [Fact]
+    public void AddBDnDm_Basic()
+    {
+        ResetCpu();
+        // ADD.B D1,D0: 1101 000 000 000 001 = 0xD001
+        Mem.WriteWord(0x1000, 0xD001);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x12345610;
+        Cpu.D[1] = 0xABCDEF20;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0x12345630u, Cpu.D[0]); // only low byte changes
+    }
+
+    [Fact]
+    public void AddWDnDm_Basic()
+    {
+        ResetCpu();
+        // ADD.W D1,D0: 1101 000 001 000 001 = 0xD041
+        Mem.WriteWord(0x1000, 0xD041);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x12340100;
+        Cpu.D[1] = 0xABCD0200;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0x12340300u, Cpu.D[0]);
+    }
+
+    [Fact]
+    public void SubBDnDm_Basic()
+    {
+        ResetCpu();
+        // SUB.B D1,D0: 1001 000 000 000 001 = 0x9001
+        Mem.WriteWord(0x1000, 0x9001);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x12345630;
+        Cpu.D[1] = 0xABCDEF10;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0x12345620u, Cpu.D[0]);
+    }
+
+    [Fact]
+    public void SubWDnDm_Basic()
+    {
+        ResetCpu();
+        // SUB.W D1,D0: 1001 000 001 000 001 = 0x9041
+        Mem.WriteWord(0x1000, 0x9041);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x12340300;
+        Cpu.D[1] = 0xABCD0100;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0x12340200u, Cpu.D[0]);
+    }
+
+    [Fact]
+    public void CmpBDnDm_Equal()
+    {
+        ResetCpu();
+        // CMP.B D1,D0: 1011 000 000 000 001 = 0xB001
+        Mem.WriteWord(0x1000, 0xB001);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x12345642;
+        Cpu.D[1] = 0xABCDEF42;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.True(Cpu.FlagZ);
+        Assert.Equal(0x12345642u, Cpu.D[0]); // unchanged
+    }
+
+    [Fact]
+    public void CmpWDnDm_NotEqual()
+    {
+        ResetCpu();
+        // CMP.W D1,D0: 1011 000 001 000 001 = 0xB041
+        Mem.WriteWord(0x1000, 0xB041);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x12340100;
+        Cpu.D[1] = 0xABCD0200;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.False(Cpu.FlagZ);
+    }
+
+    [Fact]
+    public void AndBDnDm_Basic()
+    {
+        ResetCpu();
+        // AND.B D1,D0: 1100 000 000 000 001 = 0xC001
+        Mem.WriteWord(0x1000, 0xC001);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x123456FF;
+        Cpu.D[1] = 0xABCDEF0F;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0x1234560Fu, Cpu.D[0]);
+    }
+
+    [Fact]
+    public void OrWDnDm_Basic()
+    {
+        ResetCpu();
+        // OR.W D1,D0: 1000 000 001 000 001 = 0x8041
+        Mem.WriteWord(0x1000, 0x8041);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x12340F00;
+        Cpu.D[1] = 0xABCD00F0;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0x12340FF0u, Cpu.D[0]);
+    }
+
+    [Fact]
+    public void EorBDnDm_Basic()
+    {
+        ResetCpu();
+        // EOR.B D1,D0: 1011 001 100 000 000 = 0xB300
+        Mem.WriteWord(0x1000, 0xB300);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x123456FF;
+        Cpu.D[1] = 0xABCDEF0F;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0x123456F0u, Cpu.D[0]); // 0xFF ^ 0x0F = 0xF0
+    }
+
+    [Fact]
+    public void EorWDnDm_Basic()
+    {
+        ResetCpu();
+        // EOR.W D1,D0: 1011 001 101 000 000 = 0xB340
+        Mem.WriteWord(0x1000, 0xB340);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x1234FFFF;
+        Cpu.D[1] = 0xABCD00FF;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0x1234FF00u, Cpu.D[0]);
+    }
+
+    [Fact]
+    public void AddqBDn_Basic()
+    {
+        ResetCpu();
+        // ADDQ.B #3,D0: 0101 011 0 00 000 000 = 0x5600
+        Mem.WriteWord(0x1000, 0x5600);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x123456FD;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        // 0xFD + 3 = 0x100 → wraps to 0x00
+        Assert.Equal(0x12345600u, Cpu.D[0]);
+    }
+
+    [Fact]
+    public void SubqWDn_Basic()
+    {
+        ResetCpu();
+        // SUBQ.W #1,D0: 0101 001 1 01 000 000 = 0x5340
+        Mem.WriteWord(0x1000, 0x5340);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x12340000;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        // 0x0000 - 1 = 0xFFFF
+        Assert.Equal(0x1234FFFFu, Cpu.D[0]);
+    }
+
+    [Fact]
+    public void ClrBDn_Basic()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x4200); // CLR.B D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x123456FF;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0x12345600u, Cpu.D[0]);
+        Assert.True(Cpu.FlagZ);
+    }
+
+    [Fact]
+    public void ClrWDn_Basic()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x4240); // CLR.W D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x1234FFFF;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0x12340000u, Cpu.D[0]);
+        Assert.True(Cpu.FlagZ);
+    }
+
+    [Fact]
+    public void TstBDn_Negative()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x4A00); // TST.B D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x000000FF;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.True(Cpu.FlagN);
+        Assert.False(Cpu.FlagZ);
+    }
+
+    [Fact]
+    public void TstWDn_Zero()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x4A40); // TST.W D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x12340000;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.False(Cpu.FlagN);
+        Assert.True(Cpu.FlagZ);
+    }
+
+    [Fact]
+    public void NegBDn_Basic()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x4400); // NEG.B D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x12345601;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0x123456FFu, Cpu.D[0]); // NEG.B 1 = 0xFF (-1)
+    }
+
+    [Fact]
+    public void NotWDn_Basic()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x4640); // NOT.W D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0x1234FF00;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0x123400FFu, Cpu.D[0]);
+    }
+
+    [Fact]
+    public void AddBDnDm_PreservesUpperBytes()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0xD001); // ADD.B D1,D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.D[0] = 0xAABBCC05;
+        Cpu.D[1] = 0x11223303;
+        Cpu.SetCCR(0);
+        block.Execute(Cpu);
+        Assert.Equal(0xAABBCC08u, Cpu.D[0]); // upper bytes unchanged
+    }
+
+    // ================================================================
+    // Dead flag elimination for new instructions
+    // ================================================================
+
+    [Fact]
+    public void DeadFlags_BtstTransparent()
+    {
+        ResetCpu();
+        // ADDQ.L #1,D0 / BTST D1,D2 / BEQ target
+        Mem.WriteWord(0x1000, 0x5280); // ADDQ.L #1,D0
+        Mem.WriteWord(0x1002, 0x0302); // BTST D1,D2
+        Mem.WriteWord(0x1004, 0x6704); // BEQ.B +4
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(3, block.InstructionCount);
+    }
+
+    [Fact]
+    public void DeadFlags_LeaTransparent()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x43D0); // LEA (A0),A1
+        Mem.WriteWord(0x1002, 0x43E8); // LEA d16(A0),A1
+        Mem.WriteWord(0x1004, 0x0010); // d16=16
+        Mem.WriteWord(0x1006, 0x5380); // SUBQ.L #1,D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(3, block.InstructionCount);
+    }
+
+    [Fact]
+    public void DeadFlags_MuluKillsFlags()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x5280); // ADDQ.L #1,D0
+        Mem.WriteWord(0x1002, 0xC0C1); // MULU.W D1,D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(2, block.InstructionCount);
+    }
+
+    // ================================================================
+    // Multi-word instruction mixed blocks
+    // ================================================================
+
+    [Fact]
+    public void MixedBlock_LeaAndMoveq()
+    {
+        ResetCpu();
+        // MOVEQ #10,D0 / LEA d16(A0),A1 / MOVEQ #20,D2
+        Mem.WriteWord(0x1000, 0x700A); // MOVEQ #10,D0
+        Mem.WriteWord(0x1002, 0x43E8); // LEA d16(A0),A1
+        Mem.WriteWord(0x1004, 0x0080); // d16=128
+        Mem.WriteWord(0x1006, 0x7414); // MOVEQ #20,D2
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(3, block.InstructionCount);
+        Assert.Equal(8, block.ByteLength); // 2 + 4 + 2
+
+        Cpu.A[0] = 0x00004000;
+        Cpu.SetCCR(0);
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1008u, nextPC);
+        Assert.Equal(10u, Cpu.D[0]);
+        Assert.Equal(0x00004080u, Cpu.A[1]);
+        Assert.Equal(20u, Cpu.D[2]);
+    }
+
+    // ================================================================
+    // Phase 2: Memory access instructions
+    // ================================================================
+
+    private void SetupDataCache(uint baseAddr, uint mask)
+    {
+        Cpu.SetupDataCache(baseAddr, baseAddr, mask);
+    }
+
+    [Fact]
+    public void MoveLIndAnDm_Classify()
+    {
+        ResetCpu();
+        // MOVE.L (A0),D0 = 0x2010
+        Mem.WriteWord(0x1000, 0x2010);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(1, block.InstructionCount);
+        Assert.False(block.RegisterOnly);
+    }
+
+    [Fact]
+    public void MoveLIndAnDm_CacheHit()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x2010); // MOVE.L (A0),D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.A[0] = 0x2000;
+        Mem.WriteLong(0x2000, 0xDEADBEEF);
+        SetupDataCache(0x2000, 0xFFF);
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1002u, nextPC);
+        Assert.Equal(0xDEADBEEFu, Cpu.D[0]);
+        Assert.Equal(block.InstructionCount, Cpu._jitExecutedCount);
+    }
+
+    [Fact]
+    public void MoveLIndAnDm_CacheMiss_Bailout()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x2010);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.A[0] = 0x2000;
+        Cpu.InvalidateDataCache();
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1000u, nextPC); // bailout PC
+        Assert.Equal(0, Cpu._jitExecutedCount);
+    }
+
+    [Fact]
+    public void MoveLIndAnDm_WrongPage_Bailout()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x2010);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.A[0] = 0x3000; // different page than cached
+        SetupDataCache(0x2000, 0xFFF);
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1000u, nextPC);
+        Assert.Equal(0, Cpu._jitExecutedCount);
+    }
+
+    [Fact]
+    public void MoveLPostIncAnDm_CacheHit()
+    {
+        ResetCpu();
+        // MOVE.L (A0)+,D1 = 0x2218
+        Mem.WriteWord(0x1000, 0x2218);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.A[0] = 0x2000;
+        Mem.WriteLong(0x2000, 0x12345678);
+        SetupDataCache(0x2000, 0xFFF);
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1002u, nextPC);
+        Assert.Equal(0x12345678u, Cpu.D[1]);
+        Assert.Equal(0x2004u, Cpu.A[0]); // post-incremented
+    }
+
+    [Fact]
+    public void MoveLPostIncAnDm_CacheMiss_NoIncrement()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x2218);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.A[0] = 0x2000;
+        Cpu.InvalidateDataCache();
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1000u, nextPC);
+        Assert.Equal(0x2000u, Cpu.A[0]); // NOT incremented
+    }
+
+    [Fact]
+    public void MoveLDmIndAn_AlwaysBailout()
+    {
+        ResetCpu();
+        // MOVE.L D0,(A0) = 0x2080
+        Mem.WriteWord(0x1000, 0x2080);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        SetupDataCache(0x2000, 0xFFF);
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1000u, nextPC);
+        Assert.Equal(0, Cpu._jitExecutedCount);
+    }
+
+    [Fact]
+    public void MoveLD16AnDm_CacheHit()
+    {
+        ResetCpu();
+        // MOVE.L d16(A2),D3 — opcode=0x2628 (srcMode=5, srcReg=0, but srcReg from bits 0-2)
+        // Actually: 0010 ddd 000 101 sss → D3=dst(bits 11-9=011), srcMode=5, srcReg=A2(bits 2-0=010)
+        // 0x262A = 0010 011 000 101 010 → MOVE.L d16(A2),D3
+        Mem.WriteWord(0x1000, 0x262A);
+        Mem.WriteWord(0x1002, 0x0010); // d16 = 16
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(1, block.InstructionCount);
+        Assert.Equal(4, block.ByteLength);
+
+        Cpu.A[2] = 0x2000;
+        Mem.WriteLong(0x2010, 0xCAFEBABE);
+        SetupDataCache(0x2000, 0xFFF);
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1004u, nextPC);
+        Assert.Equal(0xCAFEBABEu, Cpu.D[3]);
+    }
+
+    [Fact]
+    public void MoveLD16AnDm_NegativeDisp()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x262A); // MOVE.L d16(A2),D3
+        Mem.WriteWord(0x1002, unchecked((ushort)-16)); // d16 = -16
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.A[2] = 0x2020;
+        Mem.WriteLong(0x2010, 0x11223344);
+        SetupDataCache(0x2000, 0xFFF);
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1004u, nextPC);
+        Assert.Equal(0x11223344u, Cpu.D[3]);
+    }
+
+    [Fact]
+    public void MoveLDmD16An_AlwaysBailout()
+    {
+        ResetCpu();
+        // MOVE.L D0,d16(A1) — 0010 sss 101 000 ddd... wait, MOVE.L encoding:
+        // MOVE.L src,dst — bits 11-6=dst, 5-0=src
+        // dstMode=5(bits 8-6=101), dstReg=A1(bits 11-9=001)
+        // srcMode=0, srcReg=D0(bits 2-0=000)
+        // 0010 001 101 000 000 = 0x2340
+        Mem.WriteWord(0x1000, 0x2340);
+        Mem.WriteWord(0x1002, 0x0010);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        SetupDataCache(0x2000, 0xFFF);
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1000u, nextPC);
+        Assert.Equal(0, Cpu._jitExecutedCount);
+    }
+
+    [Fact]
+    public void Rts_CacheHit()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x4E75); // RTS
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(1, block.InstructionCount);
+
+        Cpu.A[7] = 0x2000;
+        Mem.WriteLong(0x2000, 0x00003000);
+        SetupDataCache(0x2000, 0xFFF);
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x00003000u, nextPC);
+        Assert.Equal(0x2004u, Cpu.A[7]); // stack pointer incremented
+    }
+
+    [Fact]
+    public void Rts_CacheMiss_Bailout()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x4E75);
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.A[7] = 0x2000;
+        Cpu.InvalidateDataCache();
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1000u, nextPC); // bailout
+        Assert.Equal(0x2000u, Cpu.A[7]); // NOT incremented
+        Assert.Equal(0, Cpu._jitExecutedCount);
+    }
+
+    [Fact]
+    public void Rts_TerminatesBlock()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x7001); // MOVEQ #1,D0
+        Mem.WriteWord(0x1002, 0x4E75); // RTS
+        Mem.WriteWord(0x1004, 0x7002); // MOVEQ #2,D0 — should NOT be included
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(2, block.InstructionCount);
+    }
+
+    [Fact]
+    public void Bailout_CycleCounting()
+    {
+        ResetCpu();
+        // MOVEQ #1,D0 (2 cycles) + MOVE.L (A0),D1 (6 cycles)
+        Mem.WriteWord(0x1000, 0x7001); // MOVEQ #1,D0
+        Mem.WriteWord(0x1002, 0x2210); // MOVE.L (A0),D1
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        Cpu.InvalidateDataCache();
+        uint nextPC = block.Execute(Cpu);
+        // MOVEQ succeeds (1 instr), MOVE.L bails out
+        Assert.Equal(0x1002u, nextPC);
+        Assert.Equal(1, Cpu._jitExecutedCount);
+        Assert.Equal(2, Cpu._jitExecutedCycles); // only MOVEQ's 2 cycles
+    }
+
+    [Fact]
+    public void MixedBlock_RegisterAndMemory()
+    {
+        ResetCpu();
+        // MOVEQ #5,D0 + MOVE.L (A0),D1 + MOVEQ #10,D2
+        Mem.WriteWord(0x1000, 0x7005); // MOVEQ #5,D0
+        Mem.WriteWord(0x1002, 0x2210); // MOVE.L (A0),D1
+        Mem.WriteWord(0x1004, 0x740A); // MOVEQ #10,D2
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.Equal(3, block.InstructionCount);
+        Assert.False(block.RegisterOnly);
+
+        // Cache hit: all 3 execute
+        Cpu.A[0] = 0x2000;
+        Mem.WriteLong(0x2000, 0xAABBCCDD);
+        SetupDataCache(0x2000, 0xFFF);
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0x1006u, nextPC);
+        Assert.Equal(5u, Cpu.D[0]);
+        Assert.Equal(0xAABBCCDDu, Cpu.D[1]);
+        Assert.Equal(10u, Cpu.D[2]);
+        Assert.Equal(3, Cpu._jitExecutedCount);
+    }
+
+    [Fact]
+    public void MoveLIndAnDm_PageBoundary_Bailout()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x2210); // MOVE.L (A0),D1
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        // Address 0x2FFE crosses page boundary
+        Cpu.A[0] = 0x2FFE;
+        SetupDataCache(0x2000, 0xFFF);
+        uint nextPC = block.Execute(Cpu);
+        Assert.Equal(0, Cpu._jitExecutedCount); // bailout
+    }
+
+    [Fact]
+    public void RegisterOnlyBlock_FlagIsTrue()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x7001); // MOVEQ #1,D0
+        Mem.WriteWord(0x1002, 0x7201); // MOVEQ #1,D1
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+        Assert.True(block.RegisterOnly);
+    }
+
+    // ================================================================
+    // Bailout blacklisting
+    // ================================================================
+
+    [Fact]
+    public void BailoutBlacklist_EvictsAfterThreshold()
+    {
+        ResetCpu();
+        Mem.WriteWord(0x1000, 0x2010); // MOVE.L (A0),D0
+        var compiler = new JitCompiler();
+        var block = compiler.TryCompile(Cpu, 0x1000, 0x1000);
+        Assert.NotNull(block);
+
+        var cache = Cpu.JitCache;
+        cache.AddBlock(0x1000, block);
+        Assert.NotNull(cache.TryGetBlock(0x1000));
+        Assert.False(cache.IsUncompilable(0x1000));
+
+        block.BailoutCount = MC68030.JitBailoutBlacklistThreshold;
+        cache.RemoveBlock(0x1000);
+        cache.MarkUncompilable(0x1000);
+
+        Assert.Null(cache.TryGetBlock(0x1000));
+        Assert.True(cache.IsUncompilable(0x1000));
     }
 }
