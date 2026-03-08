@@ -51,6 +51,7 @@ public class Wd33c93Device : IMemoryMappedDevice
     private enum ScsiPhase { Idle, MsgOut, Command, DataIn, DataOut, Status, MsgIn }
     private ScsiPhase _phase = ScsiPhase.Idle;
     private bool _pioTransferActive;
+    private bool _satInProgress; // Select-and-Transfer (Level II) in progress
 
     // SBT (Single Byte Transfer) two-stage handshake state.
     // On real WD33C93, SBT + XFER_INFO sets DBR to signal the driver to
@@ -79,6 +80,10 @@ public class Wd33c93Device : IMemoryMappedDevice
     private uint _writeLba;
     private int _writeSectorCount;
 
+    // Deferred interrupt: Level I SEL_ATN follow-up (CSR=0x8E after CSR=0x11)
+    // Set in HandleSelectAtn, fired in Tick(), cancelled by new command execution.
+    private byte _deferredInterruptCsr;
+
     // Diagnostics
     public Action<bool>? InterruptOutput;
     public Action<string>? DiagLog;
@@ -95,7 +100,25 @@ public class Wd33c93Device : IMemoryMappedDevice
     // --- External device attachment ---
 
     public void AttachMemory(Memory memory) { _memory = memory; }
-    public void AttachPcc(PccDevice pcc) { _pcc = pcc; }
+    public void AttachPcc(PccDevice pcc)
+    {
+        _pcc = pcc;
+    }
+
+    /// <summary>
+    /// Called periodically from PCC.Tick() to fire deferred interrupts.
+    /// </summary>
+    public void Tick()
+    {
+        // Only fire deferred interrupt after the host has read the previous CSR
+        // (INT cleared). Otherwise, the deferred CSR overwrites the unread one.
+        if (_deferredInterruptCsr != 0 && (_regs[0x1F] & 0x80) == 0)
+        {
+            byte csr = _deferredInterruptCsr;
+            _deferredInterruptCsr = 0;
+            SetCsrAndInterrupt(csr);
+        }
+    }
     public void AttachTarget(int scsiId, IScsiTarget target)
     {
         if (scsiId >= 0 && scsiId < 8)
@@ -263,6 +286,9 @@ public class Wd33c93Device : IMemoryMappedDevice
 
     private void HandleCommand(byte cmd)
     {
+        // Cancel any deferred follow-up interrupt — the host is manually managing phases
+        _deferredInterruptCsr = 0;
+
         CommandCount++;
         // Bit 7 = SBT (Single Byte Transfer) modifier — used with XFER_INFO
         bool sbt = (cmd & 0x80) != 0;
@@ -303,6 +329,7 @@ public class Wd33c93Device : IMemoryMappedDevice
         _phase = ScsiPhase.Idle;
         _pioTransferActive = false;
         _sbtPending = false;
+        _satInProgress = false;
         _selectedTarget = -1;
         SetCsrAndInterrupt(0x41); // DISC
     }
@@ -312,6 +339,7 @@ public class Wd33c93Device : IMemoryMappedDevice
         _phase = ScsiPhase.Idle;
         _pioTransferActive = false;
         _sbtPending = false;
+        _satInProgress = false;
         _selectedTarget = -1;
         SetCsrAndInterrupt(0x41); // DISC
     }
@@ -323,6 +351,7 @@ public class Wd33c93Device : IMemoryMappedDevice
         _phase = ScsiPhase.Idle;
         _pioTransferActive = false;
         _sbtPending = false;
+        _satInProgress = false;
         _selectedTarget = -1;
         _cdbOffset = 0;
         _dataOffset = 0;
@@ -352,33 +381,160 @@ public class Wd33c93Device : IMemoryMappedDevice
             _phase = ScsiPhase.MsgOut;
             _cdbOffset = 0;
             _cdbLength = 0;
-            // CSR = 0x8E (MIS_2 | MESG_OUT phase) — MIS_2 after SEL_ATN
-            // Phase bits: 110 = MSG_OUT
-            SetCsrAndInterrupt(0x8E);
+            // CSR = 0x11 (CSR_SELECT — selection complete)
+            SetCsrAndInterrupt(0x11);
+
+            // Level I follow-up: after host reads CSR_SELECT (0x11) and returns
+            // from ISR, fire CSR=0x8E (SRV_REQ|MSG_OUT) on next Tick() to signal
+            // the target is requesting MSG_OUT phase for IDENTIFY message.
+            // Cancelled if host issues a command (e.g. XFER_INFO) before Tick.
+            _deferredInterruptCsr = 0x8E;
         }
     }
 
-    // --- SEL_ATN_XFER (0x08) — Select-and-Transfer completion ---
-    // NetBSD's sbicxfdone() issues this with cmd_phase=0x46 to complete
-    // STATUS + MSG_IN + DISCONNECT automatically.
+    // --- SEL_ATN_XFER (0x08) — Select-and-Transfer (Level II) ---
+    // Performs selection, IDENTIFY message, CDB, and optionally data transfer.
+    // For Level II (L2_BASIC), the chip interrupts with SRV_REQ when data
+    // transfer is needed, allowing the driver to set up DMA and issue XFER_INFO.
+    // After all phases complete, returns CSR=0x16 (SEL_XFER_DONE).
+
+    private static int GetCdbLength(byte opcode) => (opcode >> 5) switch
+    {
+        0 => 6,   // Group 0
+        1 => 10,  // Group 1
+        2 => 10,  // Group 2
+        5 => 12,  // Group 5
+        _ => 10   // Default
+    };
 
     private void HandleSelAtnXfer()
     {
-        if (_selectedTarget < 0)
+        int target = _regs[0x15] & 0x07;
+
+        DiagLog?.Invoke($"[SCSI] SEL_ATN_XFER target={target} hasTarget={_targets[target] != null} ready={_targets[target]?.IsReady}");
+
+        if (_targets[target] == null || !_targets[target]!.IsReady)
         {
-            // No target selected — timeout
-            SetCsrAndInterrupt(0x42);
+            _selectedTarget = -1;
+            _phase = ScsiPhase.Idle;
+            SetCsrAndInterrupt(0x42); // SEL_TIMEO
             return;
         }
 
-        // Store status byte in TLUN register ($0F)
-        _regs[0x0F] = _statusByte;
-        // Set cmd_phase to 0x60 (complete)
-        _regs[0x10] = 0x60;
+        _selectedTarget = target;
+        _selectedLun = _regs[0x0F] & 0x07;
+
+        // Check command phase for scatter/gather resume or status phase resume
+        byte cmdPhase = _regs[0x10];
+
+        // Command phase 0x45 = resume data transfer (scatter/gather continuation).
+        // The driver re-issues SAT after a partial DMA segment completes.
+        // Don't re-execute the CDB — just continue transferring from the existing buffer.
+        if (cmdPhase == 0x45 && _satInProgress &&
+            (_phase == ScsiPhase.DataIn || _phase == ScsiPhase.DataOut) &&
+            _dataOffset < _dataLength)
+        {
+            DiagLog?.Invoke($"[SCSI] SAT resume cmdPhase=$45 offset={_dataOffset} remaining={_dataLength - _dataOffset}");
+            if (_pcc != null && _memory != null)
+            {
+                if (_phase == ScsiPhase.DataIn)
+                    DoDmaDataIn();
+                else
+                    DoDmaDataOut();
+            }
+            else
+            {
+                SetCsrAndInterrupt(_phase == ScsiPhase.DataIn ? (byte)0x89 : (byte)0x88);
+            }
+            return;
+        }
+
+        // Command phase 0x50 = status phase (after L2_BASIC reads status byte).
+        // Re-issue SAT to handle message-in and complete the command.
+        if (cmdPhase == 0x50 && _satInProgress)
+        {
+            DiagLog?.Invoke("[SCSI] SAT resume cmdPhase=$50 → CompleteSat");
+            CompleteSat();
+            return;
+        }
+
+        // Read CDB from registers 0x03-0x0E
+        byte opcode = _regs[0x03];
+        _cdbLength = GetCdbLength(opcode);
+        for (int i = 0; i < _cdbLength && i < _cdb.Length; i++)
+            _cdb[i] = _regs[0x03 + i];
+        _cdbOffset = _cdbLength;
+
+        if (_scsiCmdLogCount < 200)
+        {
+            _scsiCmdLogCount++;
+            DiagLog?.Invoke($"[SCSI] SAT CDB[{_cdbLength}]: {FormatCdb()} target={_selectedTarget} lun={_selectedLun}");
+        }
+
+        // Execute the SCSI command
+        var result = _targets[_selectedTarget]!.ProcessCommand(_cdb, _cdbLength, _selectedLun);
+        _currentResult = result;
+        _statusByte = result.StatusByte;
+        _satInProgress = true;
+
+        if (result.HasDataIn)
+        {
+            _dataBuffer = result.DataIn ?? Array.Empty<byte>();
+            _dataOffset = 0;
+            _dataLength = result.DataInLength;
+            _phase = ScsiPhase.DataIn;
+
+            if (_scsiCmdLogCount <= 200 && _cdb[0] is 0x08 or 0x28 or 0x25 or 0x12)
+                LogDataBuffer("SAT DataIn", _dataBuffer, _dataLength);
+
+            if (_pcc != null && _memory != null)
+            {
+                // PCC DMA available — driver has already set up PCC DMA before SAT.
+                DoDmaDataIn();
+            }
+            else
+            {
+                SetCsrAndInterrupt(0x89); // SRV_REQ | DATA_IN
+            }
+        }
+        else if (result.HasDataOut)
+        {
+            _dataBuffer = result.DataOut ?? new byte[result.DataOutLength];
+            _dataOffset = 0;
+            _dataLength = result.DataOutLength;
+            SaveWriteParams();
+            _phase = ScsiPhase.DataOut;
+
+            if (_pcc != null && _memory != null)
+            {
+                DoDmaDataOut();
+            }
+            else
+            {
+                SetCsrAndInterrupt(0x88); // SRV_REQ | DATA_OUT
+            }
+        }
+        else
+        {
+            // No data phase — complete SAT immediately
+            CompleteSat();
+        }
+    }
+
+    /// <summary>
+    /// Complete a Select-and-Transfer operation. Sets status/message registers
+    /// and returns CSR=0x16 (SEL_XFER_DONE).
+    /// </summary>
+    private void CompleteSat()
+    {
+        _satInProgress = false;
         _phase = ScsiPhase.Idle;
         _selectedTarget = -1;
-        // CSR = 0x16 (S_XFERRED — Select-and-Transfer completed)
-        SetCsrAndInterrupt(0x16);
+        _regs[0x0F] = _statusByte;  // Status byte (read by driver)
+        _regs[0x19] = 0x00;          // Command Complete message
+        _regs[0x10] = 0x60;          // Command Phase: all phases done
+        // TC already reflects remaining bytes (set by DoDmaDataIn/Out)
+        SetCsrAndInterrupt(0x16);     // SEL_XFER_DONE
     }
 
     // --- XFER_INFO (0x20) — Phase-based transfer ---
@@ -636,8 +792,7 @@ public class Wd33c93Device : IMemoryMappedDevice
                 _phase = ScsiPhase.Command;
                 _cdbOffset = 0;
                 // CSR = 0x2A (MIS | COMMAND phase)
-                // MIS (0x28) + CMD phase bits (010) = 0x2A
-                SetCsrAndInterrupt(0x2A);
+                SetCsrAndInterrupt(0x1A); // XFER_DONE | COMMAND
                 break;
 
             case ScsiPhase.Command:
@@ -648,29 +803,36 @@ public class Wd33c93Device : IMemoryMappedDevice
             case ScsiPhase.DataIn:
                 if (_dataOffset < _dataLength)
                 {
-                    // TC exhausted but target still has data — stay in DataIn phase
-                    SetCsrAndInterrupt(0x29);
+                    SetCsrAndInterrupt(_satInProgress ? (byte)0x89 : (byte)0x19);
+                }
+                else if (_satInProgress)
+                {
+                    CompleteSat();
                 }
                 else
                 {
-                    // All data transferred → STATUS phase
                     _phase = ScsiPhase.Status;
-                    SetCsrAndInterrupt(0x2B);
+                    SetCsrAndInterrupt(0x1B); // XFER_DONE | STATUS
                 }
                 break;
 
             case ScsiPhase.DataOut:
                 if (_dataOffset < _dataLength)
                 {
-                    // TC exhausted but target expects more data — stay in DataOut phase
-                    SetCsrAndInterrupt(0x28);
+                    SetCsrAndInterrupt(_satInProgress ? (byte)0x88 : (byte)0x18);
                 }
                 else
                 {
-                    // All data received → flush to disk, then STATUS phase
                     CompleteDataOut();
-                    _phase = ScsiPhase.Status;
-                    SetCsrAndInterrupt(0x2B);
+                    if (_satInProgress)
+                    {
+                        CompleteSat();
+                    }
+                    else
+                    {
+                        _phase = ScsiPhase.Status;
+                        SetCsrAndInterrupt(0x1B); // XFER_DONE | STATUS
+                    }
                 }
                 break;
 
@@ -681,7 +843,7 @@ public class Wd33c93Device : IMemoryMappedDevice
                 _dataOffset = 0;
                 _dataLength = 1;
                 // CSR = 0x2F (MIS | MSG_IN phase)
-                SetCsrAndInterrupt(0x2F);
+                SetCsrAndInterrupt(0x1F); // XFER_DONE | MSG_IN
                 break;
 
             case ScsiPhase.MsgIn:
@@ -710,7 +872,7 @@ public class Wd33c93Device : IMemoryMappedDevice
         {
             _statusByte = 0x02; // CHECK CONDITION
             _phase = ScsiPhase.Status;
-            SetCsrAndInterrupt(0x2B);
+            SetCsrAndInterrupt(0x1B); // XFER_DONE | STATUS
             return;
         }
 
@@ -733,7 +895,7 @@ public class Wd33c93Device : IMemoryMappedDevice
             }
 
             // CSR = 0x29 (MIS | DATA_IN phase)
-            SetCsrAndInterrupt(0x29);
+            SetCsrAndInterrupt(0x19); // XFER_DONE | DATA_IN
         }
         else if (result.HasDataOut)
         {
@@ -745,14 +907,14 @@ public class Wd33c93Device : IMemoryMappedDevice
             SaveWriteParams();
             _phase = ScsiPhase.DataOut;
             // CSR = 0x28 (MIS | DATA_OUT phase)
-            SetCsrAndInterrupt(0x28);
+            SetCsrAndInterrupt(0x18); // XFER_DONE | DATA_OUT
         }
         else
         {
             // No data phase → STATUS
             _phase = ScsiPhase.Status;
             // CSR = 0x2B (MIS | STATUS phase)
-            SetCsrAndInterrupt(0x2B);
+            SetCsrAndInterrupt(0x1B); // XFER_DONE | STATUS
         }
     }
 
@@ -820,21 +982,23 @@ public class Wd33c93Device : IMemoryMappedDevice
             DiagLog?.Invoke($"[SCSI] DMA verify @${verifyAddr:X8}: {sb}");
         }
 
-        SetTransferCount(0);
-        _pcc.SetDmaDataAddress(dmaAddr); // Update PCC DMA address for next transfer
+        SetTransferCount(tc - transferLen);
+        _pcc.SetDmaDataAddress(dmaAddr);
         _pcc.SetDmaDone();
 
         if (_dataOffset < _dataLength)
         {
-            // TC exhausted but SCSI target still has data — stay in DataIn phase.
-            // Report "service required, DataIn phase" so the driver sets up another DMA.
-            SetCsrAndInterrupt(0x29);
+            // Partial transfer — SAT: SRV_REQ for next segment; SEL_ATN: MIS
+            SetCsrAndInterrupt(_satInProgress ? (byte)0x89 : (byte)0x19);
+        }
+        else if (_satInProgress)
+        {
+            CompleteSat();
         }
         else
         {
-            // All data transferred — move to STATUS phase
             _phase = ScsiPhase.Status;
-            SetCsrAndInterrupt(0x2B);
+            SetCsrAndInterrupt(0x1B); // XFER_DONE | STATUS
         }
     }
 
@@ -860,21 +1024,26 @@ public class Wd33c93Device : IMemoryMappedDevice
                 _dataBuffer[_dataOffset++] = b;
         }
 
-        SetTransferCount(0);
-        _pcc.SetDmaDataAddress(dmaAddr); // Update PCC DMA address for next transfer
+        SetTransferCount(tc - transferLen);
+        _pcc.SetDmaDataAddress(dmaAddr);
         _pcc.SetDmaDone();
 
         if (_dataOffset < _dataLength)
         {
-            // TC exhausted but target expects more data — stay in DataOut phase.
-            SetCsrAndInterrupt(0x28);
+            SetCsrAndInterrupt(_satInProgress ? (byte)0x88 : (byte)0x18);
         }
         else
         {
-            // All data received — flush to disk and move to STATUS
             CompleteDataOut();
-            _phase = ScsiPhase.Status;
-            SetCsrAndInterrupt(0x2B);
+            if (_satInProgress)
+            {
+                CompleteSat();
+            }
+            else
+            {
+                _phase = ScsiPhase.Status;
+                SetCsrAndInterrupt(0x1B); // XFER_DONE | STATUS
+            }
         }
     }
 

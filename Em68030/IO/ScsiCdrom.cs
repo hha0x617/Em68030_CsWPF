@@ -19,12 +19,15 @@ public class ScsiCdrom : IScsiTarget
 
     public void MountImage(string path)
     {
+        bool wasOpen = _imageStream != null;
         UnmountImage();
         _imageStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         _totalSectors = _imageStream.Length / SectorSize;
         if (_totalSectors == 0 && _imageStream.Length > 0)
             _totalSectors = 1;
-        _mediaChanged = true;
+        // Only report UNIT ATTENTION for media changes after initial mount.
+        // At power-on, media is already present — no UNIT ATTENTION needed.
+        _mediaChanged = wasOpen;
         ClearSense();
     }
 
@@ -39,8 +42,22 @@ public class ScsiCdrom : IScsiTarget
 
     public ScsiResult ProcessCommand(byte[] cdb, int cdbLength, int lun = 0)
     {
-        // Report media change via UNIT ATTENTION (except for REQUEST SENSE)
-        if (_mediaChanged && cdb[0] != 0x03)
+        byte opcode = cdb[0];
+
+        // INQUIRY and REQUEST SENSE must always work regardless of media state
+        // (SCSI standard: these commands never return CHECK CONDITION for
+        // UNIT ATTENTION or NOT READY).
+        if (lun != 0)
+        {
+            if (opcode == 0x12) return CmdInquiryNoDevice(cdb);
+            if (opcode == 0x03) return CmdRequestSense(cdb);
+            return MakeCheckCondition(0x05, 0x25, 0x00); // LUN NOT SUPPORTED
+        }
+        if (opcode == 0x12) return CmdInquiry(cdb);
+        if (opcode == 0x03) return CmdRequestSense(cdb);
+
+        // Report media change via UNIT ATTENTION
+        if (_mediaChanged)
         {
             _mediaChanged = false;
             return MakeCheckCondition(0x06, 0x28, 0x00); // UNIT ATTENTION, MEDIUM MAY HAVE CHANGED
@@ -48,14 +65,6 @@ public class ScsiCdrom : IScsiTarget
 
         if (!IsReady)
             return MakeCheckCondition(0x02, 0x3A, 0x00); // NOT READY, MEDIUM NOT PRESENT
-
-        if (lun != 0)
-        {
-            byte opcode = cdb[0];
-            if (opcode == 0x12) return CmdInquiryNoDevice(cdb);
-            if (opcode == 0x03) return CmdRequestSense(cdb);
-            return MakeCheckCondition(0x05, 0x25, 0x00); // LUN NOT SUPPORTED
-        }
 
         byte op = cdb[0];
         return op switch

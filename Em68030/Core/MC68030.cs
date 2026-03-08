@@ -84,11 +84,12 @@ public class MC68030
     public const ushort JitBailoutBlacklistThreshold = 64;
 
     // External interrupt support
-    private int _pendingIPL = 0;
-    private int _pendingVector = -1; // -1 = use autovector
+    internal int _pendingIPL = 0;
+    internal int _pendingVector = -1; // -1 = use autovector
     private readonly List<Action> _tickHandlers = new();
     private Action[] _tickHandlerArray = Array.Empty<Action>(); // cached for fast iteration
     private int _tickDivider;
+    private int _interruptSuppress;
 
     private const int TickInterval = 256;
 
@@ -224,6 +225,16 @@ public class MC68030
     public void AddTickHandler(Action handler) { _tickHandlers.Add(handler); _tickHandlerArray = _tickHandlers.ToArray(); }
     public void ClearTickHandlers() { _tickHandlers.Clear(); _tickHandlerArray = Array.Empty<Action>(); }
     public bool HasExternalDevices => _tickHandlerArray.Length > 0;
+
+    /// <summary>
+    /// Suppress interrupt processing for the given number of instructions.
+    /// Used by PCC to defer SCSI interrupt delivery so the driver can finish
+    /// setting up state (hostdata-&gt;connected, hostdata-&gt;state) before the ISR runs.
+    /// </summary>
+    public void SuppressInterrupt(int instructions)
+    {
+        _interruptSuppress = instructions;
+    }
 
     public MC68030(Memory memory)
     {
@@ -569,31 +580,38 @@ public class MC68030
         // Check for pending interrupts (checked even during STOP)
         if (_pendingIPL > 0 && (_pendingIPL == 7 || _pendingIPL > InterruptMask))
         {
-            Stopped = false;
-            StopReason = null;
-            // Save state before interrupt processing for bus error recovery
-            _lastPC = PC;
-            A.AsSpan().CopyTo(_savedA);
-            D.AsSpan().CopyTo(_savedD);
-            _savedSR = SR;
-            try
+            if (_interruptSuppress > 0)
             {
-                ProcessInterrupt(_pendingIPL);
+                --_interruptSuppress;
             }
-            catch (BusErrorException ex)
+            else
             {
-                PC = _lastPC;
-                _savedA.AsSpan().CopyTo(A);
-                _savedD.AsSpan().CopyTo(D);
-                SR = _savedSR;
-                _fetchCacheValid = false;
-                _dataCacheValid = false;
-                var (faultAddr, isWrite, fc, ssw) = FixupPhysicalBusError(ex);
-                RaiseBusError(faultAddr, isWrite, fc, ssw);
+                Stopped = false;
+                StopReason = null;
+                // Save state before interrupt processing for bus error recovery
+                _lastPC = PC;
+                A.AsSpan().CopyTo(_savedA);
+                D.AsSpan().CopyTo(_savedD);
+                _savedSR = SR;
+                try
+                {
+                    ProcessInterrupt(_pendingIPL);
+                }
+                catch (BusErrorException ex)
+                {
+                    PC = _lastPC;
+                    _savedA.AsSpan().CopyTo(A);
+                    _savedD.AsSpan().CopyTo(D);
+                    SR = _savedSR;
+                    _fetchCacheValid = false;
+                    _dataCacheValid = false;
+                    var (faultAddr, isWrite, fc, ssw) = FixupPhysicalBusError(ex);
+                    RaiseBusError(faultAddr, isWrite, fc, ssw);
+                }
+                CycleCount += 34;
+                InstructionCount++;
+                return;
             }
-            CycleCount += 34;
-            InstructionCount++;
-            return;
         }
 
         if (Stopped) return;
@@ -639,16 +657,23 @@ public class MC68030
 
         if (_pendingIPL > 0 && (_pendingIPL == 7 || _pendingIPL > InterruptMask))
         {
-            Stopped = false;
-            StopReason = null;
-            _lastPC = PC;
-            A.AsSpan().CopyTo(_savedA);
-            D.AsSpan().CopyTo(_savedD);
-            _savedSR = SR;
-            ProcessInterrupt(_pendingIPL);
-            CycleCount += 34;
-            InstructionCount++;
-            return !Halted;
+            if (_interruptSuppress > 0)
+            {
+                --_interruptSuppress;
+            }
+            else
+            {
+                Stopped = false;
+                StopReason = null;
+                _lastPC = PC;
+                A.AsSpan().CopyTo(_savedA);
+                D.AsSpan().CopyTo(_savedD);
+                _savedSR = SR;
+                ProcessInterrupt(_pendingIPL);
+                CycleCount += 34;
+                InstructionCount++;
+                return !Halted;
+            }
         }
 
         if (Stopped) return false;
@@ -684,16 +709,23 @@ public class MC68030
 
         if (_pendingIPL > 0 && (_pendingIPL == 7 || _pendingIPL > InterruptMask))
         {
-            Stopped = false;
-            StopReason = null;
-            _lastPC = PC;
-            A.AsSpan().CopyTo(_savedA);
-            D.AsSpan().CopyTo(_savedD);
-            _savedSR = SR;
-            ProcessInterrupt(_pendingIPL);
-            CycleCount += 34;
-            InstructionCount++;
-            return !Halted;
+            if (_interruptSuppress > 0)
+            {
+                --_interruptSuppress;
+            }
+            else
+            {
+                Stopped = false;
+                StopReason = null;
+                _lastPC = PC;
+                A.AsSpan().CopyTo(_savedA);
+                D.AsSpan().CopyTo(_savedD);
+                _savedSR = SR;
+                ProcessInterrupt(_pendingIPL);
+                CycleCount += 34;
+                InstructionCount++;
+                return !Halted;
+            }
         }
 
         if (Stopped) return false;

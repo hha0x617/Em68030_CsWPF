@@ -133,6 +133,10 @@ public class PccDevice : IMemoryMappedDevice
     private bool _scsiDeviceActive;
     private bool _lanceDeviceActive;
 
+    // Reference to SCSI controller for Tick() deferred interrupt delivery
+    private Wd33c93Device? _scsiDevice;
+
+
     // PCC interrupt vector offsets
     private const int PCCV_ACFAIL = 0;
     private const int PCCV_BERR = 1;
@@ -151,6 +155,9 @@ public class PccDevice : IMemoryMappedDevice
     {
         _cpu = cpu;
     }
+
+    /// <summary>Set reference to WD33C93 for deferred interrupt delivery via Tick().</summary>
+    public void SetScsiDevice(Wd33c93Device scsi) { _scsiDevice = scsi; }
 
     /// <summary>
     /// Hardware reset: called when the CPU executes the RESET instruction (0x4E70).
@@ -232,6 +239,9 @@ public class PccDevice : IMemoryMappedDevice
                 AdvanceTimer(ref _timer2Count, _timer2Control, _timer2Preload,
                     ref _timer2OverflowCount, ref _timer2Icr, ticks);
         }
+
+        // Fire deferred SCSI interrupts (Level I SEL_ATN follow-up)
+        _scsiDevice?.Tick();
     }
 
     /// <summary>
@@ -318,6 +328,14 @@ public class PccDevice : IMemoryMappedDevice
                 break;
         }
         UpdateIPL();
+        if (device == "scsi" && active)
+        {
+            // WD33C93 SAT commands complete synchronously during WriteByte,
+            // but the Linux driver needs a few instructions after the command write
+            // to set up hostdata->connected and hostdata->state before the ISR runs.
+            // Real hardware takes milliseconds for SCSI selection/transfer.
+            _cpu.SuppressInterrupt(8);
+        }
     }
 
     private void UpdateIPL()
@@ -394,6 +412,7 @@ public class PccDevice : IMemoryMappedDevice
             0x28 => _lanceIcr,
             0x29 => _generalStatus,
             0x2A => _scsiIcr,
+            0x30 => _scsiIcr, // SCSI ICR alias (real HW offset; Linux uses this)
             0x2B => _slaveBaseAddr,
             0x2C => _soft1Icr,
             0x2D => _vectorBase,
@@ -453,7 +472,9 @@ public class PccDevice : IMemoryMappedDevice
             case 0x1E: WriteIcr(ref _printerIcr, value); break;
             case 0x1F: _printerControl = value; break;
             case 0x20: WriteIcr(ref _dmaIcr, value); break;
-            case 0x21: _dmaControl = value; break;
+            case 0x21:
+                _dmaControl = value;
+                break;
             case 0x22: WriteIcr(ref _busErrIcr, value); break;
             case 0x23: _dmaStatus = value; break;
             case 0x24: WriteIcr(ref _abortIcr, value); break;
@@ -468,6 +489,7 @@ public class PccDevice : IMemoryMappedDevice
             case 0x2D: _vectorBase = value; break;
             case 0x2E: WriteSoftIcr(ref _soft2Icr, value); break;
             case 0x2F: _revision = value; break;
+            case 0x30: WriteDeviceIcr(ref _scsiIcr, value, _scsiDeviceActive); break; // SCSI ICR alias (real HW offset; Linux uses this)
         }
     }
 
