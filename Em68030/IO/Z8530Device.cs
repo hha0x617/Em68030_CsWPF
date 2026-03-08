@@ -100,16 +100,13 @@ public class Z8530Channel
         if (_registerPointer == 0)
         {
             byte regSelect = (byte)(value & 0x07);
-            if (regSelect != 0)
-            {
-                _registerPointer = regSelect;
-                return;
-            }
             // WR0 command handling (bits 5-3)
             byte cmd = (byte)((value >> 3) & 0x07);
+
             switch (cmd)
             {
                 case 0: break; // Null command
+                case 1: break; // Point High (not implemented — Linux uses 16550 UART)
                 case 2: // Reset Ext/Status interrupts
                     break;
                 case 5: // Reset Tx interrupt pending
@@ -122,14 +119,26 @@ public class Z8530Channel
                     InterruptStateChanged?.Invoke();
                     break;
             }
+            if (regSelect != 0)
+            {
+                _registerPointer = regSelect;
+                return;
+            }
             _writeRegs[0] = value;
         }
         else
         {
             byte reg = _registerPointer;
-            byte oldVal = _writeRegs[reg];
-            _writeRegs[reg] = value;
             _registerPointer = 0;
+
+            // WR8 = Transmit Buffer — treat as data write
+            if (reg == 8)
+            {
+                WriteData(value);
+                return;
+            }
+
+            _writeRegs[reg] = value;
             // WR1 affects interrupt enables — re-evaluate
             if (reg == 1)
             {
