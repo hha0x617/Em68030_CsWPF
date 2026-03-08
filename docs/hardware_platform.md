@@ -1,4 +1,4 @@
-# MC68030 Emulator (C# WPF) - Hardware Platform Emulation
+# MC68030 Emulator (C++ WinUI3) - Hardware Platform Emulation
 
 Date: 2026-03-05
 
@@ -21,7 +21,7 @@ The emulator supports two hardware platform configurations:
 
 | Item | Detail |
 |------|--------|
-| File | `Core/MC68030.cs` |
+| File | `Core/MC68030.h/.cpp` |
 | Chip | Motorola MC68030 (32-bit) |
 | Registers | D0-D7, A0-A7, PC, SR, SSP, VBR, CACR, SFC, DFC |
 | Status | Fully implemented |
@@ -30,7 +30,7 @@ The emulator supports two hardware platform configurations:
 
 | Item | Detail |
 |------|--------|
-| File | `Core/Mmu.cs` |
+| File | `Core/Mmu.h/.cpp` |
 | Chip | MC68030 integrated MMU |
 | Features | CRP/SRP root pointers, TC register, TT0/TT1 transparent translation, ATC (1024-entry hash), multi-level page table walk, FC support |
 | Status | Fully implemented |
@@ -39,7 +39,7 @@ The emulator supports two hardware platform configurations:
 
 | Item | Detail |
 |------|--------|
-| File | `Core/Fpu.cs`, `Core/FpuInstructionDecoder.cs` |
+| File | `Core/Fpu.h/.cpp`, `Core/FpuInstructionDecoder.h/.cpp` |
 | Chip | MC68881/MC68882 compatible |
 | Features | 8 FP registers, FPCR/FPSR/FPIAR, all arithmetic/transcendental/hyperbolic/logarithmic operations, FMOVECR constant ROM |
 | Status | Fully implemented |
@@ -62,7 +62,7 @@ Minimal system for standalone MC68030 program execution.
 
 | Item | Detail |
 |------|--------|
-| File | `IO/ConsoleDevice.cs` |
+| File | `IO/ConsoleDevice.h/.cpp` |
 | Chip | Custom (not real hardware) |
 | Base Address | 0x00FF0000 (configurable) |
 | Interface | TRAP #15 handler for 147Bug-compatible monitor I/O |
@@ -73,7 +73,7 @@ Minimal system for standalone MC68030 program execution.
 
 | Item | Detail |
 |------|--------|
-| File | `IO/HddDevice.cs` |
+| File | `IO/HddDevice.h/.cpp` |
 | Chip | Custom (not real hardware) |
 | Base Address | 0x00FF1000 (configurable) |
 | Interface | Memory-mapped register I/O with DMA |
@@ -93,7 +93,7 @@ Register map:
 
 ## MVME147 Platform
 
-Emulates a Motorola MVME147 VMEbus single-board computer running NetBSD/mvme68k.
+Emulates a Motorola MVME147 VMEbus single-board computer running NetBSD/mvme68k and Linux/m68k.
 
 ### Memory Map
 
@@ -104,6 +104,7 @@ Emulates a Motorola MVME147 VMEbus single-board computer running NetBSD/mvme68k.
 | 0xFFFE0000 - 0xFFFE07FF | 2 KB | MK48T02 NVRAM/RTC |
 | 0xFFFE1000 - 0xFFFE102F | 48 B | PCC (Peripheral Channel Controller) |
 | 0xFFFE1800 - 0xFFFE1803 | 4 B | LANCE Ethernet Controller |
+| 0xFFFE2000 - 0xFFFE2007 | 8 B | 16550A UART (Linux only, virtual) |
 | 0xFFFE3000 - 0xFFFE3003 | 4 B | Z8530 SCC (Serial Controller) |
 | 0xFFFE4000 - 0xFFFE4001 | 2 B | WD33C93 SCSI Controller |
 | 0xFFFE0000 - 0xFFFEFFFF | 64 KB | I/O Space Catch-all (fallback) |
@@ -124,7 +125,7 @@ Timer 2    ──→ PCC ICR ($1A) ──→ CPU IPL
 
 | Item | Detail |
 |------|--------|
-| File | `IO/PccDevice.cs` |
+| File | `IO/PccDevice.h/.cpp` |
 | Chip | MVME147 PCC (custom ASIC) |
 | Base Address | 0xFFFE1000 |
 | Size | 48 bytes (0x00-0x2F) |
@@ -165,7 +166,7 @@ ICR format: INT (bit 7) | IEN (bit 3) | IL[2:0] (bits 2-0)
 
 | Item | Detail |
 |------|--------|
-| File | `IO/Z8530Device.cs` |
+| File | `IO/Z8530Device.h/.cpp` |
 | Chip | Zilog Z8530 (dual-channel SCC) |
 | Base Address | 0xFFFE3000 |
 | Size | 4 bytes |
@@ -178,6 +179,8 @@ Features:
 - **TX simulation** with idle tracking and periodic interrupt reassertion
 - **DCD/CTS** always asserted (terminal connected)
 
+> **Linux note**: The Linux kernel 6.x series removed the Z8530-based tty driver for MVME147 (`drivers/char/vme_scc.c` was present in 2.6.x but dropped during the 3.x/4.x cleanup). As a result, Linux/m68k on MVME147 has no kernel tty driver for the Z8530. The SCC is still used by Linux's early boot console (`earlyprintk`) via direct register access in `arch/m68k/kernel/head.S`, but userspace programs (init, shell, getty) require a proper tty device backed by a serial driver. Since no upstream Z8530 tty driver exists for MVME147 in modern kernels, the emulator provides a virtual 16550A UART (see below) as a substitute console device for Linux. NetBSD is unaffected -- it has its own Z8530 driver (`zs(4)`) and uses the SCC for all console I/O.
+
 Address map:
 
 | Offset | Register |
@@ -187,11 +190,60 @@ Address map:
 | $2 | Channel A Control |
 | $3 | Channel A Data |
 
+### Virtual 16550A UART (Linux Console)
+
+| Item | Detail |
+|------|--------|
+| File | `IO/Uart16550Device.h/.cpp` |
+| Chip | Virtual 16550A UART (not present on real MVME147) |
+| Base Address | 0xFFFE2000 |
+| Size | 8 bytes |
+| Activated | Only when Target OS = `Linux` |
+| Status | Fully implemented |
+
+This device does not exist on real MVME147 hardware. It is a virtual peripheral added by the emulator to provide Linux userspace with a working console (`/dev/ttyS0`).
+
+**Background**: The real MVME147 uses a Z8530 SCC for serial communication. The Linux kernel's Z8530 tty driver for VME boards (`vme_scc.c`) was removed in the kernel 3.x/4.x era and is not present in 6.x. Without a tty driver, Linux can output kernel messages via earlyprintk (direct SCC register writes in assembly) but cannot provide a `/dev/ttyS*` device for userspace. The emulator solves this by mapping a 16550A-compatible UART at 0xFFFE2000, allowing the well-supported `8250/16550` serial driver (`CONFIG_SERIAL_8250`) to register `/dev/ttyS0` as the system console.
+
+**Kernel modifications required**: Two patches to the Linux kernel source are needed:
+1. `arch/m68k/mvme147/config.c` -- Register the UART as a platform device (`serial8250` with `mapbase=0xFFFE2000`)
+2. `arch/m68k/kernel/early_printk.c` -- (Optional) Prevent early console unregistration on MVME147 for `keep_bootcon` support
+
+See the [Getting Started: Debian](getting_started_debian.md) or [Getting Started: Gentoo](getting_started_gentoo.md) guides for the complete patch instructions.
+
+Features:
+- **Full 16550A register set**: RBR/THR, IER, IIR/FCR, LCR, MCR, LSR, MSR, SCR
+- **DLAB** (Divisor Latch Access Bit) for baud rate divisor registers
+- **MCR loopback mode** (bit 4) for 8250 driver autodetection and FIFO size probing
+- **64-byte receive FIFO**
+- **Interrupt output** (active high) with RX data and TX empty priorities
+- **TX always ready**: LSR reports THRE and TEMT permanently set (instantaneous transmission)
+
+Register map (DLAB=0):
+
+| Offset | Read | Write |
+|--------|------|-------|
+| $0 | RBR (Receive Buffer) | THR (Transmit Holding) |
+| $1 | IER (Interrupt Enable) | IER |
+| $2 | IIR (Interrupt ID) | FCR (FIFO Control) |
+| $3 | LCR (Line Control) | LCR |
+| $4 | MCR (Modem Control) | MCR |
+| $5 | LSR (Line Status) | (ignored) |
+| $6 | MSR (Modem Status) | (ignored) |
+| $7 | SCR (Scratch) | SCR |
+
+Register map (DLAB=1, LCR bit 7 set):
+
+| Offset | Register |
+|--------|----------|
+| $0 | DLL (Divisor Latch Low) |
+| $1 | DLM (Divisor Latch High) |
+
 ### MK48T02 NVRAM/RTC
 
 | Item | Detail |
 |------|--------|
-| File | `IO/Mk48t02Device.cs` |
+| File | `IO/Mk48t02Device.h/.cpp` |
 | Chip | Mostek MK48T02 (2 KB SRAM + RTC) |
 | Base Address | 0xFFFE0000 |
 | Size | 2048 bytes |
@@ -222,7 +274,7 @@ Pre-populated MVME147 configuration:
 
 | Item | Detail |
 |------|--------|
-| File | `IO/Wd33c93Device.cs` |
+| File | `IO/Wd33c93Device.h/.cpp` |
 | Chip | Western Digital WD33C93 (SCSI Level I) |
 | Base Address | 0xFFFE4000 |
 | Size | 2 ports |
@@ -259,7 +311,7 @@ Commands:
 
 | Item | Detail |
 |------|--------|
-| File | `IO/ScsiDisk.cs` |
+| File | `IO/ScsiDisk.h/.cpp` |
 | Interface | IScsiTarget |
 | Sector Size | 512 bytes |
 | Max Targets | 8 (IDs 0-7) |
@@ -289,7 +341,7 @@ Supported SCSI commands:
 
 | Item | Detail |
 |------|--------|
-| File | `IO/ScsiCdrom.cs` |
+| File | `IO/ScsiCdrom.h/.cpp` |
 | Interface | IScsiTarget |
 | Sector Size | 2048 bytes (ISO 9660) |
 | Max Targets | 1 |
@@ -307,7 +359,7 @@ Limitations: Read-only. WRITE commands not supported.
 
 | Item | Detail |
 |------|--------|
-| File | `IO/LanceDevice.cs` |
+| File | `IO/LanceDevice.h/.cpp` |
 | Chip | AMD AM7990 LANCE |
 | Base Address | 0xFFFE1800 |
 | Size | 4 bytes |
@@ -338,14 +390,14 @@ Features:
 
 | Backend | File | Description | Config |
 |---------|------|-------------|--------|
-| VirtualNetworkHandler | `IO/VirtualNetworkHandler.cs` | Internal echo server (ARP, ICMP, TCP/UDP echo). No host network access. | NetworkMode = "Virtual" (default) |
-| SlirpNetworkHandler | `IO/SlirpNetworkHandler.cs` | User-mode NAT via libslirp. Full host network access. | NetworkMode = "NAT" |
+| VirtualNetworkHandler | `IO/VirtualNetworkHandler.h/.cpp` | Internal echo server (ARP, ICMP, TCP/UDP echo). No host network access. | NetworkMode = "Virtual" (default) |
+| SlirpNetworkHandler | `IO/SlirpNetworkHandler.h/.cpp` | User-mode NAT via libslirp. Full host network access. | NetworkMode = "NAT" |
 
 ### MVME147 I/O Space Catch-all
 
 | Item | Detail |
 |------|--------|
-| File | `IO/Mvme147IoSpaceDevice.cs` |
+| File | `IO/Mvme147IoSpaceDevice.h/.cpp` |
 | Base Address | 0xFFFE0000 |
 | Size | 64 KB |
 | Purpose | Prevents bus errors on kernel probes of unmapped I/O addresses |
@@ -365,6 +417,7 @@ Features:
 | HDD | Custom | 0x00FF1000 | Generic | Complete |
 | PCC | MVME147 ASIC | 0xFFFE1000 | MVME147 | Complete |
 | SCC | Zilog Z8530 | 0xFFFE3000 | MVME147 | Complete |
+| UART | Virtual 16550A | 0xFFFE2000 | MVME147 (Linux) | Complete |
 | RTC/NVRAM | Mostek MK48T02 | 0xFFFE0000 | MVME147 | Complete |
 | SCSI | WD WD33C93 | 0xFFFE4000 | MVME147 | Complete |
 | SCSI Disk | File-backed | via WD33C93 | MVME147 | Complete |
