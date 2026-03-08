@@ -24,12 +24,13 @@ public class Vt100Terminal
     private int _maxScrollback;
 
     // Parser state machine
-    private enum State { Normal, Esc, Csi, EscParen }
+    private enum State { Normal, Esc, Csi, EscParen, StringSeq }
     private State _state = State.Normal;
     private readonly List<int> _csiParams = new();
     private int _currentParam;
     private bool _hasCurrentParam;
     private bool _csiQuestion; // CSI ? prefix
+    private bool _stringSeqEsc; // ESC seen inside string sequence
 
     // Scroll region (0-based, inclusive)
     private int _scrollTop;
@@ -245,6 +246,9 @@ public class Vt100Terminal
                 // ESC ( or ESC ) — character set designation, consume one more char
                 _state = State.Normal;
                 break;
+            case State.StringSeq:
+                ProcessStringSeq(ch);
+                break;
         }
     }
 
@@ -427,6 +431,13 @@ public class Vt100Terminal
                 LineFeed();
                 _state = State.Normal;
                 break;
+            case ']': // OSC — Operating System Command
+            case 'P': // DCS — Device Control String
+            case '^': // PM  — Privacy Message
+            case '_': // APC — Application Program Command
+                _state = State.StringSeq;
+                _stringSeqEsc = false;
+                break;
             case '=' or '>': // Keypad modes — ignore
                 _state = State.Normal;
                 break;
@@ -604,6 +615,47 @@ public class Vt100Terminal
                 _dirty = true;
                 break;
         }
+    }
+
+    // --- OSC / DCS / PM / APC string sequence processing ---
+    // Consume all characters until ST (ESC \) or BEL (0x07).
+
+    private void ProcessStringSeq(char ch)
+    {
+        if (_stringSeqEsc)
+        {
+            // Previous character was ESC inside the string sequence
+            if (ch == '\\')
+            {
+                // ESC \ = ST (String Terminator) — end of sequence
+                _state = State.Normal;
+            }
+            else
+            {
+                // ESC followed by something else — treat as new ESC sequence
+                _state = State.Esc;
+                ProcessEsc(ch);
+            }
+            _stringSeqEsc = false;
+            return;
+        }
+
+        if (ch == '\x1B')
+        {
+            // ESC inside string sequence — might be start of ST (ESC \)
+            _stringSeqEsc = true;
+        }
+        else if (ch == '\x07')
+        {
+            // BEL terminates OSC sequences (xterm extension, widely used)
+            _state = State.Normal;
+        }
+        else if (ch == '\x9C')
+        {
+            // 8-bit ST (C1 control character)
+            _state = State.Normal;
+        }
+        // All other characters are consumed silently
     }
 
     // --- Erase operations ---
