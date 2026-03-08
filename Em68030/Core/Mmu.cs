@@ -437,8 +437,11 @@ public class Mmu
                         (m ? 0x0200 : 0)                     // M (Modified, bit 9)
                     );
 
-                    // Cache in ATC
-                    CacheInAtc(logicalAddress, functionCode, physPage,
+                    // Cache in ATC — for early-terminating descriptors that map
+                    // regions larger than a single page, compute the correct
+                    // physPage for the specific page within the larger region.
+                    uint atcPhysPage = physAddr & ~CachedPageMask;
+                    CacheInAtc(logicalAddress, functionCode, atcPhysPage,
                                writeProtected, cacheInhibit, m,
                                entrySize == 8 ? descAddr + 4 : descAddr);
 
