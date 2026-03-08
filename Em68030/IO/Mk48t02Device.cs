@@ -22,6 +22,14 @@ public class Mk48t02Device : IMemoryMappedDevice
     private const uint BaseAddress = 0xFFFE0000;
     private readonly byte[] _nvram = new byte[2048];
 
+    /// <summary>
+    /// Year base for RTC year register.
+    /// NetBSD uses YEAR0=1968: year stored as (year - 1968) % 100.
+    /// Linux uses raw 2-digit year: year stored as year % 100.
+    /// Default is 0 (Linux/standard: year % 100).
+    /// </summary>
+    public int YearBase { get; set; } = 0;
+
     public byte ReadByte(uint address)
     {
         uint offset = address - BaseAddress;
@@ -75,7 +83,7 @@ public class Mk48t02Device : IMemoryMappedDevice
             4 => (byte)((int)now.DayOfWeek + 1), // Sunday=1
             5 => ToBcd(now.Day),
             6 => ToBcd(now.Month),
-            7 => ToBcd((now.Year - 1968) % 100), // YEAR0=1968 (Sun/NetBSD convention)
+            7 => ToBcd(YearBase == 0 ? now.Year % 100 : (now.Year - YearBase) % 100),
             _ => 0
         };
     }

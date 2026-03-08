@@ -61,6 +61,7 @@ public class MainViewModel : INotifyPropertyChanged
     private ScsiCdrom? _scsiCdrom;
     private int _scsiCdromId = -1; // Current SCSI ID of the CD-ROM (-1 = not attached)
     private LanceDevice? _lanceDevice;
+    private Uart16550Device? _uartDevice;
     private uint _brdIdAddress; // Address of board ID packet in memory
     private bool _systemBooted; // True after first .BRD_ID call; used to detect warm reboot
 
@@ -323,6 +324,8 @@ public class MainViewModel : INotifyPropertyChanged
     public void SendConsoleChar(byte ch)
     {
         _sccDevice?.ChannelA.QueueInput(ch);
+        // Also feed into virtual 16550 UART RX buffer (for Linux serial console)
+        _uartDevice?.ReceiveChar(ch);
     }
 
     // Commands
@@ -427,6 +430,9 @@ public class MainViewModel : INotifyPropertyChanged
         _pccDevice = new PccDevice(_cpu);
         _sccDevice = new Z8530Device();
         _rtcDevice = new Mk48t02Device();
+        // RTC year base: NetBSD uses YEAR0=1968, Linux uses raw 2-digit year
+        if (_config.TargetOS != "Linux")
+            _rtcDevice.YearBase = 1968;
         _rtcDevice.SetMvme147Config(
             onboardRamEnd: (uint)_config.MemorySize,
             ethernetAddr: new byte[] { 0x21, 0x00, 0x00 } // 08:00:3E:21:00:00
@@ -456,11 +462,22 @@ public class MainViewModel : INotifyPropertyChanged
         _memory.RegisterDevice(0xFFFE4000, 4, _scsiDevice);
         _memory.RegisterDevice(0xFFFE1800, 4, _lanceDevice);
 
+        // Virtual 16550 UART at 0xFFFE2000 for Linux serial console
+        // Only register for Linux -- NetBSD does not expect a device at this address
+        if (_config.TargetOS == "Linux")
+        {
+            _uartDevice = new Uart16550Device(0xFFFE2000);
+            _uartDevice.OnTransmit = ch => { ConsoleCharOutput?.Invoke((char)ch); _traceWriter?.Write((char)ch); };
+            _memory.RegisterDevice(0xFFFE2000, 8, _uartDevice);
+        }
+
         // Wire device interrupts through PCC
         _sccDevice.InterruptOutput = active => _pccDevice.SetDeviceInterrupt("scc", active);
         _scsiDevice.InterruptOutput = active => _pccDevice.SetDeviceInterrupt("scsi", active);
-        _scsiDevice.DiagLog = msg => _traceWriter?.Write(msg + "\n");
+        // SCSI diagnostic logging disabled for performance
+        // _scsiDevice.DiagLog = msg => _traceWriter?.Write(msg + "\n");
         _scsiDevice.AttachPcc(_pccDevice);
+        _pccDevice.SetScsiDevice(_scsiDevice);
         _lanceDevice.InterruptOutput = active => _pccDevice.SetDeviceInterrupt("lance", active);
 
         // Mount SCSI disk images if configured
@@ -469,7 +486,8 @@ public class MainViewModel : INotifyPropertyChanged
         {
             if (!string.IsNullOrEmpty(diskConfig.Path) && File.Exists(diskConfig.Path))
             {
-                EnsureCpuDisklabel(diskConfig.Path);
+                if (_config.TargetOS != "Linux")
+                    EnsureCpuDisklabel(diskConfig.Path);
                 var disk = new ScsiDisk();
                 disk.DiagLog = msg => _traceWriter?.Write(msg + "\n");
                 disk.MountImage(diskConfig.Path);
@@ -648,7 +666,10 @@ public class MainViewModel : INotifyPropertyChanged
                         if (_config.BoardType == "MVME147")
                         {
                             uint topOfRam = (uint)_config.MemorySize;
-                            SetupMvme147BootStub(topOfRam);
+                            if (_config.TargetOS == "Linux")
+                                SetupMvme147LinuxBootStub(topOfRam, _programEndAddress);
+                            else
+                                SetupMvme147BootStub(topOfRam);
                             _cpu.SR = 0x2700;
                         }
                     }
@@ -789,7 +810,10 @@ public class MainViewModel : INotifyPropertyChanged
         if (_config.BoardType == "MVME147")
         {
             uint topOfRam = (uint)_config.MemorySize;
-            SetupMvme147BootStub(topOfRam);
+            if (_config.TargetOS == "Linux")
+                SetupMvme147LinuxBootStub(topOfRam, _programEndAddress);
+            else
+                SetupMvme147BootStub(topOfRam);
             _cpu.SR = 0x2700; // Supervisor mode, IPL 7
         }
         else
@@ -860,6 +884,91 @@ public class MainViewModel : INotifyPropertyChanged
         _cpu.VBR = 0;
         _cpu.SSP = bootArgs;
         _cpu.A[7] = bootArgs;
+    }
+
+    private void SetupMvme147LinuxBootStub(uint topOfRam, uint endOfKernel)
+    {
+        // Linux/m68k boot protocol: the kernel's get_bi_record() in head.S
+        // searches for bi_record structures starting at _end (the end of
+        // the kernel image), NOT from a register pointer.
+        //
+        // struct bi_record {
+        //     uint16_t tag;    // record type
+        //     uint16_t size;   // total size in bytes (header + data)
+        //     uint32_t data[]; // payload
+        // };
+
+        uint ssp = topOfRam - 0x3000;
+
+        // Place bootinfo chain at _end (end of kernel image), aligned to 4 bytes
+        uint biAddr = (endOfKernel + 3) & ~3u;
+
+        // --- BI_MACHTYPE (tag=0x0001): machine type ---
+        const uint MACH_MVME147 = 6;
+        _memory.PokeWord(biAddr + 0, 0x0001); // BI_MACHTYPE
+        _memory.PokeWord(biAddr + 2, 8);      // size = 4 + 4
+        _memory.PokeLong(biAddr + 4, MACH_MVME147);
+        biAddr += 8;
+
+        // --- BI_CPUTYPE (tag=0x0002): CPU_68030 = (1 << 1) ---
+        _memory.PokeWord(biAddr + 0, 0x0002); // BI_CPUTYPE
+        _memory.PokeWord(biAddr + 2, 8);
+        _memory.PokeLong(biAddr + 4, (1 << 1)); // CPU_68030
+        biAddr += 8;
+
+        // --- BI_FPUTYPE (tag=0x0003): FPU_68882 = (1 << 1) ---
+        _memory.PokeWord(biAddr + 0, 0x0003); // BI_FPUTYPE
+        _memory.PokeWord(biAddr + 2, 8);
+        _memory.PokeLong(biAddr + 4, (1 << 1)); // FPU_68882
+        biAddr += 8;
+
+        // --- BI_MMUTYPE (tag=0x0004): MMU_68030 = (1 << 1) ---
+        _memory.PokeWord(biAddr + 0, 0x0004); // BI_MMUTYPE
+        _memory.PokeWord(biAddr + 2, 8);
+        _memory.PokeLong(biAddr + 4, (1 << 1)); // MMU_68030
+        biAddr += 8;
+
+        // --- BI_MEMCHUNK (tag=0x0005): memory region ---
+        _memory.PokeWord(biAddr + 0, 0x0005); // BI_MEMCHUNK
+        _memory.PokeWord(biAddr + 2, 12);     // size = 4 + 8
+        _memory.PokeLong(biAddr + 4, 0);      // start address
+        _memory.PokeLong(biAddr + 8, topOfRam); // size
+        biAddr += 12;
+
+        // --- BI_COMMAND_LINE (tag=0x0007): kernel command line ---
+        string cmdline = _config.LinuxCommandLine ?? "root=/dev/sda1 console=ttyS0";
+        uint cmdLen = (uint)cmdline.Length + 1; // include NUL
+        uint cmdRecSize = 4 + ((cmdLen + 3) & ~3u); // header + padded string
+        _memory.PokeWord(biAddr + 0, 0x0007); // BI_COMMAND_LINE
+        _memory.PokeWord(biAddr + 2, (ushort)cmdRecSize);
+        for (uint i = 0; i < cmdLen; i++)
+            _memory.PokeByte(biAddr + 4 + i, i < (uint)cmdline.Length ? (byte)cmdline[(int)i] : (byte)0);
+        for (uint i = cmdLen; i < ((cmdLen + 3) & ~3u); i++)
+            _memory.PokeByte(biAddr + 4 + i, 0);
+        biAddr += cmdRecSize;
+
+        // --- BI_VME_TYPE (tag=0x8000): VME board type ---
+        const ushort VME_TYPE_MVME147 = 0x0147;
+        _memory.PokeWord(biAddr + 0, 0x8000); // BI_VME_TYPE
+        _memory.PokeWord(biAddr + 2, 8);      // size = 4 + 4
+        _memory.PokeLong(biAddr + 4, VME_TYPE_MVME147);
+        biAddr += 8;
+
+        // --- BI_VME_BRDINFO (tag=0x8001): board info ---
+        _memory.PokeWord(biAddr + 0, 0x8001); // BI_VME_BRDINFO
+        _memory.PokeWord(biAddr + 2, 4 + 24); // size = header + 24 bytes
+        for (uint i = 0; i < 24; i++)
+            _memory.PokeByte(biAddr + 4 + i, 0);
+        biAddr += 4 + 24;
+
+        // --- BI_LAST (tag=0x0000): end of chain ---
+        _memory.PokeWord(biAddr + 0, 0x0000); // BI_LAST
+        _memory.PokeWord(biAddr + 2, 4);      // size = 4
+
+        // Set up CPU state
+        _cpu.VBR = 0;
+        _cpu.SSP = ssp;
+        _cpu.A[7] = ssp;
     }
 
     /// <summary>

@@ -48,6 +48,9 @@ public partial class SettingsWindow : Window
         ScsiCdromPathBox.Text = Config.Mvme147ScsiCdromPath;
         _desiredCdromId = Math.Clamp(Config.Mvme147ScsiCdromId, 0, 6);
         BootPartitionBox.SelectedIndex = Math.Clamp(Config.Mvme147BootPartition, 0, 1);
+        TargetOSBox.SelectedIndex = Config.TargetOS == "Linux" ? 1 : 0;
+        LinuxCommandLineBox.Text = Config.LinuxCommandLine;
+        UpdateTargetOSVisibility();
         NetworkModeBox.SelectedIndex = Config.NetworkMode == "NAT" ? 1 : 0;
         NatGatewayIpBox.Text = Config.NatGatewayIp;
         NatGatewayMacBox.Text = Config.NatGatewayMac;
@@ -271,6 +274,19 @@ public partial class SettingsWindow : Window
         Mvme147Panel.Visibility = isMvme ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private void UpdateTargetOSVisibility()
+    {
+        bool isLinux = TargetOSBox.SelectedIndex == 1;
+        NetBsdPanel.Visibility = isLinux ? Visibility.Collapsed : Visibility.Visible;
+        LinuxPanel.Visibility = isLinux ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void TargetOS_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (NetBsdPanel != null)
+            UpdateTargetOSVisibility();
+    }
+
     private void UpdateNatGatewayEnabled()
     {
         bool isNat = NetworkModeBox.SelectedIndex == 1;
@@ -315,6 +331,8 @@ public partial class SettingsWindow : Window
         Config.Mvme147ScsiCdromPath = ScsiCdromPathBox.Text;
         Config.Mvme147ScsiCdromId = GetSelectedScsiId(ScsiCdromIdBox);
         Config.Mvme147BootPartition = BootPartitionBox.SelectedIndex;
+        Config.TargetOS = TargetOSBox.SelectedIndex == 1 ? "Linux" : "NetBSD";
+        Config.LinuxCommandLine = LinuxCommandLineBox.Text;
         Config.NetworkMode = NetworkModeBox.SelectedIndex == 1 ? "NAT" : "Virtual";
 
         // Validate and save gateway IP/MAC (fallback to default on invalid input)

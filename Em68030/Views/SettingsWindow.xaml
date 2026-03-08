@@ -163,6 +163,47 @@
                                 Background="#FF3E3E42" Foreground="#FFD4D4D4" />
                     </Grid>
 
+                    <!-- Target OS -->
+                    <TextBlock Text="Target OS" Style="{StaticResource SectionHeader}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Operating System:" Style="{StaticResource SettingLabel}" />
+                        <ComboBox x:Name="TargetOSBox" Grid.Column="1"
+                                  SelectionChanged="TargetOS_Changed">
+                            <ComboBoxItem Content="NetBSD" />
+                            <ComboBoxItem Content="Linux" />
+                        </ComboBox>
+                    </Grid>
+                    <!-- NetBSD-specific settings -->
+                    <StackPanel x:Name="NetBsdPanel">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Boot Partition:" Style="{StaticResource SettingLabel}" />
+                            <ComboBox x:Name="BootPartitionBox" Grid.Column="1"
+                                      Width="60" HorizontalAlignment="Left">
+                                <ComboBoxItem Content="a" />
+                                <ComboBoxItem Content="b" />
+                            </ComboBox>
+                        </Grid>
+                    </StackPanel>
+                    <!-- Linux-specific settings -->
+                    <StackPanel x:Name="LinuxPanel" Visibility="Collapsed">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Command Line:" Style="{StaticResource SettingLabel}" />
+                            <TextBox x:Name="LinuxCommandLineBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
+                        </Grid>
+                    </StackPanel>
+
                     <!-- SCSI Disk Settings -->
                     <TextBlock Text="SCSI Disks" Style="{StaticResource SectionHeader}" />
                     <StackPanel x:Name="ScsiDiskListPanel" />
@@ -207,20 +248,6 @@
                             <ComboBoxItem Content="4" />
                             <ComboBoxItem Content="5" />
                             <ComboBoxItem Content="6" />
-                        </ComboBox>
-                    </Grid>
-                    <!-- NetBSD Settings -->
-                    <TextBlock Text="NetBSD" Style="{StaticResource SectionHeader}" />
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="150" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="Boot Partition:" Style="{StaticResource SettingLabel}" />
-                        <ComboBox x:Name="BootPartitionBox" Grid.Column="1"
-                                  Width="60" HorizontalAlignment="Left">
-                            <ComboBoxItem Content="a" />
-                            <ComboBoxItem Content="b" />
                         </ComboBox>
                     </Grid>
                     <!-- Network Mode -->
