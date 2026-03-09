@@ -201,6 +201,43 @@ echo "127.0.1.1 mvme147" | sudo tee -a /mnt/debian/etc/hosts
 sudo chroot /mnt/debian /bin/sh -c "systemctl enable serial-getty@ttyS0.service 2>/dev/null"
 ```
 
+#### Network (optional)
+
+If the emulator's network mode is set to **Virtual (Echo Server)** (default), no guest-side
+network configuration is required. The following is only needed for **NAT (Host Network)** mode,
+which provides the guest with access to the host network.
+
+The default NAT gateway address is `10.0.2.2` and the guest IP is `10.0.2.15`.
+These match the emulator's default settings (Settings → Network).
+
+The emulator's NAT implementation forwards UDP/TCP packets to the destination IP
+as-is via the host OS network stack. There is no built-in DNS forwarder, so
+`/etc/resolv.conf` must point to a DNS server reachable from the host
+(e.g., `8.8.8.8`, or your LAN's DNS server).
+
+```bash
+cat << 'EOF' | sudo tee /mnt/debian/etc/systemd/network/10-eth0.network
+[Match]
+Name=eth0
+
+[Network]
+Address=10.0.2.15/24
+Gateway=10.0.2.2
+EOF
+```
+
+```bash
+cat << 'EOF' | sudo tee /mnt/debian/etc/resolv.conf
+nameserver 8.8.8.8
+EOF
+```
+
+Enable systemd-networkd:
+
+```bash
+sudo chroot /mnt/debian /bin/sh -c "systemctl enable systemd-networkd 2>/dev/null"
+```
+
 #### APT sources (for future package installation)
 
 ```bash

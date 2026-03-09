@@ -201,6 +201,43 @@ echo "127.0.1.1 mvme147" | sudo tee -a /mnt/debian/etc/hosts
 sudo chroot /mnt/debian /bin/sh -c "systemctl enable serial-getty@ttyS0.service 2>/dev/null"
 ```
 
+#### ネットワーク (オプション)
+
+エミュレータのネットワークモードが **Virtual (Echo Server)**（デフォルト）の場合、
+ゲスト側のネットワーク設定は不要です。以下の設定は **NAT (Host Network)** モードで
+ゲストからホストネットワークにアクセスする場合のみ必要です。
+
+デフォルトの NAT ゲートウェイアドレスは `10.0.2.2`、ゲスト IP は `10.0.2.15` です。
+これらはエミュレータのデフォルト設定（設定 → ネットワーク）と一致します。
+
+エミュレータの NAT 実装は UDP/TCP パケットを宛先 IP のままホスト OS のネットワーク
+スタック経由で転送します。組み込みの DNS フォワーダは存在しないため、
+`/etc/resolv.conf` にはホストから到達可能な DNS サーバ（例: `8.8.8.8` や
+LAN の DNS サーバ）を指定してください。
+
+```bash
+cat << 'EOF' | sudo tee /mnt/debian/etc/systemd/network/10-eth0.network
+[Match]
+Name=eth0
+
+[Network]
+Address=10.0.2.15/24
+Gateway=10.0.2.2
+EOF
+```
+
+```bash
+cat << 'EOF' | sudo tee /mnt/debian/etc/resolv.conf
+nameserver 8.8.8.8
+EOF
+```
+
+systemd-networkd を有効化します:
+
+```bash
+sudo chroot /mnt/debian /bin/sh -c "systemctl enable systemd-networkd 2>/dev/null"
+```
+
 #### APT ソース (将来のパッケージインストール用)
 
 ```bash

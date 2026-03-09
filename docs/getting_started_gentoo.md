@@ -78,22 +78,24 @@ The tarball is approximately 200 MB.
 
 ### 1.2 Create and Partition the Disk Image
 
-Create a 512 MB disk image and partition it with `fdisk`:
+Create a 2048 MB disk image and partition it with `fdisk`.
+The Gentoo stage3 tarball (~197 MB compressed) expands to over 1 GB when extracted,
+so a 2 GB image is recommended.
 
 ```bash
-dd if=/dev/zero of=gentoo.img bs=1M count=512
+dd if=/dev/zero of=gentoo.img bs=1M count=2048
 
 # Partition the image
 fdisk gentoo.img
 ```
 
 Create two partitions:
-- **Partition 1** (Linux, ~480 MB): root filesystem
-- **Partition 2** (Linux swap, ~32 MB): swap space
+- **Partition 1** (Linux, ~1984 MB): root filesystem
+- **Partition 2** (Linux swap, ~64 MB): swap space
 
 Example `fdisk` commands:
 ```
-n p 1 <enter> +480M
+n p 1 <enter> +1984M
 n p 2 <enter> <enter>
 t 2 82
 w
@@ -156,33 +158,77 @@ echo "mvme147" | sudo tee /mnt/gentoo/etc/hostname
 
 #### Serial console
 
-For **OpenRC** (SysVinit-style inittab):
+Choose **one** of the following depending on your stage3 init system:
 
-```bash
-# Enable serial console login
-echo "s0:12345:respawn:/sbin/agetty 9600 ttyS0 vt100" | sudo tee -a /mnt/gentoo/etc/inittab
-```
+> **Option A — OpenRC** (SysVinit-style inittab):
+>
+> ```bash
+> # Enable serial console login
+> echo "s0:12345:respawn:/sbin/agetty 9600 ttyS0 vt100" | sudo tee -a /mnt/gentoo/etc/inittab
+> ```
 
-For **systemd**, use a systemd unit instead:
-
-```bash
-sudo mkdir -p /mnt/gentoo/etc/systemd/system/getty.target.wants
-sudo ln -s /usr/lib/systemd/system/serial-getty@.service \
-    /mnt/gentoo/etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service
-```
+> **Option B — systemd**:
+>
+> ```bash
+> sudo mkdir -p /mnt/gentoo/etc/systemd/system/getty.target.wants
+> sudo ln -s /usr/lib/systemd/system/serial-getty@.service \
+>     /mnt/gentoo/etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service
+> ```
 
 #### Network (optional)
 
+If the emulator's network mode is set to **Virtual (Echo Server)** (default), no guest-side
+network configuration is required. The following is only needed for **NAT (Host Network)** mode,
+which provides the guest with access to the host network via libslirp.
+
+The default NAT gateway address is `10.0.2.2` and the guest IP is `10.0.2.15`.
+These match the emulator's default settings (Settings → Network).
+
+The emulator's NAT implementation forwards UDP/TCP packets to the destination IP
+as-is via the host OS network stack. There is no built-in DNS forwarder, so
+`/etc/resolv.conf` must point to a DNS server reachable from the host
+(e.g., `8.8.8.8`, or your LAN's DNS server).
+
+Choose **one** of the following depending on your stage3 init system:
+
+> **Option A — OpenRC** (`/etc/conf.d/net`):
+>
+> ```bash
+> cat << 'EOF' | sudo tee /mnt/gentoo/etc/conf.d/net
+> config_eth0="10.0.2.15/24"
+> routes_eth0="default via 10.0.2.2"
+> EOF
+> cd /mnt/gentoo/etc/init.d && sudo ln -s net.lo net.eth0
+> ```
+
+> **Option B — systemd** (systemd-networkd):
+>
+> ```bash
+> cat << 'EOF' | sudo tee /mnt/gentoo/etc/systemd/network/10-eth0.network
+> [Match]
+> Name=eth0
+>
+> [Network]
+> Address=10.0.2.15/24
+> Gateway=10.0.2.2
+> EOF
+> ```
+
+Then, for both init systems, set up DNS resolution with a DNS server reachable from the host:
+
 ```bash
-cat << 'EOF' | sudo tee /mnt/gentoo/etc/conf.d/net
-config_eth0="dhcp"
+cat << 'EOF' | sudo tee /mnt/gentoo/etc/resolv.conf
+nameserver 8.8.8.8
 EOF
-cd /mnt/gentoo/etc/init.d && sudo ln -s net.lo net.eth0
 ```
 
 ### 1.6 Unmount
 
+Make sure your current directory is outside the mount point before unmounting.
+If you are inside `/mnt/gentoo/...`, `umount` will fail with "target is busy".
+
 ```bash
+cd ~
 sudo umount /mnt/gentoo
 sudo losetup -d ${LOOPDEV}
 ```

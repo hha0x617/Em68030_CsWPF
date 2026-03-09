@@ -78,22 +78,24 @@ tarball のサイズは約 200 MB です。
 
 ### 1.2 ディスクイメージの作成とパーティション分割
 
-512 MB のディスクイメージを作成し、`fdisk` でパーティションを分割します:
+2048 MB のディスクイメージを作成し、`fdisk` でパーティションを分割します。
+Gentoo の stage3 tarball（圧縮時約 197 MB）は展開すると 1 GB 以上になるため、
+2 GB のイメージを推奨します。
 
 ```bash
-dd if=/dev/zero of=gentoo.img bs=1M count=512
+dd if=/dev/zero of=gentoo.img bs=1M count=2048
 
 # イメージのパーティション分割
 fdisk gentoo.img
 ```
 
 2 つのパーティションを作成します:
-- **パーティション 1** (Linux、約 480 MB): ルートファイルシステム
-- **パーティション 2** (Linux swap、約 32 MB): スワップ領域
+- **パーティション 1** (Linux、約 1984 MB): ルートファイルシステム
+- **パーティション 2** (Linux swap、約 64 MB): スワップ領域
 
 `fdisk` コマンドの例:
 ```
-n p 1 <enter> +480M
+n p 1 <enter> +1984M
 n p 2 <enter> <enter>
 t 2 82
 w
@@ -156,33 +158,77 @@ echo "mvme147" | sudo tee /mnt/gentoo/etc/hostname
 
 #### シリアルコンソール
 
-**OpenRC** の場合 (SysVinit 形式の inittab):
+使用する stage3 の init システムに応じて、以下の**いずれか一方**を実行してください:
 
-```bash
-# シリアルコンソールログインを有効化
-echo "s0:12345:respawn:/sbin/agetty 9600 ttyS0 vt100" | sudo tee -a /mnt/gentoo/etc/inittab
-```
+> **選択肢 A — OpenRC** (SysVinit 形式の inittab):
+>
+> ```bash
+> # シリアルコンソールログインを有効化
+> echo "s0:12345:respawn:/sbin/agetty 9600 ttyS0 vt100" | sudo tee -a /mnt/gentoo/etc/inittab
+> ```
 
-**systemd** の場合は systemd ユニットを使用します:
-
-```bash
-sudo mkdir -p /mnt/gentoo/etc/systemd/system/getty.target.wants
-sudo ln -s /usr/lib/systemd/system/serial-getty@.service \
-    /mnt/gentoo/etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service
-```
+> **選択肢 B — systemd**:
+>
+> ```bash
+> sudo mkdir -p /mnt/gentoo/etc/systemd/system/getty.target.wants
+> sudo ln -s /usr/lib/systemd/system/serial-getty@.service \
+>     /mnt/gentoo/etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service
+> ```
 
 #### ネットワーク (オプション)
 
+エミュレータのネットワークモードが **Virtual (Echo Server)**（デフォルト）の場合、
+ゲスト側のネットワーク設定は不要です。以下の設定は **NAT (Host Network)** モードで
+libslirp 経由でゲストからホストネットワークにアクセスする場合のみ必要です。
+
+デフォルトの NAT ゲートウェイアドレスは `10.0.2.2`、ゲスト IP は `10.0.2.15` です。
+これらはエミュレータのデフォルト設定（設定 → ネットワーク）と一致します。
+
+エミュレータの NAT 実装は UDP/TCP パケットを宛先 IP のままホスト OS のネットワーク
+スタック経由で転送します。組み込みの DNS フォワーダは存在しないため、
+`/etc/resolv.conf` にはホストから到達可能な DNS サーバ（例: `8.8.8.8` や
+LAN の DNS サーバ）を指定してください。
+
+使用する stage3 の init システムに応じて、以下の**いずれか一方**を実行してください:
+
+> **選択肢 A — OpenRC** (`/etc/conf.d/net`):
+>
+> ```bash
+> cat << 'EOF' | sudo tee /mnt/gentoo/etc/conf.d/net
+> config_eth0="10.0.2.15/24"
+> routes_eth0="default via 10.0.2.2"
+> EOF
+> cd /mnt/gentoo/etc/init.d && sudo ln -s net.lo net.eth0
+> ```
+
+> **選択肢 B — systemd** (systemd-networkd):
+>
+> ```bash
+> cat << 'EOF' | sudo tee /mnt/gentoo/etc/systemd/network/10-eth0.network
+> [Match]
+> Name=eth0
+>
+> [Network]
+> Address=10.0.2.15/24
+> Gateway=10.0.2.2
+> EOF
+> ```
+
+続けて、いずれの init システムでも、ホストから到達可能な DNS サーバで名前解決を設定します:
+
 ```bash
-cat << 'EOF' | sudo tee /mnt/gentoo/etc/conf.d/net
-config_eth0="dhcp"
+cat << 'EOF' | sudo tee /mnt/gentoo/etc/resolv.conf
+nameserver 8.8.8.8
 EOF
-cd /mnt/gentoo/etc/init.d && sudo ln -s net.lo net.eth0
 ```
 
 ### 1.6 アンマウント
 
+アンマウント前にカレントディレクトリがマウントポイントの外にあることを確認してください。
+`/mnt/gentoo/...` 内にいると `umount` は "target is busy" で失敗します。
+
 ```bash
+cd ~
 sudo umount /mnt/gentoo
 sudo losetup -d ${LOOPDEV}
 ```
