@@ -63,7 +63,7 @@ M48T02 RTC の年エンコーディングは NetBSD と Linux で異なります
 
 ### 1.1 Stage3 Tarball のダウンロード
 
-Gentoo m68k の stage3 tarball をダウンロードします:
+Gentoo m68k の stage3 tarball をダウンロードします。エミュレータ環境では軽量な **OpenRC** 版を推奨します:
 
 ```bash
 wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-openrc/stage3-m68k-openrc-<DATE>.tar.xz
@@ -71,6 +71,8 @@ wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-o
 
 最新の日付は以下で確認できます:
 `https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-openrc/`
+
+> **注意**: **systemd** 版 (`stage3-m68k-systemd-<DATE>.tar.xz`) も利用可能です。systemd を使用したい場合は `current-stage3-m68k-systemd/` からダウンロードし、[セクション 1.5](#15-ルートファイルシステムの設定) と[セクション 2.4](#24-カーネルの設定) の追加設定に関する注記を参照してください。
 
 tarball のサイズは約 200 MB です。
 
@@ -118,7 +120,10 @@ sudo mount ${LOOPDEV}p1 /mnt/gentoo
 ### 1.4 Stage3 Tarball の展開
 
 ```bash
+# OpenRC 版:
 sudo tar xpf stage3-m68k-openrc-*.tar.xz -C /mnt/gentoo --xattrs-include='*.*' --numeric-owner
+# systemd 版:
+# sudo tar xpf stage3-m68k-systemd-*.tar.xz -C /mnt/gentoo --xattrs-include='*.*' --numeric-owner
 ```
 
 ### 1.5 ルートファイルシステムの設定
@@ -151,9 +156,19 @@ echo "mvme147" | sudo tee /mnt/gentoo/etc/hostname
 
 #### シリアルコンソール
 
+**OpenRC** の場合 (SysVinit 形式の inittab):
+
 ```bash
 # シリアルコンソールログインを有効化
 echo "s0:12345:respawn:/sbin/agetty 9600 ttyS0 vt100" | sudo tee -a /mnt/gentoo/etc/inittab
+```
+
+**systemd** の場合は systemd ユニットを使用します:
+
+```bash
+sudo mkdir -p /mnt/gentoo/etc/systemd/system/getty.target.wants
+sudo ln -s /usr/lib/systemd/system/serial-getty@.service \
+    /mnt/gentoo/etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service
 ```
 
 #### ネットワーク (オプション)
@@ -299,7 +314,7 @@ CONFIG_SERIAL_8250_CONSOLE=y  # (Device Drivers > Character devices > Serial dri
 
 > **注意**: `CONFIG_SERIAL_8250` と `CONFIG_SERIAL_8250_CONSOLE` は必須です。これらがないと、カーネルは仮想 16550 UART を使用できず、ユーザー空間にコンソールがありません (`Warning: unable to open an initial console`)。
 
-> **注意**: Gentoo は OpenRC を使用するため (systemd ではない)、`CONFIG_CGROUPS` とそのサブオプションは不要です。systemd に切り替える場合は、Debian ガイドで必要な cgroup オプションを参照してください。
+> **注意**: **OpenRC** 版の stage3 (推奨) を使用する場合、`CONFIG_CGROUPS` とそのサブオプションは不要です。**systemd** 版の stage3 を選択した場合は、`CONFIG_CGROUPS=y`、`CONFIG_CGROUP_PIDS=y`、`CONFIG_CGROUP_FREEZER=y`、`CONFIG_CGROUP_DEVICE=y`、`CONFIG_CGROUP_BPF=y` も有効にする必要があります — 詳細は Debian ガイドを参照してください。
 
 > **注意**: `mvme16x_defconfig` では `CONFIG_M68040` と `CONFIG_M68060` がデフォルトで有効です。カーネルは実行時に CPU タイプを検出するため、有効のままでも問題ありません。無効にするとカーネルサイズが若干小さくなります。
 
@@ -344,7 +359,7 @@ make ARCH=m68k CROSS_COMPILE=m68k-linux-gnu- vmlinux -j$(nproc)
 2. **F5** を押して実行を開始します
 3. **View > Console Window** を開きます
 
-カーネルが起動メッセージを表示します。ブートシーケンス完了後、OpenRC がサービスを起動し、ログインプロンプトが表示されます。
+カーネルが起動メッセージを表示します。ブートシーケンス完了後、init システム (stage3 の選択に応じて OpenRC または systemd) がサービスを起動し、ログインプロンプトが表示されます。
 
 ### 3.3 初回ログイン
 

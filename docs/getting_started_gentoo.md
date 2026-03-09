@@ -63,7 +63,7 @@ All filesystem preparation is done on a Linux host or WSL2, since Windows cannot
 
 ### 1.1 Download the Stage3 Tarball
 
-Download the Gentoo m68k stage3 tarball:
+Download the Gentoo m68k stage3 tarball. We recommend the **OpenRC** variant, which is lightweight and well-suited for emulated environments:
 
 ```bash
 wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-openrc/stage3-m68k-openrc-<DATE>.tar.xz
@@ -71,6 +71,8 @@ wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-o
 
 Check the latest available date at:
 `https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-openrc/`
+
+> **Note**: A **systemd** variant (`stage3-m68k-systemd-<DATE>.tar.xz`) is also available. If you prefer systemd, download it from `current-stage3-m68k-systemd/` instead, and see the notes in [Section 1.5](#15-configure-the-root-filesystem) and [Section 2.4](#24-configure-kernel) for the additional configuration required.
 
 The tarball is approximately 200 MB.
 
@@ -118,7 +120,10 @@ sudo mount ${LOOPDEV}p1 /mnt/gentoo
 ### 1.4 Extract the Stage3 Tarball
 
 ```bash
+# OpenRC variant:
 sudo tar xpf stage3-m68k-openrc-*.tar.xz -C /mnt/gentoo --xattrs-include='*.*' --numeric-owner
+# systemd variant:
+# sudo tar xpf stage3-m68k-systemd-*.tar.xz -C /mnt/gentoo --xattrs-include='*.*' --numeric-owner
 ```
 
 ### 1.5 Configure the Root Filesystem
@@ -151,9 +156,19 @@ echo "mvme147" | sudo tee /mnt/gentoo/etc/hostname
 
 #### Serial console
 
+For **OpenRC** (SysVinit-style inittab):
+
 ```bash
 # Enable serial console login
 echo "s0:12345:respawn:/sbin/agetty 9600 ttyS0 vt100" | sudo tee -a /mnt/gentoo/etc/inittab
+```
+
+For **systemd**, use a systemd unit instead:
+
+```bash
+sudo mkdir -p /mnt/gentoo/etc/systemd/system/getty.target.wants
+sudo ln -s /usr/lib/systemd/system/serial-getty@.service \
+    /mnt/gentoo/etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service
 ```
 
 #### Network (optional)
@@ -299,7 +314,7 @@ CONFIG_SERIAL_8250_CONSOLE=y  # (Device Drivers > Character devices > Serial dri
 
 > **Note**: `CONFIG_SERIAL_8250` and `CONFIG_SERIAL_8250_CONSOLE` are essential. Without them, the kernel cannot use the virtual 16550 UART and userspace will have no console (`Warning: unable to open an initial console`).
 
-> **Note**: Gentoo uses OpenRC (not systemd), so `CONFIG_CGROUPS` and its sub-options are not required. If you plan to switch to systemd, see the Debian guide for the required cgroup options.
+> **Note**: If you are using the **OpenRC** stage3 (recommended), `CONFIG_CGROUPS` and its sub-options are not required. If you chose the **systemd** stage3, you must also enable `CONFIG_CGROUPS=y`, `CONFIG_CGROUP_PIDS=y`, `CONFIG_CGROUP_FREEZER=y`, `CONFIG_CGROUP_DEVICE=y`, and `CONFIG_CGROUP_BPF=y` — see the Debian guide for details.
 
 > **Note**: `CONFIG_M68040` and `CONFIG_M68060` are enabled by default in `mvme16x_defconfig`. They can be left enabled -- the kernel detects the CPU type at runtime. Disabling them slightly reduces the kernel size.
 
@@ -344,7 +359,7 @@ The output is `vmlinux` -- an ELF binary that Em68030 can load directly via **Fi
 2. Press **F5** to start execution
 3. Open **View > Console Window**
 
-The kernel will display boot messages. After the boot sequence completes, OpenRC will start services and present a login prompt.
+The kernel will display boot messages. After the boot sequence completes, the init system (OpenRC or systemd, depending on your stage3 choice) will start services and present a login prompt.
 
 ### 3.3 First Login
 
