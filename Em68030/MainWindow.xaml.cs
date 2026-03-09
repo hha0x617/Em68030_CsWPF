@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Title = $"Em68030 - MC68030 Emulator (C#/WPF) [{GitVersion.CommitHash}]";
         _vm = new MainViewModel();
         DataContext = _vm;
 

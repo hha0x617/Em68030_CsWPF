@@ -14,4 +14,20 @@
     <InternalsVisibleTo Include="Em68030.Tests" />
   </ItemGroup>
 
+  <!-- Generate GitVersion.generated.cs with the current git commit hash -->
+  <Target Name="GenerateGitVersion" BeforeTargets="CoreCompile">
+    <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low" IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitHash" />
+    </Exec>
+    <PropertyGroup>
+      <GitCommitHash Condition="'$(GitCommitHash)' == ''">unknown</GitCommitHash>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(IntermediateOutputPath)GitVersion.generated.cs"
+                     Lines="namespace Em68030 { internal static class GitVersion { public const string CommitHash = &quot;$(GitCommitHash)&quot;%3B } }"
+                     Overwrite="true" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)GitVersion.generated.cs" />
+    </ItemGroup>
+  </Target>
+
 </Project>

@@ -18,6 +18,8 @@
                        Foreground="#FFD4D4D4" Margin="0,0,0,12" />
             <TextBlock Text="Version 0.1.0" FontSize="13"
                        Foreground="#FFD4D4D4" Margin="0,0,0,2" />
+            <TextBlock x:Name="BuildHashText" FontSize="13"
+                       Foreground="#FF888888" Margin="0,0,0,2" />
             <TextBlock Text="C# / WPF" FontSize="13"
                        Foreground="#FF888888" Margin="0,0,0,12" />
             <TextBlock Text="&#x00A9; 2026 hha0x617" FontSize="13"
