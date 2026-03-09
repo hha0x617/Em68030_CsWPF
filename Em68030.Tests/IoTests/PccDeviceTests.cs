@@ -433,4 +433,67 @@ public class PccDeviceTests
         // SCC (PCCV=3) is checked before SCSI (PCCV=5), wins at same level
         Assert.Equal(0x40 + 3, _cpu._pendingVector);
     }
+
+    // ========================================================================
+    // Watchdog Timer
+    // ========================================================================
+
+    [Fact]
+    public void Watchdog_ArmValue_TriggersCallback()
+    {
+        bool callbackInvoked = false;
+        _pcc.OnWatchdogReset = () => { callbackInvoked = true; };
+
+        // Writing 0xA5 to watchdog register arms it and triggers immediate reset
+        _pcc.WriteByte(Base + 0x1D, 0xA5);
+        Assert.True(callbackInvoked);
+    }
+
+    [Fact]
+    public void Watchdog_ClearValue_DoesNotTriggerCallback()
+    {
+        bool callbackInvoked = false;
+        _pcc.OnWatchdogReset = () => { callbackInvoked = true; };
+
+        // Writing 0x0A (clear) should NOT trigger watchdog — treated as normal ICR write
+        _pcc.WriteByte(Base + 0x1D, 0x0A);
+        Assert.False(callbackInvoked);
+    }
+
+    [Fact]
+    public void Watchdog_OtherValues_DoNotTriggerCallback()
+    {
+        int callCount = 0;
+        _pcc.OnWatchdogReset = () => { callCount++; };
+
+        // Various non-0xA5 values should not trigger watchdog
+        _pcc.WriteByte(Base + 0x1D, 0x00);
+        _pcc.WriteByte(Base + 0x1D, 0x0D); // IEN=1, level=5
+        _pcc.WriteByte(Base + 0x1D, 0x80); // W1C
+        _pcc.WriteByte(Base + 0x1D, 0xFF);
+        Assert.Equal(0, callCount);
+    }
+
+    [Fact]
+    public void Watchdog_NoCallback_DoesNotCrash()
+    {
+        // No callback set — writing 0xA5 should not crash
+        _pcc.OnWatchdogReset = null;
+        _pcc.WriteByte(Base + 0x1D, 0xA5);
+        // Just verify no crash
+    }
+
+    [Fact]
+    public void Watchdog_LinuxRebootSequence()
+    {
+        // Simulates Linux mvme147_reset(): clear then arm
+        bool callbackInvoked = false;
+        _pcc.OnWatchdogReset = () => { callbackInvoked = true; };
+
+        _pcc.WriteByte(Base + 0x1D, 0x0A); // Clear timer
+        Assert.False(callbackInvoked);
+
+        _pcc.WriteByte(Base + 0x1D, 0xA5); // Arm watchdog
+        Assert.True(callbackInvoked);
+    }
 }
