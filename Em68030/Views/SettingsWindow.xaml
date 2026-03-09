@@ -213,10 +213,6 @@
                     <StackPanel Orientation="Horizontal" Margin="0,8">
                         <TextBlock Text="New Image Size (MB):" Style="{StaticResource SettingLabel}" Width="150" />
                         <TextBox x:Name="NewScsiImageSizeBox" Width="60" Style="{StaticResource SettingTextBox}" Text="100" />
-                        <ComboBox x:Name="NewScsiImageTypeBox" Margin="8,0" Width="100">
-                            <ComboBoxItem Content="NetBSD" IsSelected="True" />
-                            <ComboBoxItem Content="Empty" />
-                        </ComboBox>
                         <Button Content="Create" Click="CreateScsiImage_Click" Margin="8,0"
                                 Background="#FF3E3E42" Foreground="#FFD4D4D4" Padding="8,2" />
                     </StackPanel>

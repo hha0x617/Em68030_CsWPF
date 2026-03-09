@@ -19,11 +19,32 @@ public partial class SettingsWindow : Window
         public ComboBox IdBox { get; set; } = null!;
         public Button BrowseBtn { get; set; } = null!;
         public Button RemoveBtn { get; set; } = null!;
+        public Button DisklabelBtn { get; set; } = null!;
     }
 
     private readonly List<DiskRowInfo> _diskRows = new();
     private int _desiredCdromId = 3;
     private readonly Action? _unmountScsiDisks;
+
+    private static string GetSelectedItemText(ComboBox box)
+    {
+        if (box.SelectedItem is ComboBoxItem cbi && cbi.Content is string text)
+            return text;
+        return "";
+    }
+
+    private static void SelectItemByText(ComboBox box, string text)
+    {
+        for (int i = 0; i < box.Items.Count; i++)
+        {
+            if (box.Items[i] is ComboBoxItem cbi && cbi.Content is string content && content == text)
+            {
+                box.SelectedIndex = i;
+                return;
+            }
+        }
+        box.SelectedIndex = 0;
+    }
 
     public SettingsWindow(EmulatorConfig config, Action? unmountScsiDisks = null)
     {
@@ -36,7 +57,7 @@ public partial class SettingsWindow : Window
     private void LoadSettings()
     {
         // Board type
-        BoardTypeBox.SelectedIndex = Config.BoardType == "MVME147" ? 1 : 0;
+        SelectItemByText(BoardTypeBox, Config.BoardType);
         Mvme147RomBox.Text = Config.Mvme147RomPath;
 
         // SCSI Disks
@@ -48,10 +69,10 @@ public partial class SettingsWindow : Window
         ScsiCdromPathBox.Text = Config.Mvme147ScsiCdromPath;
         _desiredCdromId = Math.Clamp(Config.Mvme147ScsiCdromId, 0, 6);
         BootPartitionBox.SelectedIndex = Math.Clamp(Config.Mvme147BootPartition, 0, 1);
-        TargetOSBox.SelectedIndex = Config.TargetOS == "Linux" ? 1 : 0;
+        SelectItemByText(TargetOSBox, Config.TargetOS);
         LinuxCommandLineBox.Text = Config.LinuxCommandLine;
         UpdateTargetOSVisibility();
-        NetworkModeBox.SelectedIndex = Config.NetworkMode == "NAT" ? 1 : 0;
+        SelectItemByText(NetworkModeBox, Config.NetworkMode);
         NatGatewayIpBox.Text = Config.NatGatewayIp;
         NatGatewayMacBox.Text = Config.NatGatewayMac;
         UpdateNatGatewayEnabled();
@@ -129,6 +150,19 @@ public partial class SettingsWindow : Window
         removeBtn.Tag = row;
         removeBtn.Click += RemoveScsiDisk_Click;
 
+        var disklabelBtn = new Button
+        {
+            Content = "Disklabel",
+            Margin = new Thickness(4, 0, 0, 0),
+            Background = new SolidColorBrush(Color.FromRgb(0x3E, 0x3E, 0x42)),
+            Foreground = new SolidColorBrush(Color.FromRgb(0xD4, 0xD4, 0xD4)),
+            FontSize = 11,
+            ToolTip = "Write a NetBSD disklabel to this disk image",
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        disklabelBtn.Tag = row;
+        disklabelBtn.Click += WriteDisklabel_Click;
+
         var idLabel = new TextBlock
         {
             Text = "ID:",
@@ -141,16 +175,19 @@ public partial class SettingsWindow : Window
         var grid = new Grid { Margin = new Thickness(0, 2, 0, 2) };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         Grid.SetColumn(idLabel, 0);
         Grid.SetColumn(idBox, 1);
-        Grid.SetColumn(pathBox, 2);
-        Grid.SetColumn(browseBtn, 3);
-        Grid.SetColumn(removeBtn, 4);
+        Grid.SetColumn(disklabelBtn, 2);
+        Grid.SetColumn(pathBox, 3);
+        Grid.SetColumn(browseBtn, 4);
+        Grid.SetColumn(removeBtn, 5);
         grid.Children.Add(idLabel);
         grid.Children.Add(idBox);
+        grid.Children.Add(disklabelBtn);
         grid.Children.Add(pathBox);
         grid.Children.Add(browseBtn);
         grid.Children.Add(removeBtn);
@@ -160,6 +197,7 @@ public partial class SettingsWindow : Window
         row.IdBox = idBox;
         row.BrowseBtn = browseBtn;
         row.RemoveBtn = removeBtn;
+        row.DisklabelBtn = disklabelBtn;
 
         _diskRows.Add(row);
         ScsiDiskListPanel.Children.Add(grid);
@@ -270,15 +308,22 @@ public partial class SettingsWindow : Window
 
     private void UpdateMvme147Visibility()
     {
-        bool isMvme = BoardTypeBox.SelectedIndex == 1;
+        bool isMvme = GetSelectedItemText(BoardTypeBox) == "MVME147";
         Mvme147Panel.Visibility = isMvme ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void UpdateTargetOSVisibility()
     {
-        bool isLinux = TargetOSBox.SelectedIndex == 1;
+        bool isLinux = GetSelectedItemText(TargetOSBox) == "Linux";
         NetBsdPanel.Visibility = isLinux ? Visibility.Collapsed : Visibility.Visible;
         LinuxPanel.Visibility = isLinux ? Visibility.Visible : Visibility.Collapsed;
+
+        // Disklabel buttons are only useful for NetBSD disk images
+        foreach (var row in _diskRows)
+        {
+            row.DisklabelBtn.IsEnabled = !isLinux;
+            row.DisklabelBtn.Opacity = isLinux ? 0.35 : 1.0;
+        }
     }
 
     private void TargetOS_Changed(object sender, SelectionChangedEventArgs e)
@@ -289,7 +334,7 @@ public partial class SettingsWindow : Window
 
     private void UpdateNatGatewayEnabled()
     {
-        bool isNat = NetworkModeBox.SelectedIndex == 1;
+        bool isNat = GetSelectedItemText(NetworkModeBox) == "NAT";
         NatGatewayIpBox.IsEnabled = isNat;
         NatGatewayMacBox.IsEnabled = isNat;
         NatGatewayIpBox.Opacity = isNat ? 1.0 : 0.35;
@@ -315,7 +360,7 @@ public partial class SettingsWindow : Window
     private void OK_Click(object sender, RoutedEventArgs e)
     {
         // Board type
-        Config.BoardType = BoardTypeBox.SelectedIndex == 1 ? "MVME147" : "Generic";
+        Config.BoardType = GetSelectedItemText(BoardTypeBox);
         Config.Mvme147RomPath = Mvme147RomBox.Text;
 
         // SCSI Disks
@@ -331,9 +376,9 @@ public partial class SettingsWindow : Window
         Config.Mvme147ScsiCdromPath = ScsiCdromPathBox.Text;
         Config.Mvme147ScsiCdromId = GetSelectedScsiId(ScsiCdromIdBox);
         Config.Mvme147BootPartition = BootPartitionBox.SelectedIndex;
-        Config.TargetOS = TargetOSBox.SelectedIndex == 1 ? "Linux" : "NetBSD";
+        Config.TargetOS = GetSelectedItemText(TargetOSBox);
         Config.LinuxCommandLine = LinuxCommandLineBox.Text;
-        Config.NetworkMode = NetworkModeBox.SelectedIndex == 1 ? "NAT" : "Virtual";
+        Config.NetworkMode = GetSelectedItemText(NetworkModeBox);
 
         // Validate and save gateway IP/MAC (fallback to default on invalid input)
         var parsedIp = SlirpNetworkHandler.ParseIpAddress(NatGatewayIpBox.Text);
@@ -397,6 +442,31 @@ public partial class SettingsWindow : Window
     {
         if (sender is Button btn && btn.Tag is DiskRowInfo row)
             RemoveDiskRow(row);
+    }
+
+    private void WriteDisklabel_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not DiskRowInfo row) return;
+        var filePath = row.PathBox.Text;
+        if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath)) return;
+
+        var result = MessageBox.Show(
+            "Write a NetBSD disklabel to this disk image?\n\n" +
+            "This overwrites the first sector of the image with a NetBSD-format\n" +
+            "partition table. Only use this for NetBSD disk images.",
+            "Write NetBSD Disklabel",
+            MessageBoxButton.OKCancel,
+            MessageBoxImage.Question);
+        if (result != MessageBoxResult.OK) return;
+
+        try
+        {
+            ScsiDisk.WriteNetBsdDisklabel(filePath);
+        }
+        catch
+        {
+            // ignore write errors
+        }
     }
 
     private void BrowseRom_Click(object sender, RoutedEventArgs e)
@@ -480,7 +550,7 @@ public partial class SettingsWindow : Window
                 fs.SetLength(sizeBytes);
             }
 
-            bool isNetBsd = NewScsiImageTypeBox.SelectedIndex == 0;
+            bool isNetBsd = GetSelectedItemText(TargetOSBox) != "Linux";
             if (isNetBsd)
                 ScsiDisk.WriteNetBsdDisklabel(dlg.FileName);
 
