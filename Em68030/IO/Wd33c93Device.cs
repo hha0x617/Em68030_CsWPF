@@ -128,16 +128,26 @@ public class Wd33c93Device : IMemoryMappedDevice
         _phase = ScsiPhase.Idle;
         _pioTransferActive = false;
         _sbtPending = false;
+        _sbtOutput = false;
         _satInProgress = false;
         _selectedTarget = -1;
+        _selectedLun = 0;
         _cdbOffset = 0;
+        _cdbLength = 0;
         _dataOffset = 0;
         _dataLength = 0;
+        _statusByte = 0;
         _deferredInterruptCsr = 0;
         _dataBuffer = Array.Empty<byte>();
         _currentResult = default;
-        // Clear INT flag in ASR without triggering interrupt callback
-        _regs[0x1F] &= unchecked((byte)~0x80);
+
+        // Reset all registers and CDB to power-on defaults
+        Array.Clear(_regs, 0, _regs.Length);
+        Array.Clear(_cdb, 0, _cdb.Length);
+        _addressReg = 0;
+
+        // Deassert interrupt line
+        InterruptOutput?.Invoke(false);
     }
 
     public void AttachTarget(int scsiId, IScsiTarget target)
@@ -467,6 +477,19 @@ public class Wd33c93Device : IMemoryMappedDevice
             {
                 SetCsrAndInterrupt(_phase == ScsiPhase.DataIn ? (byte)0x89 : (byte)0x88);
             }
+            return;
+        }
+
+        // Command phase 0x46 = data transfer complete, finish status/message phases.
+        // The Level I driver (NetBSD sbic) handles select + CDB + data manually, then
+        // issues SAT with cmdPhase=0x46 to automate the status byte read and command
+        // complete message. The SCSI command was already executed during the Level I
+        // command phase, so _statusByte already holds the correct status.
+        if (cmdPhase == 0x46)
+        {
+            DiagLog?.Invoke("[SCSI] SAT cmdPhase=$46 → CompleteSat (Level I status completion)");
+            _satInProgress = true;
+            CompleteSat();
             return;
         }
 
