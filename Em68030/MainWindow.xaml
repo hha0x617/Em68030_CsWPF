@@ -372,7 +372,7 @@
 
         <!-- Toolbar -->
         <ToolBarTray DockPanel.Dock="Top" Background="#FF2D2D30">
-            <ToolBar Background="#FF2D2D30" Band="0" BandIndex="0">
+            <ToolBar Background="#FF2D2D30" Band="0" BandIndex="0" Loaded="ToolBar_Loaded">
                 <Button Content="Run (F5)" Command="{Binding RunCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button Content="Stop" Command="{Binding StopCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button Content="Step (F10)" Command="{Binding StepCommand}" Style="{StaticResource ToolBarButton}" />

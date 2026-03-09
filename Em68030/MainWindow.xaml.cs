@@ -187,6 +187,15 @@ public partial class MainWindow : Window
         _vm.ToggleMhzDisplayMode();
     }
 
+    private void ToolBar_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is ToolBar toolBar)
+        {
+            if (toolBar.Template.FindName("OverflowGrid", toolBar) is FrameworkElement overflow)
+                overflow.Visibility = Visibility.Collapsed;
+        }
+    }
+
     private void Settings_Click(object sender, RoutedEventArgs e)
     {
         var settings = new SettingsWindow(_vm.Config.Clone(), () => _vm.UnmountAllScsiDisks());
