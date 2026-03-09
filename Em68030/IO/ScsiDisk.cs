@@ -90,11 +90,14 @@ public class ScsiDisk : IScsiTarget
     {
         int allocLen = cdb[4];
         if (allocLen == 0) allocLen = 18;
-        int len = Math.Min(allocLen, 18);
-        byte[] data = new byte[len];
-        Array.Copy(_senseData, data, len);
+        // Return allocLen bytes (zero-padded beyond 18) to match the transfer count
+        // the driver sets up. Returning fewer bytes leaves a non-zero residual TC,
+        // which causes the NetBSD wdsc driver to report EINVAL (error 22).
+        byte[] data = new byte[allocLen];
+        int copyLen = Math.Min(allocLen, 18);
+        Array.Copy(_senseData, data, copyLen);
         ClearSense();
-        return new ScsiResult { StatusByte = 0x00, DataIn = data, DataInLength = len, HasDataIn = true };
+        return new ScsiResult { StatusByte = 0x00, DataIn = data, DataInLength = allocLen, HasDataIn = true };
     }
 
     private ScsiResult CmdInquiryNoDevice(byte[] cdb)
