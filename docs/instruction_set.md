@@ -76,6 +76,30 @@ instruction tracing is output to diagnostics (not available in C++ version).
 >   are sampled every ~500ms.
 > - Results vary depending on workload, host CPU, and system load.
 
+> **Linux shows significantly lower MHz/MIPS than NetBSD**: When running a Linux kernel,
+> the displayed MHz and MIPS values may be dramatically lower than during a NetBSD session.
+> The effect is most pronounced at an idle shell prompt (e.g., ~1.5 MHz / ~0.2 MIPS),
+> but is also visible during boot. This is primarily caused by two factors:
+>
+> 1. **STOP instruction idle time** — Linux uses the M68K `STOP` instruction (0x4E72) to
+>    halt the CPU while waiting for interrupts (interrupt-driven idle). During a STOP,
+>    the emulator executes no instructions and accumulates no cycles, but wall-clock time
+>    continues to elapse. Since MHz and MIPS are computed as cycles (or instructions)
+>    divided by wall-clock time, extended STOP periods cause both metrics to drop
+>    significantly. At an idle shell prompt, nearly all time is spent in STOP, so the
+>    values become extremely low. NetBSD, by contrast, tends to use busy-wait loops that
+>    continuously execute instructions, keeping the counters high even when idle.
+>
+> 2. **Incomplete SCSI interrupt handling** — The WD33C93 SCSI controller emulation does
+>    not yet fully support all interrupt scenarios expected by the Linux kernel driver.
+>    During SCSI disk probing, unhandled interrupt conditions can cause the driver to
+>    enter polling loops or wait for events that never arrive, further reducing the
+>    effective instruction throughput. This is a known limitation that will be addressed
+>    by improving WD33C93 interrupt emulation.
+>
+> The low values do not indicate a bug in the MHz/MIPS measurement itself — they
+> accurately reflect that the emulated CPU is spending much of its time idle or stalled.
+
 ### Cycle Table
 
 `s_cycleTable[65536]` (byte): Static lookup table. EA cost functions compute
@@ -399,6 +423,26 @@ instruction. Blocks that bail out too frequently (>64 times) are blacklisted and
 - IL code generation via System.Reflection.Emit (DynamicMethod)
 - Per-opcode cycle costs are summed at compile time and stored in CompiledBlock.TotalCycles
 - Sampling at TickInterval (256), threshold = 16 hits to compile
+
+#### Tuning Parameters
+
+The following parameters are configurable via Settings → Performance → JIT:
+
+- **Compile Threshold** (default: 16): The number of times a basic block must be sampled
+  at the hot-block detection point before it is compiled. The emulator samples the current PC
+  every TickInterval (256) instructions; when the same block address accumulates this many hits,
+  compilation is triggered. A lower value compiles more aggressively (more blocks compiled sooner,
+  but more compilation overhead). A higher value is more conservative (only the hottest loops
+  are compiled). Since JIT currently has net negative performance impact (~3.5% MIPS slower),
+  adjusting this value has limited practical effect.
+
+- **Min Block Length** (default: 3): The minimum number of JIT-compilable instructions a basic
+  block must contain to be worth caching. Blocks shorter than this threshold are immediately
+  marked as uncompilable and will never be compiled, even if they are frequently executed.
+  This avoids the overhead of compiling and dispatching very short blocks where the per-block
+  setup cost (lookup, delegate call) would outweigh the benefit. Increasing this value reduces
+  the number of compiled blocks; decreasing it allows more blocks to be compiled but may increase
+  dispatch overhead for trivial blocks.
 - ExecuteNextFast() and ExecuteNextFastJit() are completely separate methods (same separation
   design as C++)
 - Method selection uses a bool branch. Func<bool> delegate dispatch caused a 36 to 30 MIPS
