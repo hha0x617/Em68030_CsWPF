@@ -1458,6 +1458,9 @@ public class MainViewModel : INotifyPropertyChanged
                 disk.UnmountImage();
             _scsiDisks.Clear();
 
+            // Reset SCSI controller bus state to clear any in-flight operations
+            _scsiDevice.ResetBusState();
+
             // Mount and attach new SCSI disks from updated config
             foreach (var diskConfig in _config.Mvme147ScsiDisks)
             {

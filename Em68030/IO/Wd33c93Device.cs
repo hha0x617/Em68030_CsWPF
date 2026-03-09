@@ -119,6 +119,27 @@ public class Wd33c93Device : IMemoryMappedDevice
             SetCsrAndInterrupt(csr);
         }
     }
+    /// <summary>
+    /// Reset all SCSI bus state without triggering an interrupt.
+    /// Used when hot-swapping SCSI devices via settings.
+    /// </summary>
+    public void ResetBusState()
+    {
+        _phase = ScsiPhase.Idle;
+        _pioTransferActive = false;
+        _sbtPending = false;
+        _satInProgress = false;
+        _selectedTarget = -1;
+        _cdbOffset = 0;
+        _dataOffset = 0;
+        _dataLength = 0;
+        _deferredInterruptCsr = 0;
+        _dataBuffer = Array.Empty<byte>();
+        _currentResult = default;
+        // Clear INT flag in ASR without triggering interrupt callback
+        _regs[0x1F] &= unchecked((byte)~0x80);
+    }
+
     public void AttachTarget(int scsiId, IScsiTarget target)
     {
         if (scsiId >= 0 && scsiId < 8)
