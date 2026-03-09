@@ -136,6 +136,7 @@ Features:
 - **DMA controller** registers (table address, data address, byte count, data hold)
 - **12 interrupt control registers** (ICR) for all MVME147 devices
 - **Hardware reset** via RESET instruction (0x4E70)
+- **Watchdog timer** ($1D): writing 0xA5 arms the watchdog and triggers an immediate warm reboot (used by Linux `mvme147_reset()`)
 
 Register map:
 
@@ -153,6 +154,7 @@ Register map:
 | $19 | Timer 1 Control | Timer 1 enable/COC/overflow |
 | $1A | Timer 2 ICR | Timer 2 interrupt control |
 | $1B | Timer 2 Control | Timer 2 enable/COC/overflow |
+| $1D | Watchdog Timer | Write 0x0A=clear, 0xA5=arm (triggers reset) |
 | $26 | SCC ICR | Z8530 interrupt control |
 | $28 | LANCE ICR | AM7990 interrupt control |
 | $2A | SCSI ICR | WD33C93 interrupt control |

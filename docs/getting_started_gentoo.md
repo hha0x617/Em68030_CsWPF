@@ -411,6 +411,24 @@ The kernel will display boot messages. After the boot sequence completes, the in
 
 Login as `root` with the password you set in Phase 1.5.
 
+### 3.4 Halt and Reboot
+
+To shut down the system:
+
+```
+# halt
+```
+
+To reboot:
+
+```
+# reboot
+```
+
+The `reboot` command triggers the Linux kernel's `mvme147_reset()`, which uses the PCC watchdog timer to perform a hardware reset. The emulator detects this and performs a warm reboot (reloads the kernel ELF and restarts).
+
+You can also press **Shift+F5** at any time to stop the emulator.
+
 ---
 
 ## Kernel Command Line Options
