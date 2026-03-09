@@ -529,6 +529,43 @@ public class MainViewModel : INotifyPropertyChanged
             _pccDevice.HardwareReset();
         };
 
+        // PCC watchdog timer: Linux MVME147 uses this for hardware reboot
+        _pccDevice.OnWatchdogReset = () =>
+        {
+            _cpu.DiagnosticOutput?.Invoke("\n[EMU] Watchdog reset triggered — performing warm reboot\n");
+            _pccDevice.HardwareReset();
+            _scsiDevice?.ResetBusState();
+            _systemBooted = false;
+
+            // Disable MMU before reloading the kernel — the old page tables will be
+            // overwritten by LoadElf, so any MMU-translated fetch would use corrupt tables.
+            // FlushAll triggers OnFlush which invalidates fetch/data caches and JIT.
+            _cpu.Mmu.Reset();
+            _cpu.Mmu.FlushAll();
+
+            if (!string.IsNullOrEmpty(_config.LastOpenedFile) && System.IO.File.Exists(_config.LastOpenedFile))
+            {
+                var result = FileLoader.LoadElf(_memory, _config.LastOpenedFile);
+                _cpu.PC = result.EntryPoint;
+                _programStartAddress = result.StartAddress;
+                _programEndAddress = result.EndAddress;
+
+                if (_config.BoardType == "MVME147")
+                {
+                    uint topOfRam = (uint)_config.MemorySize;
+                    if (_config.TargetOS == "Linux")
+                        SetupMvme147LinuxBootStub(topOfRam, _programEndAddress);
+                    else
+                        SetupMvme147BootStub(topOfRam);
+                    _cpu.SR = 0x2700;
+                }
+            }
+            else
+            {
+                _cpu.Reset();
+            }
+        };
+
         // Load ROM image if configured
         if (!string.IsNullOrEmpty(_config.Mvme147RomPath) &&
             File.Exists(_config.Mvme147RomPath))

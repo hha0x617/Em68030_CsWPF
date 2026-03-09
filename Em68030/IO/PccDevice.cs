@@ -136,6 +136,12 @@ public class PccDevice : IMemoryMappedDevice
     // Reference to SCSI controller for Tick() deferred interrupt delivery
     private Wd33c93Device? _scsiDevice;
 
+    /// <summary>
+    /// Callback invoked when the watchdog timer is armed (0xA5 written to watchdog register).
+    /// Used by MVME147 Linux kernel for hardware reboot (mvme147_reset).
+    /// </summary>
+    public Action? OnWatchdogReset;
+
 
     // PCC interrupt vector offsets
     private const int PCCV_ACFAIL = 0;
@@ -468,7 +474,17 @@ public class PccDevice : IMemoryMappedDevice
 
             // Device ICR and control registers
             case 0x1C: WriteIcr(ref _acFailIcr, value); break;
-            case 0x1D: WriteIcr(ref _wdogIcr, value); break;
+            case 0x1D:
+                if (value == 0xA5)
+                {
+                    // Watchdog armed with ~100ms timeout — trigger immediate reset in emulation
+                    OnWatchdogReset?.Invoke();
+                }
+                else
+                {
+                    WriteIcr(ref _wdogIcr, value);
+                }
+                break;
             case 0x1E: WriteIcr(ref _printerIcr, value); break;
             case 0x1F: _printerControl = value; break;
             case 0x20: WriteIcr(ref _dmaIcr, value); break;
