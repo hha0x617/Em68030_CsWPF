@@ -39,6 +39,8 @@ public partial class MainWindow : Window
         Icon = decoder.Frames.OrderByDescending(f => f.PixelWidth).First();
         _vm = new MainViewModel();
         DataContext = _vm;
+        DisasmAddrBox.Text = _vm.PC.ToString("X8");
+        MemAddrBox.Text = _vm.PC.ToString("X8");
 
         // Console output events may fire from the emulation background thread.
         // AppendChar/AppendString are thread-safe (use ConcurrentQueue internally).
@@ -100,7 +102,7 @@ public partial class MainWindow : Window
                 uint.TryParse(inputDlg.InputText, NumberStyles.HexNumber, null, out uint addr))
             {
                 _vm.LoadBinaryFile(dlg.FileName, addr);
-                UpdateManualUpdateButton();
+
             }
         }
     }
@@ -115,7 +117,6 @@ public partial class MainWindow : Window
         if (dlg.ShowDialog() == true)
         {
             _vm.LoadSRecordFile(dlg.FileName);
-            UpdateManualUpdateButton();
         }
     }
 
@@ -123,7 +124,7 @@ public partial class MainWindow : Window
     {
         var dlg = new OpenFileDialog
         {
-            Filter = "ELF files (*.elf;netbsd*)|*.elf;netbsd*|All files (*.*)|*.*",
+            Filter = "ELF files (*.elf;netbsd*;vmlinux*)|*.elf;netbsd*;vmlinux*|All files (*.*)|*.*",
             Title = "Open ELF File"
         };
         if (dlg.ShowDialog() == true)
@@ -131,7 +132,7 @@ public partial class MainWindow : Window
             try
             {
                 var result = _vm.LoadElfFile(dlg.FileName);
-                UpdateManualUpdateButton();
+
                 MessageBox.Show(
                     $"ELF loaded successfully.\n\n" +
                     $"Machine: {result.MachineDescription}\n" +
@@ -251,49 +252,19 @@ public partial class MainWindow : Window
             _vm.ResetDisasmFollowPC();
     }
 
-    private void ManualUpdate_Click(object sender, RoutedEventArgs e)
+    private uint ParseDisasmSize()
     {
-        if (_vm.HasProgramLoaded) return;
-
-        // Parse address
-        string addrText = DisasmAddrBox.Text.Trim();
-        if (addrText.StartsWith("$")) addrText = addrText[1..];
-        else if (addrText.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) addrText = addrText[2..];
-
-        uint addr = 0;
-        if (!string.IsNullOrEmpty(addrText))
-        {
-            if (!uint.TryParse(addrText, NumberStyles.HexNumber, null, out addr))
-            {
-                MessageBox.Show("Invalid hex address.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-        }
-
-        // Parse size (hex, default 0x400 = 1KB)
-        uint sizeBytes = 0x400;
+        uint sizeBytes = 1024;
         string sizeText = DisasmSizeBox.Text.Trim();
-        if (sizeText.StartsWith("$")) sizeText = sizeText[1..];
-        else if (sizeText.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) sizeText = sizeText[2..];
-
-        if (!string.IsNullOrEmpty(sizeText))
+        if (sizeText.StartsWith("$"))
         {
-            if (!uint.TryParse(sizeText, NumberStyles.HexNumber, null, out sizeBytes))
-            {
-                MessageBox.Show("Invalid hex size.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
+            uint.TryParse(sizeText[1..], NumberStyles.HexNumber, null, out sizeBytes);
         }
-
-        if (sizeBytes == 0) sizeBytes = 0x400;
-
-        _vm.ManualDisassembly(addr, sizeBytes);
-        DisasmAddrBox.Text = addr.ToString("X8");
-    }
-
-    private void UpdateManualUpdateButton()
-    {
-        BtnManualUpdate.IsEnabled = !_vm.HasProgramLoaded;
+        else if (!string.IsNullOrEmpty(sizeText))
+        {
+            uint.TryParse(sizeText, NumberStyles.Integer, null, out sizeBytes);
+        }
+        return sizeBytes == 0 ? 1024 : sizeBytes;
     }
 
     private void NavigateDisassembly()
@@ -313,7 +284,8 @@ public partial class MainWindow : Window
 
         if (uint.TryParse(text, NumberStyles.HexNumber, null, out uint addr))
         {
-            _vm.NavigateDisassembly(addr);
+            uint sizeBytes = ParseDisasmSize();
+            _vm.NavigateDisassembly(addr, sizeBytes);
             DisasmAddrBox.Text = addr.ToString("X8");
         }
         else
@@ -433,7 +405,20 @@ public partial class MainWindow : Window
 
         if (uint.TryParse(text, NumberStyles.HexNumber, null, out uint addr))
         {
-            _vm.NavigateMemoryDump(addr);
+            // Parse size (decimal by default, $ prefix = hex)
+            uint size = 256;
+            string sizeText = MemSizeBox.Text.Trim();
+            if (sizeText.StartsWith("$"))
+            {
+                uint.TryParse(sizeText[1..], NumberStyles.HexNumber, null, out size);
+            }
+            else
+            {
+                uint.TryParse(sizeText, NumberStyles.Integer, null, out size);
+            }
+            if (size == 0) size = 256;
+
+            _vm.NavigateMemoryDump(addr, size);
             MemAddrBox.Text = addr.ToString("X8");
         }
         else

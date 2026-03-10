@@ -458,17 +458,14 @@
                             <TextBlock Text="Address:" Style="{StaticResource MonoText}" VerticalAlignment="Center" Margin="16,0,4,0" />
                             <TextBox x:Name="DisasmAddrBox" Width="80" Style="{StaticResource MonoTextBox}"
                                      VerticalAlignment="Center" KeyDown="DisasmAddrBox_KeyDown" />
+                            <TextBlock Text="Size:" Style="{StaticResource MonoText}" VerticalAlignment="Center" Margin="8,0,2,0" />
+                            <TextBox x:Name="DisasmSizeBox" Width="50" Style="{StaticResource MonoTextBox}"
+                                     VerticalAlignment="Center" Text="1024" />
                             <Button Content="Go" Click="DisasmGo_Click" Style="{StaticResource ToolBarButton}" Margin="4,2" />
                             <ToggleButton x:Name="BtnFollowPC" Content="Follow PC" Click="DisasmFollowPC_Click"
                                          IsChecked="{Binding DisasmFollowPC, Mode=TwoWay}"
                                          Style="{StaticResource ToolBarToggleButton}" Margin="4,2"
                                          IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" />
-                            <Separator Margin="4,2" />
-                            <TextBlock Text="Size:" Style="{StaticResource MonoText}" VerticalAlignment="Center" Margin="4,0,2,0" />
-                            <TextBox x:Name="DisasmSizeBox" Width="50" Style="{StaticResource MonoTextBox}"
-                                     VerticalAlignment="Center" Text="400" />
-                            <Button x:Name="BtnManualUpdate" Content="Manual Update" Click="ManualUpdate_Click"
-                                    Style="{StaticResource ToolBarButton}" Margin="4,2" />
                             <Button Content="LST" Click="ToggleLst_Click" Style="{StaticResource ToolBarButton}"
                                     Margin="8,2" Visibility="{Binding HasLstFile, Converter={StaticResource BoolToVis}}" />
                         </StackPanel>
@@ -739,6 +736,9 @@
                         <TextBlock Text="Address:" Style="{StaticResource MonoText}" VerticalAlignment="Center" Margin="16,0,4,0" />
                         <TextBox x:Name="MemAddrBox" Width="80" Style="{StaticResource MonoTextBox}"
                                  VerticalAlignment="Center" KeyDown="MemAddrBox_KeyDown" />
+                        <TextBlock Text="Size:" Style="{StaticResource MonoText}" VerticalAlignment="Center" Margin="8,0,2,0" />
+                        <TextBox x:Name="MemSizeBox" Width="50" Style="{StaticResource MonoTextBox}"
+                                 VerticalAlignment="Center" Text="256" KeyDown="MemAddrBox_KeyDown" />
                         <Button Content="Go" Click="MemGo_Click" Style="{StaticResource ToolBarButton}" Margin="4,2" />
                         <Separator Margin="8,2" />
                         <Button Content="Edit" Command="{Binding EditMemoryCommand}" Style="{StaticResource ToolBarButton}" Margin="4,2" />

@@ -42,12 +42,13 @@ public class MainViewModel : INotifyPropertyChanged
     private List<LstLine>? _lstLines;
     private bool _showLst;
     private uint _memoryDumpAddress;
+    private int _memoryDumpRows = 16;
     private uint _disasmAddress;
     private uint _programStartAddress;
     private uint _programEndAddress;
     private bool _disasmFollowPC = true;
     private bool _fullProgramDisassembled;
-    private bool _manualDisasmMode;
+
     private string _loadedFileName = "";
 
     // Clock frequency estimation
@@ -221,19 +222,23 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public void NavigateMemoryDump(uint address)
+    public void NavigateMemoryDump(uint address, uint sizeBytes = 256)
     {
         _memoryDumpAddress = address;
+        _memoryDumpRows = Math.Max(1, (int)((sizeBytes + 15) / 16));
         OnPropertyChanged(nameof(MemoryDumpAddress));
         UpdateMemoryDump();
     }
 
-    public void NavigateDisassembly(uint address)
+    public void NavigateDisassembly(uint address, uint sizeBytes = 0)
     {
         _disasmAddress = address;
         DisasmFollowPC = false;
         _fullProgramDisassembled = false;
-        UpdateDisassemblyAt(_disasmAddress);
+        if (sizeBytes > 0)
+            UpdateDisassemblyRange(address, address + sizeBytes);
+        else
+            UpdateDisassemblyAt(_disasmAddress);
     }
 
     /// <summary>
@@ -302,21 +307,6 @@ public class MainViewModel : INotifyPropertyChanged
         UpdateDisassembly();
     }
 
-    public bool IsManualDisasmMode => _manualDisasmMode;
-
-    public void ManualDisassembly(uint address, uint sizeBytes)
-    {
-        _manualDisasmMode = true;
-        DisasmFollowPC = false;
-        _fullProgramDisassembled = false;
-        _disasmAddress = address;
-        UpdateDisassemblyRange(address, address + sizeBytes);
-    }
-
-    public void ClearManualDisasmMode()
-    {
-        _manualDisasmMode = false;
-    }
 
     public ObservableCollection<DisasmLineViewModel> DisassemblyLines { get; } = new();
     public ObservableCollection<MemoryDumpRow> MemoryDumpRows { get; } = new();
@@ -812,7 +802,7 @@ public class MainViewModel : INotifyPropertyChanged
         _programEndAddress = loadAddress + size;
         DisasmFollowPC = true;
         _fullProgramDisassembled = false;
-        ClearManualDisasmMode();
+
         InitStackPointer();
         LoadedFileName = System.IO.Path.GetFileName(path);
         CheckForLstFile(path);
@@ -838,7 +828,7 @@ public class MainViewModel : INotifyPropertyChanged
         _programEndAddress = end;
         DisasmFollowPC = true;
         _fullProgramDisassembled = false;
-        ClearManualDisasmMode();
+
         InitStackPointer();
         LoadedFileName = System.IO.Path.GetFileName(path);
         CheckForLstFile(path);
@@ -855,7 +845,7 @@ public class MainViewModel : INotifyPropertyChanged
         _programEndAddress = result.EndAddress;
         DisasmFollowPC = true;
         _fullProgramDisassembled = false;
-        ClearManualDisasmMode();
+
 
         if (_config.BoardType == "MVME147")
         {
@@ -1557,12 +1547,6 @@ public class MainViewModel : INotifyPropertyChanged
 
     public void UpdateDisassembly()
     {
-        if (_manualDisasmMode)
-        {
-            UpdatePCHighlight();
-            return;
-        }
-
         if (_disasmFollowPC)
         {
             if (_fullProgramDisassembled)
@@ -1711,11 +1695,12 @@ public class MainViewModel : INotifyPropertyChanged
     public void UpdateMemoryDump()
     {
         uint addr = _memoryDumpAddress & 0xFFFFFFF0; // Align to 16
+        int numRows = _memoryDumpRows;
 
-        if (MemoryDumpRows.Count != 16)
+        if (MemoryDumpRows.Count != numRows)
         {
             MemoryDumpRows.Clear();
-            for (int row = 0; row < 16; row++)
+            for (int row = 0; row < numRows; row++)
             {
                 uint lineAddr = addr + (uint)(row * 16);
                 var dumpRow = new MemoryDumpRow(lineAddr, _memory, row);
@@ -1724,7 +1709,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
         else
         {
-            for (int row = 0; row < 16; row++)
+            for (int row = 0; row < numRows; row++)
             {
                 uint lineAddr = addr + (uint)(row * 16);
                 MemoryDumpRows[row].Update(lineAddr, _memory, row);
