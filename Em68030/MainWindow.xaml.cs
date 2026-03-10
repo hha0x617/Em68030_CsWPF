@@ -17,6 +17,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Em68030.ViewModels;
 using Em68030.Views;
 using Microsoft.Win32;
@@ -33,6 +34,9 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Title = $"Em68030 - MC68030 Emulator (C#/WPF) [{GitVersion.CommitHash}]";
+        var iconUri = new Uri("pack://application:,,,/Assets/Em68030.ico");
+        var decoder = BitmapDecoder.Create(iconUri, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+        Icon = decoder.Frames.OrderByDescending(f => f.PixelWidth).First();
         _vm = new MainViewModel();
         DataContext = _vm;
 
