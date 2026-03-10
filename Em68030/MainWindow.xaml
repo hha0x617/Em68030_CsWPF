@@ -444,17 +444,14 @@
                 <RowDefinition Height="5" />
                 <RowDefinition Height="2*" />
             </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*" />
+                <ColumnDefinition Width="5" />
+                <ColumnDefinition Width="310" />
+            </Grid.ColumnDefinitions>
 
-            <!-- Upper pane: Disassembly + Registers -->
-            <Grid Grid.Row="0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="3*" />
-                    <ColumnDefinition Width="5" />
-                    <ColumnDefinition Width="280" />
-                </Grid.ColumnDefinitions>
-
-                <!-- Disassembly View -->
-                <Border Grid.Column="0" BorderBrush="#FF3F3F46" BorderThickness="1" Margin="2">
+            <!-- Disassembly View -->
+            <Border Grid.Row="0" Grid.Column="0" BorderBrush="#FF3F3F46" BorderThickness="1" Margin="2">
                     <DockPanel>
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="#FF2D2D30">
                             <TextBlock Text="Disassembly" Style="{StaticResource HeaderText}" />
@@ -559,11 +556,11 @@
                     </DockPanel>
                 </Border>
 
-                <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch"
-                              Background="#FF3F3F46" />
+            <GridSplitter Grid.Row="0" Grid.Column="1" Grid.RowSpan="3" Width="5" HorizontalAlignment="Stretch"
+                          Background="#FF3F3F46" />
 
-                <!-- Register Panel -->
-                <Border Grid.Column="2" BorderBrush="#FF3F3F46" BorderThickness="1" Margin="2">
+            <!-- Register Panel (spans all rows) -->
+            <Border Grid.Row="0" Grid.Column="2" Grid.RowSpan="3" BorderBrush="#FF3F3F46" BorderThickness="1" Margin="2">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Margin="4">
                             <DockPanel>
@@ -649,6 +646,18 @@
                                 </StackPanel>
                             </UniformGrid>
 
+                            <!-- Flags -->
+                            <TextBlock Text="Flags" Style="{StaticResource HeaderText}" Foreground="#FF4EC9B0" Margin="4,8,4,2" />
+                            <WrapPanel Margin="2" IsEnabled="{Binding IsRegisterEditMode}">
+                                <CheckBox Content="X" IsChecked="{Binding FlagX}" Foreground="#FFD4D4D4" Margin="4,2" />
+                                <CheckBox Content="N" IsChecked="{Binding FlagN}" Foreground="#FFD4D4D4" Margin="4,2" />
+                                <CheckBox Content="Z" IsChecked="{Binding FlagZ}" Foreground="#FFD4D4D4" Margin="4,2" />
+                                <CheckBox Content="V" IsChecked="{Binding FlagV}" Foreground="#FFD4D4D4" Margin="4,2" />
+                                <CheckBox Content="C" IsChecked="{Binding FlagC}" Foreground="#FFD4D4D4" Margin="4,2" />
+                                <CheckBox Content="S" IsChecked="{Binding FlagS}" Foreground="#FFD4D4D4" Margin="4,2" />
+                                <CheckBox Content="T" IsChecked="{Binding FlagT}" Foreground="#FFD4D4D4" Margin="4,2" />
+                            </WrapPanel>
+
                             <!-- Special Registers -->
                             <TextBlock Text="Special Registers" Style="{StaticResource HeaderText}" Foreground="#FF4EC9B0" Margin="4,8,4,2" />
                             <StackPanel Orientation="Horizontal" Margin="2">
@@ -715,27 +724,15 @@
                                 <TextBox Text="{Binding FPIAR, StringFormat=X8}" Width="75" Style="{StaticResource RegisterTextBox}" />
                             </StackPanel>
 
-                            <!-- Flags -->
-                            <TextBlock Text="Flags" Style="{StaticResource HeaderText}" Foreground="#FF4EC9B0" Margin="4,8,4,2" />
-                            <WrapPanel Margin="2">
-                                <CheckBox Content="X" IsChecked="{Binding FlagX}" Foreground="#FFD4D4D4" Margin="4,2" />
-                                <CheckBox Content="N" IsChecked="{Binding FlagN}" Foreground="#FFD4D4D4" Margin="4,2" />
-                                <CheckBox Content="Z" IsChecked="{Binding FlagZ}" Foreground="#FFD4D4D4" Margin="4,2" />
-                                <CheckBox Content="V" IsChecked="{Binding FlagV}" Foreground="#FFD4D4D4" Margin="4,2" />
-                                <CheckBox Content="C" IsChecked="{Binding FlagC}" Foreground="#FFD4D4D4" Margin="4,2" />
-                                <CheckBox Content="S" IsChecked="{Binding FlagS}" Foreground="#FFD4D4D4" Margin="4,2" />
-                                <CheckBox Content="T" IsChecked="{Binding FlagT}" Foreground="#FFD4D4D4" Margin="4,2" />
-                            </WrapPanel>
                         </StackPanel>
                     </ScrollViewer>
-                </Border>
-            </Grid>
+            </Border>
 
-            <GridSplitter Grid.Row="1" Height="5" HorizontalAlignment="Stretch"
+            <GridSplitter Grid.Row="1" Grid.Column="0" Height="5" HorizontalAlignment="Stretch"
                           Background="#FF3F3F46" />
 
             <!-- Lower pane: Memory Dump -->
-            <Border Grid.Row="2" BorderBrush="#FF3F3F46" BorderThickness="1" Margin="2">
+            <Border Grid.Row="2" Grid.Column="0" BorderBrush="#FF3F3F46" BorderThickness="1" Margin="2">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="#FF2D2D30">
                         <TextBlock Text="Memory Dump" Style="{StaticResource HeaderText}" />
