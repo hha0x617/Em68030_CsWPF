@@ -1532,6 +1532,40 @@ public class MainViewModel : INotifyPropertyChanged
             }
         }
 
+        // TargetOS change: update UART 16550, RTC year offset, and boot stub
+        if (_config.BoardType == "MVME147")
+        {
+            // UART 16550 for Linux serial console
+            if (_config.TargetOS == "Linux")
+            {
+                if (_uartDevice == null)
+                {
+                    _uartDevice = new Uart16550Device(0xFFFE2000);
+                    _uartDevice.OnTransmit = ch => { ConsoleCharOutput?.Invoke((char)ch); _traceWriter?.Write((char)ch); };
+                }
+                _memory.RegisterDevice(0xFFFE2000, 8, _uartDevice);
+            }
+            else
+            {
+                if (_uartDevice != null)
+                    _memory.UnregisterDevice(0xFFFE2000, 8);
+            }
+
+            // RTC year offset: NetBSD uses YEAR0=1968, Linux uses raw 2-digit year
+            if (_rtcDevice != null)
+                _rtcDevice.YearBase = _config.TargetOS == "Linux" ? 0 : 1968;
+
+            // Re-setup boot stub if a kernel is already loaded
+            if (_programEndAddress > _programStartAddress)
+            {
+                uint topOfRam = (uint)_config.MemorySize;
+                if (_config.TargetOS == "Linux")
+                    SetupMvme147LinuxBootStub(topOfRam, _programEndAddress);
+                else
+                    SetupMvme147BootStub(topOfRam);
+            }
+        }
+
         // Apply JIT setting
         _cpu.JitEnabled = _config.JitEnabled;
         _cpu.JitMinBlockLength = _config.JitMinBlockLength;
