@@ -20,6 +20,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Em68030.Properties;
 
 namespace Em68030.Views;
 
@@ -171,7 +172,7 @@ public partial class ConsoleWindow : Window
 
     private void UpdateTitle()
     {
-        Title = $"Console - {_terminal.Cols}\u00d7{_terminal.Rows}";
+        Title = string.Format(Strings.Window_ConsoleFormat, _terminal.Cols, _terminal.Rows);
     }
 
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
@@ -247,7 +248,7 @@ public partial class ConsoleWindow : Window
     private void ScrollbackToggle_Click(object sender, RoutedEventArgs e)
     {
         _showScrollback = !_showScrollback;
-        ScrollbackButton.Content = _showScrollback ? "Live" : "Log";
+        ScrollbackButton.Content = _showScrollback ? Strings.Console_Live : Strings.Console_Log;
 
         // Force re-render with the new mode
         _terminal.SetDirty();

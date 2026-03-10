@@ -16,6 +16,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Em68030.Properties;
 using Em68030.ViewModels;
 
 namespace Em68030.Views;
@@ -89,7 +90,7 @@ public partial class BreakpointsWindow : Window
             // Delete button (right-aligned)
             var delBtn = new Button
             {
-                Content = "Del",
+                Content = Strings.Breakpoints_Delete,
                 Background = new SolidColorBrush(Color.FromRgb(0x3E, 0x3E, 0x42)),
                 Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x60, 0x60)),
                 BorderBrush = new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55)),

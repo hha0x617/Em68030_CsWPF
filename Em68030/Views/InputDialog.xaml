@@ -14,20 +14,21 @@
 <Window x:Class="Em68030.Views.InputDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Input" Height="160" Width="350"
+        xmlns:p="clr-namespace:Em68030.Properties"
+        Title="{x:Static p:Strings.Window_Input}" Height="160" Width="350"
         Background="#FF1E1E1E" Foreground="#FFD4D4D4"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize">
     <StackPanel Margin="16">
-        <TextBlock x:Name="PromptText" Text="Enter value:" Foreground="#FFD4D4D4" Margin="0,0,0,8" />
+        <TextBlock x:Name="PromptText" Text="{x:Static p:Strings.FileDialog_EnterLoadAddress}" Foreground="#FFD4D4D4" Margin="0,0,0,8" />
         <TextBox x:Name="InputTextBox" FontFamily="Consolas" FontSize="14"
                  Background="#FF2D2D30" Foreground="#FFD4D4D4"
                  CaretBrush="White" BorderBrush="#FF3F3F46"
                  Padding="4" />
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button Content="OK" Width="70" Click="OK_Click" IsDefault="True"
+            <Button Content="{x:Static p:Strings.Dialog_OK}" Width="70" Click="OK_Click" IsDefault="True"
                     Background="#FF0E639C" Foreground="White" Padding="4" Margin="4,0" />
-            <Button Content="Cancel" Width="70" IsCancel="True"
+            <Button Content="{x:Static p:Strings.Dialog_Cancel}" Width="70" IsCancel="True"
                     Background="#FF3E3E42" Foreground="#FFD4D4D4" Padding="4" />
         </StackPanel>
     </StackPanel>

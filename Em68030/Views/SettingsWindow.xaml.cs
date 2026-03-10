@@ -17,6 +17,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using Em68030.Config;
 using Em68030.IO;
+using Em68030.Properties;
 using Microsoft.Win32;
 
 namespace Em68030.Views;
@@ -165,7 +166,7 @@ public partial class SettingsWindow : Window
 
         var disklabelBtn = new Button
         {
-            Content = "Disklabel",
+            Content = Strings.Settings_Disklabel,
             Margin = new Thickness(4, 0, 0, 0),
             Background = new SolidColorBrush(Color.FromRgb(0x3E, 0x3E, 0x42)),
             Foreground = new SolidColorBrush(Color.FromRgb(0xD4, 0xD4, 0xD4)),
@@ -464,10 +465,8 @@ public partial class SettingsWindow : Window
         if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath)) return;
 
         var result = MessageBox.Show(
-            "Write a NetBSD disklabel to this disk image?\n\n" +
-            "This overwrites the first sector of the image with a NetBSD-format\n" +
-            "partition table. Only use this for NetBSD disk images.",
-            "Write NetBSD Disklabel",
+            Strings.Settings_DisklabelConfirm,
+            Strings.Settings_WriteDisklabel,
             MessageBoxButton.OKCancel,
             MessageBoxImage.Question);
         if (result != MessageBoxResult.OK) return;
@@ -487,7 +486,7 @@ public partial class SettingsWindow : Window
         var dlg = new OpenFileDialog
         {
             Filter = "ROM Image (*.bin;*.rom)|*.bin;*.rom|All files (*.*)|*.*",
-            Title = "Select MVME147 ROM Image"
+            Title = Strings.Settings_SelectRomImage
         };
         if (dlg.ShowDialog() == true)
         {
@@ -500,7 +499,7 @@ public partial class SettingsWindow : Window
         var dlg = new OpenFileDialog
         {
             Filter = "HDD Image (*.img;*.hdd)|*.img;*.hdd|All files (*.*)|*.*",
-            Title = "Select HDD Image File"
+            Title = Strings.Settings_SelectHddImage
         };
         if (dlg.ShowDialog() == true)
         {
@@ -518,7 +517,7 @@ public partial class SettingsWindow : Window
         var dlg = new OpenFileDialog
         {
             Filter = "Disk Image (*.img)|*.img|All files (*.*)|*.*",
-            Title = "Select SCSI Disk Image"
+            Title = Strings.Settings_SelectScsiDisk
         };
         if (dlg.ShowDialog() == true)
         {
@@ -531,7 +530,7 @@ public partial class SettingsWindow : Window
         var dlg = new OpenFileDialog
         {
             Filter = "ISO Image (*.iso)|*.iso|All files (*.*)|*.*",
-            Title = "Select SCSI CD-ROM ISO Image"
+            Title = Strings.Settings_SelectCdRomIso
         };
         if (dlg.ShowDialog() == true)
         {
@@ -543,7 +542,7 @@ public partial class SettingsWindow : Window
     {
         if (!int.TryParse(NewScsiImageSizeBox.Text, out int sizeMB) || sizeMB <= 0)
         {
-            MessageBox.Show("Invalid size.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(Strings.Msg_InvalidSize, Strings.Msg_Error, MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
@@ -553,7 +552,7 @@ public partial class SettingsWindow : Window
         var dlg = new SaveFileDialog
         {
             Filter = "Disk Image (*.img)|*.img|All files (*.*)|*.*",
-            Title = "Create SCSI Disk Image"
+            Title = Strings.Settings_CreateScsiDisk
         };
         if (dlg.ShowDialog() == true)
         {
@@ -580,8 +579,8 @@ public partial class SettingsWindow : Window
             }
 
             string typeLabel = isNetBsd ? "NetBSD disklabel" : "empty";
-            MessageBox.Show($"Created {sizeMB}MB SCSI disk image ({typeLabel}): {dlg.FileName}",
-                          "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(string.Format(Strings.Settings_CreatedScsiDiskFormat, sizeMB, typeLabel, dlg.FileName),
+                          Strings.Msg_Success, MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }
 
@@ -589,20 +588,20 @@ public partial class SettingsWindow : Window
     {
         if (!int.TryParse(NewImageSizeBox.Text, out int sizeMB) || sizeMB <= 0)
         {
-            MessageBox.Show("Invalid size.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(Strings.Msg_InvalidSize, Strings.Msg_Error, MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
         var dlg = new SaveFileDialog
         {
             Filter = "HDD Image (*.img)|*.img|All files (*.*)|*.*",
-            Title = "Create HDD Image File"
+            Title = Strings.Settings_CreateHddImage
         };
         if (dlg.ShowDialog() == true)
         {
             HddDevice.CreateImage(dlg.FileName, (long)sizeMB * 1024 * 1024);
             HddPathBox.Text = dlg.FileName;
-            MessageBox.Show($"Created {sizeMB}MB image: {dlg.FileName}", "Success",
+            MessageBox.Show(string.Format(Strings.Settings_CreatedHddImageFormat, sizeMB, dlg.FileName), Strings.Msg_Success,
                           MessageBoxButton.OK, MessageBoxImage.Information);
         }
     }

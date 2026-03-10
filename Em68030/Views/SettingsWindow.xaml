@@ -14,7 +14,8 @@
 <Window x:Class="Em68030.Views.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Emulator Settings" Height="600" Width="540"
+        xmlns:p="clr-namespace:Em68030.Properties"
+        Title="{x:Static p:Strings.Window_Settings}" Height="600" Width="540"
         Background="#FF1E1E1E" Foreground="#FFD4D4D4"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize">
@@ -137,22 +138,22 @@
     <DockPanel Margin="16">
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
                     HorizontalAlignment="Right" Margin="0,16,0,0">
-            <Button Content="OK" Width="80" Click="OK_Click" Margin="4"
+            <Button Content="{x:Static p:Strings.Dialog_OK}" Width="80" Click="OK_Click" Margin="4"
                     Background="#FF0E639C" Foreground="White" Padding="4" />
-            <Button Content="Cancel" Width="80" IsCancel="True" Margin="4"
+            <Button Content="{x:Static p:Strings.Dialog_Cancel}" Width="80" IsCancel="True" Margin="4"
                     Background="#FF3E3E42" Foreground="#FFD4D4D4" Padding="4" />
         </StackPanel>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel>
                 <!-- Board Type -->
-                <TextBlock Text="Board Type" Style="{StaticResource SectionHeader}" />
+                <TextBlock Text="{x:Static p:Strings.Settings_BoardType}" Style="{StaticResource SectionHeader}" />
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="150" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Board:" Style="{StaticResource SettingLabel}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_Board}" Style="{StaticResource SettingLabel}" />
                     <ComboBox x:Name="BoardTypeBox" Grid.Column="1"
                               SelectionChanged="BoardType_Changed">
                         <ComboBoxItem Content="Generic" />
@@ -162,28 +163,28 @@
 
                 <!-- MVME147 Settings -->
                 <StackPanel x:Name="Mvme147Panel" Visibility="Collapsed">
-                    <TextBlock Text="MVME147 Settings" Style="{StaticResource SectionHeader}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_Mvme147Settings}" Style="{StaticResource SectionHeader}" />
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="150" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="ROM Image:" Style="{StaticResource SettingLabel}" />
+                        <TextBlock Text="{x:Static p:Strings.Settings_RomImage}" Style="{StaticResource SettingLabel}" />
                         <TextBox x:Name="Mvme147RomBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
-                        <Button Content="..." Grid.Column="2" Click="BrowseRom_Click"
+                        <Button Content="{x:Static p:Strings.Settings_Browse}" Grid.Column="2" Click="BrowseRom_Click"
                                 Width="30" Margin="4,0,0,0"
                                 Background="#FF3E3E42" Foreground="#FFD4D4D4" />
                     </Grid>
 
                     <!-- Target OS -->
-                    <TextBlock Text="Target OS" Style="{StaticResource SectionHeader}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_TargetOS}" Style="{StaticResource SectionHeader}" />
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="150" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Operating System:" Style="{StaticResource SettingLabel}" />
+                        <TextBlock Text="{x:Static p:Strings.Settings_OperatingSystem}" Style="{StaticResource SettingLabel}" />
                         <ComboBox x:Name="TargetOSBox" Grid.Column="1"
                                   SelectionChanged="TargetOS_Changed">
                             <ComboBoxItem Content="NetBSD" />
@@ -197,7 +198,7 @@
                                 <ColumnDefinition Width="150" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Boot Partition:" Style="{StaticResource SettingLabel}" />
+                            <TextBlock Text="{x:Static p:Strings.Settings_BootPartition}" Style="{StaticResource SettingLabel}" />
                             <ComboBox x:Name="BootPartitionBox" Grid.Column="1"
                                       Width="60" HorizontalAlignment="Left">
                                 <ComboBoxItem Content="a" />
@@ -212,26 +213,26 @@
                                 <ColumnDefinition Width="150" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Command Line:" Style="{StaticResource SettingLabel}" />
+                            <TextBlock Text="{x:Static p:Strings.Settings_CommandLine}" Style="{StaticResource SettingLabel}" />
                             <TextBox x:Name="LinuxCommandLineBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                         </Grid>
                     </StackPanel>
 
                     <!-- SCSI Disk Settings -->
-                    <TextBlock Text="SCSI Disks" Style="{StaticResource SectionHeader}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_ScsiDisks}" Style="{StaticResource SectionHeader}" />
                     <StackPanel x:Name="ScsiDiskListPanel" />
-                    <Button x:Name="AddScsiDiskBtn" Content="+ Add Disk" Click="AddScsiDisk_Click"
+                    <Button x:Name="AddScsiDiskBtn" Content="{x:Static p:Strings.Settings_AddDisk}" Click="AddScsiDisk_Click"
                             Margin="0,4" Padding="8,2"
                             Background="#FF3E3E42" Foreground="#FFD4D4D4" />
                     <StackPanel Orientation="Horizontal" Margin="0,8">
-                        <TextBlock Text="New Image Size (MB):" Style="{StaticResource SettingLabel}" Width="150" />
+                        <TextBlock Text="{x:Static p:Strings.Settings_NewImageSizeMB}" Style="{StaticResource SettingLabel}" Width="150" />
                         <TextBox x:Name="NewScsiImageSizeBox" Width="60" Style="{StaticResource SettingTextBox}" Text="100" />
-                        <Button Content="Create" Click="CreateScsiImage_Click" Margin="8,0"
+                        <Button Content="{x:Static p:Strings.Settings_Create}" Click="CreateScsiImage_Click" Margin="8,0"
                                 Background="#FF3E3E42" Foreground="#FFD4D4D4" Padding="8,2" />
                     </StackPanel>
 
                     <!-- SCSI CD-ROM Settings -->
-                    <TextBlock Text="SCSI CD-ROM" Style="{StaticResource SectionHeader}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_ScsiCdRom}" Style="{StaticResource SectionHeader}" />
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="150" />
@@ -242,12 +243,12 @@
                             <RowDefinition />
                             <RowDefinition />
                         </Grid.RowDefinitions>
-                        <TextBlock Text="ISO Image:" Style="{StaticResource SettingLabel}" />
+                        <TextBlock Text="{x:Static p:Strings.Settings_IsoImage}" Style="{StaticResource SettingLabel}" />
                         <TextBox x:Name="ScsiCdromPathBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
-                        <Button Content="..." Grid.Column="2" Click="BrowseScsiCdrom_Click"
+                        <Button Content="{x:Static p:Strings.Settings_Browse}" Grid.Column="2" Click="BrowseScsiCdrom_Click"
                                 Width="30" Margin="4,0,0,0"
                                 Background="#FF3E3E42" Foreground="#FFD4D4D4" />
-                        <TextBlock Text="SCSI ID:" Grid.Row="1" Style="{StaticResource SettingLabel}" />
+                        <TextBlock Text="{x:Static p:Strings.Settings_ScsiId}" Grid.Row="1" Style="{StaticResource SettingLabel}" />
                         <ComboBox x:Name="ScsiCdromIdBox" Grid.Row="1" Grid.Column="1"
                                   Width="60" HorizontalAlignment="Left">
                             <ComboBoxItem Content="0" />
@@ -260,17 +261,17 @@
                         </ComboBox>
                     </Grid>
                     <!-- Network Mode -->
-                    <TextBlock Text="Network" Style="{StaticResource SectionHeader}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_Network}" Style="{StaticResource SectionHeader}" />
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="150" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Network Mode:" Style="{StaticResource SettingLabel}" />
+                        <TextBlock Text="{x:Static p:Strings.Settings_NetworkMode}" Style="{StaticResource SettingLabel}" />
                         <ComboBox x:Name="NetworkModeBox" Grid.Column="1"
                                   SelectionChanged="NetworkMode_Changed">
-                            <ComboBoxItem Content="Virtual (Echo Server)" />
-                            <ComboBoxItem Content="NAT (Host Network)" />
+                            <ComboBoxItem Content="{x:Static p:Strings.Settings_NetworkVirtual}" />
+                            <ComboBoxItem Content="{x:Static p:Strings.Settings_NetworkNat}" />
                         </ComboBox>
                     </Grid>
                     <Grid>
@@ -278,7 +279,7 @@
                             <ColumnDefinition Width="150" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Gateway IP:" Style="{StaticResource SettingLabel}" />
+                        <TextBlock Text="{x:Static p:Strings.Settings_GatewayIP}" Style="{StaticResource SettingLabel}" />
                         <TextBox x:Name="NatGatewayIpBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                     </Grid>
                     <Grid>
@@ -286,33 +287,33 @@
                             <ColumnDefinition Width="150" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="Gateway MAC:" Style="{StaticResource SettingLabel}" />
+                        <TextBlock Text="{x:Static p:Strings.Settings_GatewayMAC}" Style="{StaticResource SettingLabel}" />
                         <TextBox x:Name="NatGatewayMacBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                     </Grid>
                 </StackPanel>
 
                 <!-- Memory Settings -->
-                <TextBlock Text="Memory" Style="{StaticResource SectionHeader}" />
+                <TextBlock Text="{x:Static p:Strings.Settings_Memory}" Style="{StaticResource SectionHeader}" />
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="150" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Memory Size (MB):" Style="{StaticResource SettingLabel}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_MemorySizeMB}" Style="{StaticResource SettingLabel}" />
                     <TextBox x:Name="MemSizeBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                 </Grid>
 
                 <!-- I/O Device Settings -->
-                <TextBlock Text="I/O Devices" Style="{StaticResource SectionHeader}" />
+                <TextBlock Text="{x:Static p:Strings.Settings_IoDevices}" Style="{StaticResource SectionHeader}" />
 
-                <CheckBox x:Name="ConsoleEnabledBox" Content="Console Device Enabled"
+                <CheckBox x:Name="ConsoleEnabledBox" Content="{x:Static p:Strings.Settings_ConsoleEnabled}"
                           Foreground="#FFD4D4D4" Margin="0,4" />
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="150" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Console Base Addr:" Style="{StaticResource SettingLabel}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_ConsoleBaseAddr}" Style="{StaticResource SettingLabel}" />
                     <TextBox x:Name="ConsoleAddrBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                 </Grid>
                 <Grid Margin="0,4,0,0">
@@ -320,7 +321,7 @@
                         <ColumnDefinition Width="150" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Scrollback Lines:" Style="{StaticResource SettingLabel}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_ScrollbackLines}" Style="{StaticResource SettingLabel}" />
                     <TextBox x:Name="ConsoleScrollbackBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                 </Grid>
                 <Grid Margin="0,4,0,0">
@@ -330,67 +331,67 @@
                         <ColumnDefinition Width="30" />
                         <ColumnDefinition Width="60" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Terminal Size:" Style="{StaticResource SettingLabel}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_TerminalSize}" Style="{StaticResource SettingLabel}" />
                     <TextBox x:Name="ConsoleColumnsBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                     <TextBlock Text=" x " Grid.Column="2" Style="{StaticResource SettingLabel}" HorizontalAlignment="Center" />
                     <TextBox x:Name="ConsoleRowsBox" Grid.Column="3" Style="{StaticResource SettingTextBox}" />
                 </Grid>
 
-                <CheckBox x:Name="HddEnabledBox" Content="HDD Device Enabled"
+                <CheckBox x:Name="HddEnabledBox" Content="{x:Static p:Strings.Settings_HddEnabled}"
                           Foreground="#FFD4D4D4" Margin="0,8,0,4" />
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="150" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="HDD Base Addr:" Style="{StaticResource SettingLabel}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_HddBaseAddr}" Style="{StaticResource SettingLabel}" />
                     <TextBox x:Name="HddAddrBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                 </Grid>
 
                 <!-- HDD Image Settings -->
-                <TextBlock Text="HDD Image" Style="{StaticResource SectionHeader}" />
+                <TextBlock Text="{x:Static p:Strings.Settings_HddImage}" Style="{StaticResource SectionHeader}" />
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="150" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Image File:" Style="{StaticResource SettingLabel}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_ImageFile}" Style="{StaticResource SettingLabel}" />
                     <TextBox x:Name="HddPathBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
-                    <Button Content="..." Grid.Column="2" Click="BrowseHdd_Click"
+                    <Button Content="{x:Static p:Strings.Settings_Browse}" Grid.Column="2" Click="BrowseHdd_Click"
                             Width="30" Margin="4,0,0,0"
                             Background="#FF3E3E42" Foreground="#FFD4D4D4" />
                 </Grid>
                 <StackPanel Orientation="Horizontal" Margin="0,8">
-                    <TextBlock Text="New Image Size (MB):" Style="{StaticResource SettingLabel}" Width="150" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_NewImageSizeMB}" Style="{StaticResource SettingLabel}" Width="150" />
                     <TextBox x:Name="NewImageSizeBox" Width="60" Style="{StaticResource SettingTextBox}" Text="32" />
-                    <Button Content="Create" Click="CreateImage_Click" Margin="8,0"
+                    <Button Content="{x:Static p:Strings.Settings_Create}" Click="CreateImage_Click" Margin="8,0"
                             Background="#FF3E3E42" Foreground="#FFD4D4D4" Padding="8,2" />
                 </StackPanel>
 
                 <!-- Performance -->
-                <TextBlock Text="Performance" Style="{StaticResource SectionHeader}" />
-                <CheckBox x:Name="JitEnabledBox" Content="Enable JIT Compiler (experimental)"
+                <TextBlock Text="{x:Static p:Strings.Settings_Performance}" Style="{StaticResource SectionHeader}" />
+                <CheckBox x:Name="JitEnabledBox" Content="{x:Static p:Strings.Settings_EnableJit}"
                           Foreground="#FFD4D4D4" Margin="0,4" />
-                <TextBlock Text="Compiles register-only basic blocks to .NET IL at runtime. Currently covers a limited set of instructions (MOVEQ, MOVE.L Dn, ADD/SUB/CMP.L, AND/OR/EOR.L, Bcc.B, BRA.B). May reduce overall speed due to per-instruction overhead exceeding the benefit of compiled blocks."
+                <TextBlock Text="{x:Static p:Strings.Settings_JitDescription}"
                            Foreground="#FF9E9E9E" FontSize="11" TextWrapping="Wrap" Margin="20,0,0,4" />
                 <Grid Margin="24,4,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="180" /><ColumnDefinition Width="60" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Min Block Length:" Style="{StaticResource SettingLabel}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_MinBlockLength}" Style="{StaticResource SettingLabel}" />
                     <TextBox x:Name="JitMinBlockLengthBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                 </Grid>
                 <Grid Margin="24,4,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="180" /><ColumnDefinition Width="60" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="Compile Threshold:" Style="{StaticResource SettingLabel}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_CompileThreshold}" Style="{StaticResource SettingLabel}" />
                     <TextBox x:Name="JitCompileThresholdBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                 </Grid>
 
                 <!-- Display Settings -->
-                <TextBlock Text="Display" Style="{StaticResource SectionHeader}" />
+                <TextBlock Text="{x:Static p:Strings.Settings_Display}" Style="{StaticResource SectionHeader}" />
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="150" />
@@ -400,9 +401,9 @@
                         <RowDefinition />
                         <RowDefinition />
                     </Grid.RowDefinitions>
-                    <TextBlock Text="Font Family:" Style="{StaticResource SettingLabel}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_FontFamily}" Style="{StaticResource SettingLabel}" />
                     <TextBox x:Name="FontFamilyBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
-                    <TextBlock Text="Font Size:" Grid.Row="1" Style="{StaticResource SettingLabel}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_FontSize}" Grid.Row="1" Style="{StaticResource SettingLabel}" />
                     <TextBox x:Name="FontSizeBox" Grid.Row="1" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                 </Grid>
             </StackPanel>

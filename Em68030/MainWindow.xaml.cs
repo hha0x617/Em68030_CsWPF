@@ -18,6 +18,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Em68030.Properties;
 using Em68030.ViewModels;
 using Em68030.Views;
 using Microsoft.Win32;
@@ -33,7 +34,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Title = $"Em68030 - MC68030 Emulator (C#/WPF) [{GitVersion.CommitHash}]";
+        Title = $"{Strings.MainWindow_Title} [{GitVersion.CommitHash}]";
         var iconUri = new Uri("pack://application:,,,/Assets/Em68030.ico");
         var decoder = BitmapDecoder.Create(iconUri, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
         Icon = decoder.Frames.OrderByDescending(f => f.PixelWidth).First();
@@ -90,12 +91,12 @@ public partial class MainWindow : Window
         var dlg = new OpenFileDialog
         {
             Filter = "Binary files (*.bin)|*.bin|All files (*.*)|*.*",
-            Title = "Open Binary File"
+            Title = Strings.FileDialog_OpenBinary
         };
         if (dlg.ShowDialog() == true)
         {
             // Ask for load address using a simple input dialog
-            var inputDlg = new Views.InputDialog("Load Address", "Enter load address (hex):",
+            var inputDlg = new Views.InputDialog(Strings.FileDialog_LoadAddress, Strings.FileDialog_EnterLoadAddress,
                 _vm.Config.LastLoadAddress.ToString("X8"));
             inputDlg.Owner = this;
             if (inputDlg.ShowDialog() == true &&
@@ -112,7 +113,7 @@ public partial class MainWindow : Window
         var dlg = new OpenFileDialog
         {
             Filter = "S-Record files (*.s19;*.s28;*.s37;*.srec;*.hex)|*.s19;*.s28;*.s37;*.srec;*.hex|All files (*.*)|*.*",
-            Title = "Open S-Record File"
+            Title = Strings.FileDialog_OpenSRecord
         };
         if (dlg.ShowDialog() == true)
         {
@@ -125,7 +126,7 @@ public partial class MainWindow : Window
         var dlg = new OpenFileDialog
         {
             Filter = "ELF files (*.elf;netbsd*;vmlinux*)|*.elf;netbsd*;vmlinux*|All files (*.*)|*.*",
-            Title = "Open ELF File"
+            Title = Strings.FileDialog_OpenElf
         };
         if (dlg.ShowDialog() == true)
         {
@@ -134,17 +135,17 @@ public partial class MainWindow : Window
                 var result = _vm.LoadElfFile(dlg.FileName);
 
                 MessageBox.Show(
-                    $"ELF loaded successfully.\n\n" +
+                    $"{Strings.Msg_ElfLoaded}\n\n" +
                     $"Machine: {result.MachineDescription}\n" +
                     $"Entry Point: ${result.EntryPoint:X8}\n" +
                     $"Load Range: ${result.StartAddress:X8} - ${result.EndAddress:X8}\n" +
                     $"Segments: {result.SegmentsLoaded}",
-                    "ELF Loader", MessageBoxButton.OK, MessageBoxImage.None);
+                    Strings.Msg_ElfLoaderTitle, MessageBoxButton.OK, MessageBoxImage.None);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load ELF file:\n{ex.Message}",
-                    "ELF Loader Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"{Strings.Msg_FailedToLoadElf}\n{ex.Message}",
+                    Strings.Msg_ElfLoaderError, MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
     }
@@ -290,7 +291,7 @@ public partial class MainWindow : Window
         }
         else
         {
-            MessageBox.Show($"Invalid hex address: {DisasmAddrBox.Text}", "Error",
+            MessageBox.Show(string.Format(Strings.Msg_InvalidHexAddress, DisasmAddrBox.Text), Strings.Msg_Error,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
@@ -423,7 +424,7 @@ public partial class MainWindow : Window
         }
         else
         {
-            MessageBox.Show($"Invalid hex address: {MemAddrBox.Text}", "Error",
+            MessageBox.Show(string.Format(Strings.Msg_InvalidHexAddress, MemAddrBox.Text), Strings.Msg_Error,
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }

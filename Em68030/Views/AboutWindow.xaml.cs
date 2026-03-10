@@ -14,6 +14,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Navigation;
+using Em68030.Properties;
 
 namespace Em68030.Views;
 
@@ -22,7 +23,7 @@ public partial class AboutWindow : Window
     public AboutWindow()
     {
         InitializeComponent();
-        BuildHashText.Text = $"Build: {GitVersion.CommitHash}";
+        BuildHashText.Text = string.Format(Strings.About_BuildFormat, GitVersion.CommitHash);
     }
 
     private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)

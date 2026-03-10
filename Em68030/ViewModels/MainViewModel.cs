@@ -24,6 +24,7 @@ using System.Windows.Threading;
 using Em68030.Config;
 using Em68030.Core;
 using Em68030.IO;
+using Em68030.Properties;
 
 public class MainViewModel : INotifyPropertyChanged
 {
@@ -151,10 +152,10 @@ public class MainViewModel : INotifyPropertyChanged
     {
         get
         {
-            if (_isRunning) return "Running: True";
-            if (_cpu.Halted) return "HALTED";
-            if (_cpu.Stopped) return "STOPPED";
-            return "Running: False";
+            if (_isRunning) return Strings.Status_Running;
+            if (_cpu.Halted) return Strings.Status_Halted;
+            if (_cpu.Stopped) return Strings.Status_Stopped;
+            return Strings.Status_NotRunning;
         }
     }
 
@@ -186,7 +187,7 @@ public class MainViewModel : INotifyPropertyChanged
             double mhz = _showAvgMhz ? _avgMHz : _estimatedMHz;
             double mips = _showAvgMhz ? _avgMips : _estimatedMips;
             return mhz > 0
-                ? (_showAvgMhz ? $"Avg {mhz:F2} MHz ({mips:F2} MIPS)" : $"{mhz:F2} MHz ({mips:F2} MIPS)")
+                ? (_showAvgMhz ? string.Format(Strings.Status_AvgMhzFormat, mhz, mips) : string.Format(Strings.Status_MhzFormat, mhz, mips))
                 : "";
         }
     }
@@ -208,8 +209,15 @@ public class MainViewModel : INotifyPropertyChanged
     public string LoadedFileName
     {
         get => _loadedFileName;
-        set { _loadedFileName = value; OnPropertyChanged(); }
+        set { _loadedFileName = value; OnPropertyChanged(); OnPropertyChanged(nameof(FileStatusText)); }
     }
+
+    public string FileStatusText =>
+        string.IsNullOrEmpty(_loadedFileName)
+            ? Strings.Status_FileNone
+            : string.Format(Strings.Status_FileFormat, _loadedFileName);
+
+    public string CyclesText => string.Format(Strings.Status_CyclesFormat, _cpu.CycleCount);
 
     public uint MemoryDumpAddress
     {
@@ -682,7 +690,7 @@ public class MainViewModel : INotifyPropertyChanged
             case 0x0060: // .RETURN (alias)
             case 0x0063: // .RETURN / .EXIT - Return to Bug monitor
                 _cpu.Halted = true;
-                _cpu.StopReason = "147Bug .RETURN";
+                _cpu.StopReason = Strings.Status_147BugReturn;
                 break;
 
             case 0x0070: // .BRD_ID - Return board identification
@@ -1157,7 +1165,7 @@ public class MainViewModel : INotifyPropertyChanged
                             if (++loopDetectCount >= 1000)
                             {
                                 _cpu.Halted = true;
-                                _cpu.StopReason = $"Infinite loop detected at ${_cpu.PC:X8}";
+                                _cpu.StopReason = string.Format(Strings.Status_InfiniteLoopFormat, _cpu.PC);
                                 _cpu.DiagnosticOutput?.Invoke($"\n[EMU] Infinite loop detected at PC=${_cpu.PC:X8}, SR=${_cpu.SR:X4} — halting\n");
                                 RequestStopOnUI(); return;
                             }
@@ -1195,7 +1203,7 @@ public class MainViewModel : INotifyPropertyChanged
                         if (_cpu.Halted) { RequestStopOnUI(); return; }
                         if (hasBreakpoints && EnabledBreakpoints.Contains(_cpu.PC))
                         {
-                            _cpu.StopReason = $"Breakpoint at ${_cpu.PC:X8}";
+                            _cpu.StopReason = string.Format(Strings.Status_BreakpointFormat, _cpu.PC);
                             RequestStopOnUI(); return;
                         }
                         if (hasRunToCursor && _cpu.PC == runToCursorAddr)
@@ -1207,7 +1215,7 @@ public class MainViewModel : INotifyPropertyChanged
                             if (++loopDetectCount >= 1000)
                             {
                                 _cpu.Halted = true;
-                                _cpu.StopReason = $"Infinite loop detected at ${_cpu.PC:X8}";
+                                _cpu.StopReason = string.Format(Strings.Status_InfiniteLoopFormat, _cpu.PC);
                                 _cpu.DiagnosticOutput?.Invoke($"\n[EMU] Infinite loop detected at PC=${_cpu.PC:X8}, SR=${_cpu.SR:X4} — halting\n");
                                 RequestStopOnUI(); return;
                             }
@@ -1248,6 +1256,7 @@ public class MainViewModel : INotifyPropertyChanged
                     {
                         OnPropertyChanged(nameof(EstimatedMHz));
                         OnPropertyChanged(nameof(CycleCount));
+                        OnPropertyChanged(nameof(CyclesText));
                     });
                 }
             }
@@ -1844,6 +1853,7 @@ public class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(IsStopped));
         OnPropertyChanged(nameof(StopReason));
         OnPropertyChanged(nameof(CycleCount));
+        OnPropertyChanged(nameof(CyclesText));
         OnPropertyChanged(nameof(EstimatedMHz));
     }
 

@@ -14,17 +14,18 @@
 <Window x:Class="Em68030.Views.ConsoleWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Console" Height="510" Width="700"
+        xmlns:p="clr-namespace:Em68030.Properties"
+        Title="{x:Static p:Strings.Window_Console}" Height="510" Width="700"
         Background="#FF0C0C0C"
         WindowStartupLocation="CenterOwner"
         InputMethod.IsInputMethodEnabled="False">
     <DockPanel>
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Background="#FF2D2D30" Margin="0,2,0,0">
-            <Button x:Name="ScrollbackButton" Content="Log" Click="ScrollbackToggle_Click" Margin="4"
+            <Button x:Name="ScrollbackButton" Content="{x:Static p:Strings.Console_Log}" Click="ScrollbackToggle_Click" Margin="4"
                     Background="#FF3E3E42" Foreground="#FFD4D4D4"
                     BorderBrush="#FF555555" Padding="8,3"
                     Focusable="False"
-                    ToolTip="Toggle between live screen and full scrollback log" />
+                    ToolTip="{x:Static p:Strings.Console_ToggleTooltip}" />
         </StackPanel>
         <TextBox x:Name="OutputBox"
                  TextWrapping="NoWrap"
