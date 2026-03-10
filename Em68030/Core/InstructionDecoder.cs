@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using System.Diagnostics;
+
 namespace Em68030.Core;
 
 public class InstructionDecoder
@@ -1120,6 +1122,8 @@ public class InstructionDecoder
             _cpu.SetSR(imm);
             _cpu.Stopped = true;
             _cpu.StopReason = "STOP instruction";
+            _cpu._stopEnteredTick = Stopwatch.GetTimestamp();
+            _cpu._stopTimingActive = true;
             return;
         }
 

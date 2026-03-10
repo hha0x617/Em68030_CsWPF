@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Em68030.Core.Jit;
 
@@ -87,6 +88,11 @@ public class MC68030
     private uint _dataPagePA;     // PA base of cached data page
     private uint _dataPageMask;   // Page size - 1
     private bool _dataCacheValid;
+
+    // STOP idle time tracking — accumulated Stopwatch ticks spent in STOP state
+    internal long _stopEnteredTick;
+    internal long _totalStopTicks;
+    internal bool _stopTimingActive;
 
     // JIT bailout side-channel: set by compiled delegates for non-register-only blocks
     internal int _jitExecutedCount;
@@ -289,6 +295,16 @@ public class MC68030
         StopReason = null;
         CycleCount = 0;
         InstructionCount = 0;
+        _stopTimingActive = false;
+        _totalStopTicks = 0;
+    }
+
+    /// <summary>Returns accumulated STOP idle ticks and resets the accumulator.</summary>
+    public long ConsumeStopTicks()
+    {
+        long t = _totalStopTicks;
+        _totalStopTicks = 0;
+        return t;
     }
 
     // --- Function Code generation ---
@@ -599,6 +615,11 @@ public class MC68030
             }
             else
             {
+                if (_stopTimingActive)
+                {
+                    _totalStopTicks += Stopwatch.GetTimestamp() - _stopEnteredTick;
+                    _stopTimingActive = false;
+                }
                 Stopped = false;
                 StopReason = null;
                 // Save state before interrupt processing for bus error recovery
@@ -676,6 +697,11 @@ public class MC68030
             }
             else
             {
+                if (_stopTimingActive)
+                {
+                    _totalStopTicks += Stopwatch.GetTimestamp() - _stopEnteredTick;
+                    _stopTimingActive = false;
+                }
                 Stopped = false;
                 StopReason = null;
                 _lastPC = PC;
@@ -728,6 +754,11 @@ public class MC68030
             }
             else
             {
+                if (_stopTimingActive)
+                {
+                    _totalStopTicks += Stopwatch.GetTimestamp() - _stopEnteredTick;
+                    _stopTimingActive = false;
+                }
                 Stopped = false;
                 StopReason = null;
                 _lastPC = PC;

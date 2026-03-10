@@ -66,6 +66,7 @@ public class MainViewModel : INotifyPropertyChanged
     private double _avgMHz;
     private double _avgMips;
     private bool _showAvgMhz;
+    private double _totalStopSeconds;
 
     // MVME147 devices
     private PccDevice? _pccDevice;
@@ -1106,6 +1107,7 @@ public class MainViewModel : INotifyPropertyChanged
         _runStartCycleCount = _cpu.CycleCount;
         _runStartInsnCount = _cpu.InstructionCount;
         _runStartTimestamp = Stopwatch.GetTimestamp();
+        _totalStopSeconds = 0;
         _avgMHz = 0;
         _avgMips = 0;
         _emulationThread = new Thread(EmulationThreadLoop)
@@ -1230,9 +1232,14 @@ public class MainViewModel : INotifyPropertyChanged
 
                 // Periodic MHz display update (~every 500ms)
                 long now = Stopwatch.GetTimestamp();
-                double seconds = (double)(now - lastMhzUpdate) / Stopwatch.Frequency;
-                if (seconds >= 0.5)
+                double wallSeconds = (double)(now - lastMhzUpdate) / Stopwatch.Frequency;
+                if (wallSeconds >= 0.5)
                 {
+                    long stopTicks = _cpu.ConsumeStopTicks();
+                    double stopSeconds = (double)stopTicks / Stopwatch.Frequency;
+                    double seconds = wallSeconds - stopSeconds;
+                    if (seconds < 0.001) seconds = 0.001; // Avoid division by zero
+
                     long cycles = _cpu.CycleCount - _mhzCyclesSnapshot;
                     _estimatedMHz = cycles / seconds / 1_000_000.0;
                     _mhzCyclesSnapshot = _cpu.CycleCount;
@@ -1245,7 +1252,8 @@ public class MainViewModel : INotifyPropertyChanged
                     _mhzTimestamp = now;
 
                     // Cumulative average since Run started
-                    double totalSec = (double)(now - _runStartTimestamp) / Stopwatch.Frequency;
+                    _totalStopSeconds += stopSeconds;
+                    double totalSec = (double)(now - _runStartTimestamp) / Stopwatch.Frequency - _totalStopSeconds;
                     if (totalSec > 0.01)
                     {
                         _avgMHz = (_cpu.CycleCount - _runStartCycleCount) / totalSec / 1_000_000.0;
@@ -1290,8 +1298,10 @@ public class MainViewModel : INotifyPropertyChanged
         IsRunning = false;
         // Final MHz/MIPS calculation
         long now = Stopwatch.GetTimestamp();
+        long stopTicks = _cpu.ConsumeStopTicks();
+        double stopSeconds = (double)stopTicks / Stopwatch.Frequency;
         long elapsed = now - _mhzTimestamp;
-        double seconds = (double)elapsed / Stopwatch.Frequency;
+        double seconds = (double)elapsed / Stopwatch.Frequency - stopSeconds;
         if (seconds > 0.01)
         {
             long cycles = _cpu.CycleCount - _mhzCyclesSnapshot;
@@ -1300,7 +1310,8 @@ public class MainViewModel : INotifyPropertyChanged
             _estimatedMips = insns / seconds / 1_000_000.0;
         }
         // Final average calculation
-        double totalSec = (double)(now - _runStartTimestamp) / Stopwatch.Frequency;
+        _totalStopSeconds += stopSeconds;
+        double totalSec = (double)(now - _runStartTimestamp) / Stopwatch.Frequency - _totalStopSeconds;
         if (totalSec > 0.01)
         {
             _avgMHz = (_cpu.CycleCount - _runStartCycleCount) / totalSec / 1_000_000.0;
@@ -1318,8 +1329,10 @@ public class MainViewModel : INotifyPropertyChanged
         IsRunning = false;
         // Final MHz/MIPS calculation
         long now = Stopwatch.GetTimestamp();
+        long stopTicks = _cpu.ConsumeStopTicks();
+        double stopSeconds = (double)stopTicks / Stopwatch.Frequency;
         long elapsed = now - _mhzTimestamp;
-        double seconds = (double)elapsed / Stopwatch.Frequency;
+        double seconds = (double)elapsed / Stopwatch.Frequency - stopSeconds;
         if (seconds > 0.01)
         {
             long cycles = _cpu.CycleCount - _mhzCyclesSnapshot;
@@ -1328,7 +1341,8 @@ public class MainViewModel : INotifyPropertyChanged
             _estimatedMips = insns / seconds / 1_000_000.0;
         }
         // Final average calculation
-        double totalSec = (double)(now - _runStartTimestamp) / Stopwatch.Frequency;
+        _totalStopSeconds += stopSeconds;
+        double totalSec = (double)(now - _runStartTimestamp) / Stopwatch.Frequency - _totalStopSeconds;
         if (totalSec > 0.01)
         {
             _avgMHz = (_cpu.CycleCount - _runStartCycleCount) / totalSec / 1_000_000.0;
