@@ -355,9 +355,9 @@
         <!-- Menu Bar -->
         <Menu DockPanel.Dock="Top" Background="#FF2D2D30" Foreground="#FFF0F0F0">
             <MenuItem Header="{x:Static p:Strings.Menu_File}">
+                <MenuItem Header="{x:Static p:Strings.Menu_OpenElf}" Click="OpenElf_Click" />
                 <MenuItem Header="{x:Static p:Strings.Menu_OpenBinary}" Click="OpenBinary_Click" />
                 <MenuItem Header="{x:Static p:Strings.Menu_OpenSRecord}" Click="OpenSRecord_Click" />
-                <MenuItem Header="{x:Static p:Strings.Menu_OpenElf}" Click="OpenElf_Click" />
                 <Separator />
                 <MenuItem Header="{x:Static p:Strings.Menu_Exit}" Click="Exit_Click" />
             </MenuItem>
@@ -374,7 +374,7 @@
             <MenuItem Header="{x:Static p:Strings.Menu_View}">
                 <MenuItem Header="{x:Static p:Strings.Menu_ConsoleWindow}" Click="ShowConsole_Click" />
                 <MenuItem Header="{x:Static p:Strings.Menu_BreakpointsWindow}" Click="ShowBreakpoints_Click" />
-                <MenuItem Header="{x:Static p:Strings.Menu_ToggleLstView}" Click="ToggleLst_Click" />
+                <MenuItem Header="{x:Static p:Strings.Menu_ToggleLstView}" Click="ToggleLst_Click" IsEnabled="False" />
             </MenuItem>
             <MenuItem Header="{x:Static p:Strings.Menu_Settings}">
                 <MenuItem Header="{x:Static p:Strings.Menu_EmulatorSettings}" Click="Settings_Click" />
@@ -463,7 +463,7 @@
                                          Style="{StaticResource ToolBarToggleButton}" Margin="4,2"
                                          IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" />
                             <Button Content="{x:Static p:Strings.Disasm_LST}" Click="ToggleLst_Click" Style="{StaticResource ToolBarButton}"
-                                    Margin="8,2" Visibility="{Binding HasLstFile, Converter={StaticResource BoolToVis}}" />
+                                    Margin="8,2" Visibility="{Binding HasLstFile, Converter={StaticResource BoolToVis}}" IsEnabled="False" />
                         </StackPanel>
                         <ListBox x:Name="DisasmList" ItemsSource="{Binding DisassemblyLines}"
                                  Background="#FF1E1E1E" BorderThickness="0"

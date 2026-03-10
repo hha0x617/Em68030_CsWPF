@@ -99,7 +99,7 @@
     <value>Set _PC to Cursor</value>
   </data>
   <data name="Menu_Reset" xml:space="preserve">
-    <value>Re_set</value>
+    <value>CPU Re_set</value>
   </data>
   <data name="Menu_FullReset" xml:space="preserve">
     <value>_Full Reset</value>
@@ -146,7 +146,7 @@
     <value>Step (F10)</value>
   </data>
   <data name="Toolbar_Reset" xml:space="preserve">
-    <value>Reset</value>
+    <value>CPU Reset</value>
   </data>
   <data name="Toolbar_FullReset" xml:space="preserve">
     <value>Full Reset</value>
@@ -320,7 +320,7 @@
 
   <!-- Console Window -->
   <data name="Console_Log" xml:space="preserve">
-    <value>Log</value>
+    <value>History Mode</value>
   </data>
   <data name="Console_Live" xml:space="preserve">
     <value>Live</value>

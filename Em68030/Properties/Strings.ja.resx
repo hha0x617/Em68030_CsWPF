@@ -99,7 +99,7 @@
     <value>PC をカーソル位置に設定(_P)</value>
   </data>
   <data name="Menu_Reset" xml:space="preserve">
-    <value>リセット(_E)</value>
+    <value>CPU リセット(_E)</value>
   </data>
   <data name="Menu_FullReset" xml:space="preserve">
     <value>フルリセット(_F)</value>
@@ -146,7 +146,7 @@
     <value>ステップ (F10)</value>
   </data>
   <data name="Toolbar_Reset" xml:space="preserve">
-    <value>リセット</value>
+    <value>CPU リセット</value>
   </data>
   <data name="Toolbar_FullReset" xml:space="preserve">
     <value>フルリセット</value>
@@ -320,7 +320,7 @@
 
   <!-- Console Window -->
   <data name="Console_Log" xml:space="preserve">
-    <value>ログ</value>
+    <value>履歴閲覧モード</value>
   </data>
   <data name="Console_Live" xml:space="preserve">
     <value>ライブ</value>
