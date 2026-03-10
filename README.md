@@ -129,8 +129,8 @@ On first launch, an `appsettings.json` file is generated from the Settings menu.
 ## Project Structure
 
 ```
-Em68030_CsWpf/
-├── Em68030_CsWpf.sln
+Em68030_CsWPF/
+├── Em68030_CsWPF.sln
 ├── Em68030/
 │   ├── Core/           MC68030, MMU, Memory, InstructionDecoder, ALU, FPU, JIT
 │   ├── IO/             SCSI, Ethernet, Serial, RTC, PCC devices

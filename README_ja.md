@@ -129,8 +129,8 @@ dotnet run --project Em68030/Em68030.csproj -c Release
 ## プロジェクト構成
 
 ```
-Em68030_CsWpf/
-├── Em68030_CsWpf.sln
+Em68030_CsWPF/
+├── Em68030_CsWPF.sln
 ├── Em68030/
 │   ├── Core/           MC68030, MMU, Memory, InstructionDecoder, ALU, FPU, JIT
 │   ├── IO/             SCSI, Ethernet, Serial, RTC, PCC 等のデバイス
