@@ -18,6 +18,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
 namespace Em68030.Views;
@@ -58,6 +59,9 @@ public partial class ConsoleWindow : Window
     {
         _terminal = new Vt100Terminal(cols, rows, scrollbackLines);
         InitializeComponent();
+        var iconUri = new Uri("pack://application:,,,/Assets/Em68030.ico");
+        var decoder = BitmapDecoder.Create(iconUri, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+        Icon = decoder.Frames.OrderByDescending(f => f.PixelWidth).First();
 
         // Track user scroll position to determine auto-scroll behavior
         OutputBox.AddHandler(ScrollViewer.ScrollChangedEvent,

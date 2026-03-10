@@ -15,6 +15,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Em68030.ViewModels;
 
 namespace Em68030.Views;
@@ -31,6 +32,9 @@ public partial class BreakpointsWindow : Window
     public BreakpointsWindow(MainViewModel vm)
     {
         InitializeComponent();
+        var iconUri = new Uri("pack://application:,,,/Assets/Em68030.ico");
+        var decoder = BitmapDecoder.Create(iconUri, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+        Icon = decoder.Frames.OrderByDescending(f => f.PixelWidth).First();
         _vm = vm;
     }
 
