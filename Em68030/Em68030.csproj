@@ -20,6 +20,13 @@
     <Resource Include="Assets\em68030_icon.png" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Strings.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <!-- Generate GitVersion.generated.cs with the current git commit hash -->
   <Target Name="GenerateGitVersion" BeforeTargets="CoreCompile">
     <Exec Command="git rev-parse --short HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low" IgnoreExitCode="true">

@@ -1,0 +1,570 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Main Window Title -->
+  <data name="MainWindow_Title" xml:space="preserve">
+    <value>Em68030 - MC68030 Emulator (C#/WPF)</value>
+  </data>
+
+  <!-- File Menu -->
+  <data name="Menu_File" xml:space="preserve">
+    <value>_File</value>
+  </data>
+  <data name="Menu_OpenBinary" xml:space="preserve">
+    <value>_Open Binary...</value>
+  </data>
+  <data name="Menu_OpenSRecord" xml:space="preserve">
+    <value>Open _S-Record...</value>
+  </data>
+  <data name="Menu_OpenElf" xml:space="preserve">
+    <value>Open _ELF...</value>
+  </data>
+  <data name="Menu_Exit" xml:space="preserve">
+    <value>E_xit</value>
+  </data>
+
+  <!-- Run Menu -->
+  <data name="Menu_Run" xml:space="preserve">
+    <value>_Run</value>
+  </data>
+  <data name="Menu_RunF5" xml:space="preserve">
+    <value>_Run (F5)</value>
+  </data>
+  <data name="Menu_StopShiftF5" xml:space="preserve">
+    <value>_Stop (Shift+F5)</value>
+  </data>
+  <data name="Menu_StepF10" xml:space="preserve">
+    <value>S_tep (F10)</value>
+  </data>
+  <data name="Menu_RunToCursor" xml:space="preserve">
+    <value>Run to _Cursor (F4)</value>
+  </data>
+  <data name="Menu_SetPCToCursor" xml:space="preserve">
+    <value>Set _PC to Cursor</value>
+  </data>
+  <data name="Menu_Reset" xml:space="preserve">
+    <value>Re_set</value>
+  </data>
+  <data name="Menu_FullReset" xml:space="preserve">
+    <value>_Full Reset</value>
+  </data>
+
+  <!-- View Menu -->
+  <data name="Menu_View" xml:space="preserve">
+    <value>_View</value>
+  </data>
+  <data name="Menu_ConsoleWindow" xml:space="preserve">
+    <value>_Console Window</value>
+  </data>
+  <data name="Menu_BreakpointsWindow" xml:space="preserve">
+    <value>_Breakpoints Window</value>
+  </data>
+  <data name="Menu_ToggleLstView" xml:space="preserve">
+    <value>Toggle _LST View</value>
+  </data>
+
+  <!-- Settings Menu -->
+  <data name="Menu_Settings" xml:space="preserve">
+    <value>_Settings</value>
+  </data>
+  <data name="Menu_EmulatorSettings" xml:space="preserve">
+    <value>_Emulator Settings...</value>
+  </data>
+
+  <!-- Help Menu -->
+  <data name="Menu_Help" xml:space="preserve">
+    <value>_Help</value>
+  </data>
+  <data name="Menu_About" xml:space="preserve">
+    <value>_About...</value>
+  </data>
+
+  <!-- Toolbar Buttons -->
+  <data name="Toolbar_Run" xml:space="preserve">
+    <value>Run (F5)</value>
+  </data>
+  <data name="Toolbar_Stop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="Toolbar_Step" xml:space="preserve">
+    <value>Step (F10)</value>
+  </data>
+  <data name="Toolbar_Reset" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="Toolbar_FullReset" xml:space="preserve">
+    <value>Full Reset</value>
+  </data>
+  <data name="Toolbar_Trace" xml:space="preserve">
+    <value>Trace</value>
+  </data>
+
+  <!-- Disassembly Pane -->
+  <data name="Disasm_Title" xml:space="preserve">
+    <value>Disassembly</value>
+  </data>
+  <data name="Disasm_Address" xml:space="preserve">
+    <value>Address:</value>
+  </data>
+  <data name="Disasm_Size" xml:space="preserve">
+    <value>Size:</value>
+  </data>
+  <data name="Disasm_Go" xml:space="preserve">
+    <value>Go</value>
+  </data>
+  <data name="Disasm_FollowPC" xml:space="preserve">
+    <value>Follow PC</value>
+  </data>
+
+  <!-- Registers Pane -->
+  <data name="Regs_Title" xml:space="preserve">
+    <value>Registers</value>
+  </data>
+  <data name="Regs_DataRegisters" xml:space="preserve">
+    <value>Data Registers</value>
+  </data>
+  <data name="Regs_AddressRegisters" xml:space="preserve">
+    <value>Address Registers</value>
+  </data>
+  <data name="Regs_Flags" xml:space="preserve">
+    <value>Flags</value>
+  </data>
+  <data name="Regs_SpecialRegisters" xml:space="preserve">
+    <value>Special Registers</value>
+  </data>
+  <data name="Regs_FpuRegisters" xml:space="preserve">
+    <value>FPU Registers</value>
+  </data>
+  <data name="Regs_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Regs_Apply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="Regs_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+
+  <!-- Memory Dump Pane -->
+  <data name="MemDump_Title" xml:space="preserve">
+    <value>Memory Dump</value>
+  </data>
+  <data name="MemDump_Address" xml:space="preserve">
+    <value>Address:</value>
+  </data>
+  <data name="MemDump_Size" xml:space="preserve">
+    <value>Size:</value>
+  </data>
+  <data name="MemDump_Go" xml:space="preserve">
+    <value>Go</value>
+  </data>
+  <data name="MemDump_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="MemDump_Apply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="MemDump_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+
+  <!-- Context Menu -->
+  <data name="Context_Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Context_RunToCursor" xml:space="preserve">
+    <value>Run to Cursor</value>
+  </data>
+  <data name="Context_SetPCToAddress" xml:space="preserve">
+    <value>Set PC to Address</value>
+  </data>
+  <data name="Context_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Context_Paste" xml:space="preserve">
+    <value>Paste</value>
+  </data>
+  <data name="Context_SelectAll" xml:space="preserve">
+    <value>Select All</value>
+  </data>
+
+  <!-- Status Bar -->
+  <data name="Status_Running" xml:space="preserve">
+    <value>Running: True</value>
+  </data>
+  <data name="Status_Halted" xml:space="preserve">
+    <value>HALTED</value>
+  </data>
+  <data name="Status_Stopped" xml:space="preserve">
+    <value>STOPPED</value>
+  </data>
+  <data name="Status_NotRunning" xml:space="preserve">
+    <value>Running: False</value>
+  </data>
+  <data name="Status_FileNone" xml:space="preserve">
+    <value>File: (none)</value>
+  </data>
+  <data name="Status_FileFormat" xml:space="preserve">
+    <value>File: {0}</value>
+  </data>
+  <data name="Status_CyclesFormat" xml:space="preserve">
+    <value>Cycles: {0}</value>
+  </data>
+  <data name="Status_MhzFormat" xml:space="preserve">
+    <value>{0:F2} MHz ({1:F2} MIPS)</value>
+  </data>
+  <data name="Status_AvgMhzFormat" xml:space="preserve">
+    <value>Avg {0:F2} MHz ({1:F2} MIPS)</value>
+  </data>
+
+  <!-- About Dialog -->
+  <data name="About_Title" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="About_Subtitle" xml:space="preserve">
+    <value>MC68030 Emulator (C#/WPF)</value>
+  </data>
+  <data name="About_Version" xml:space="preserve">
+    <value>Version 0.1.0</value>
+  </data>
+  <data name="About_BuildFormat" xml:space="preserve">
+    <value>Build: {0}</value>
+  </data>
+  <data name="About_Copyright" xml:space="preserve">
+    <value>© 2026 hha0x617</value>
+  </data>
+  <data name="About_License" xml:space="preserve">
+    <value>Licensed under Apache-2.0</value>
+  </data>
+
+  <!-- Window Titles -->
+  <data name="Window_Breakpoints" xml:space="preserve">
+    <value>Breakpoints</value>
+  </data>
+  <data name="Window_Console" xml:space="preserve">
+    <value>Console</value>
+  </data>
+  <data name="Window_ConsoleFormat" xml:space="preserve">
+    <value>Console - {0}×{1}</value>
+  </data>
+  <data name="Window_Settings" xml:space="preserve">
+    <value>Emulator Settings</value>
+  </data>
+  <data name="Window_Input" xml:space="preserve">
+    <value>Input</value>
+  </data>
+
+  <!-- Breakpoints Window -->
+  <data name="Breakpoints_ClearAll" xml:space="preserve">
+    <value>Clear All</value>
+  </data>
+  <data name="Breakpoints_Delete" xml:space="preserve">
+    <value>Del</value>
+  </data>
+
+  <!-- Console Window -->
+  <data name="Console_Log" xml:space="preserve">
+    <value>Log</value>
+  </data>
+  <data name="Console_Live" xml:space="preserve">
+    <value>Live</value>
+  </data>
+  <data name="Console_ToggleTooltip" xml:space="preserve">
+    <value>Toggle between live screen and full scrollback log</value>
+  </data>
+
+  <!-- Dialog Buttons -->
+  <data name="Dialog_OK" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Dialog_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+
+  <!-- File Dialogs -->
+  <data name="FileDialog_OpenBinary" xml:space="preserve">
+    <value>Open Binary File</value>
+  </data>
+  <data name="FileDialog_OpenSRecord" xml:space="preserve">
+    <value>Open S-Record File</value>
+  </data>
+  <data name="FileDialog_OpenElf" xml:space="preserve">
+    <value>Open ELF File</value>
+  </data>
+  <data name="FileDialog_LoadAddress" xml:space="preserve">
+    <value>Load Address</value>
+  </data>
+  <data name="FileDialog_EnterLoadAddress" xml:space="preserve">
+    <value>Enter load address (hex):</value>
+  </data>
+
+  <!-- Messages -->
+  <data name="Msg_ElfLoaded" xml:space="preserve">
+    <value>ELF loaded successfully.</value>
+  </data>
+  <data name="Msg_ElfLoaderTitle" xml:space="preserve">
+    <value>ELF Loader</value>
+  </data>
+  <data name="Msg_ElfLoaderError" xml:space="preserve">
+    <value>ELF Loader Error</value>
+  </data>
+  <data name="Msg_FailedToLoadElf" xml:space="preserve">
+    <value>Failed to load ELF file:</value>
+  </data>
+  <data name="Msg_LoadError" xml:space="preserve">
+    <value>Load Error</value>
+  </data>
+  <data name="Msg_FailedToLoadBinary" xml:space="preserve">
+    <value>Failed to load binary file:</value>
+  </data>
+  <data name="Msg_FailedToLoadSRecord" xml:space="preserve">
+    <value>Failed to load S-Record file:</value>
+  </data>
+  <data name="Msg_InvalidHexAddress" xml:space="preserve">
+    <value>Invalid hex address: {0}</value>
+  </data>
+  <data name="Msg_Error" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Msg_InvalidSize" xml:space="preserve">
+    <value>Invalid size.</value>
+  </data>
+  <data name="Msg_Success" xml:space="preserve">
+    <value>Success</value>
+  </data>
+
+  <!-- Settings Window -->
+  <data name="Settings_BoardType" xml:space="preserve">
+    <value>Board Type</value>
+  </data>
+  <data name="Settings_Board" xml:space="preserve">
+    <value>Board:</value>
+  </data>
+  <data name="Settings_Mvme147Settings" xml:space="preserve">
+    <value>MVME147 Settings</value>
+  </data>
+  <data name="Settings_RomImage" xml:space="preserve">
+    <value>ROM Image:</value>
+  </data>
+  <data name="Settings_TargetOS" xml:space="preserve">
+    <value>Target OS</value>
+  </data>
+  <data name="Settings_OperatingSystem" xml:space="preserve">
+    <value>Operating System:</value>
+  </data>
+  <data name="Settings_BootPartition" xml:space="preserve">
+    <value>Boot Partition:</value>
+  </data>
+  <data name="Settings_CommandLine" xml:space="preserve">
+    <value>Command Line:</value>
+  </data>
+  <data name="Settings_ScsiDisks" xml:space="preserve">
+    <value>SCSI Disks</value>
+  </data>
+  <data name="Settings_AddDisk" xml:space="preserve">
+    <value>+ Add Disk</value>
+  </data>
+  <data name="Settings_NewImageSizeMB" xml:space="preserve">
+    <value>New Image Size (MB):</value>
+  </data>
+  <data name="Settings_Create" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="Settings_ScsiCdRom" xml:space="preserve">
+    <value>SCSI CD-ROM</value>
+  </data>
+  <data name="Settings_IsoImage" xml:space="preserve">
+    <value>ISO Image:</value>
+  </data>
+  <data name="Settings_ScsiId" xml:space="preserve">
+    <value>SCSI ID:</value>
+  </data>
+  <data name="Settings_Network" xml:space="preserve">
+    <value>Network</value>
+  </data>
+  <data name="Settings_NetworkMode" xml:space="preserve">
+    <value>Network Mode:</value>
+  </data>
+  <data name="Settings_NetworkVirtual" xml:space="preserve">
+    <value>Virtual (Echo Server)</value>
+  </data>
+  <data name="Settings_NetworkNat" xml:space="preserve">
+    <value>NAT (Host Network)</value>
+  </data>
+  <data name="Settings_GatewayIP" xml:space="preserve">
+    <value>Gateway IP:</value>
+  </data>
+  <data name="Settings_GatewayMAC" xml:space="preserve">
+    <value>Gateway MAC:</value>
+  </data>
+  <data name="Settings_Memory" xml:space="preserve">
+    <value>Memory</value>
+  </data>
+  <data name="Settings_MemorySizeMB" xml:space="preserve">
+    <value>Memory Size (MB):</value>
+  </data>
+  <data name="Settings_IoDevices" xml:space="preserve">
+    <value>I/O Devices</value>
+  </data>
+  <data name="Settings_ConsoleEnabled" xml:space="preserve">
+    <value>Console Device Enabled</value>
+  </data>
+  <data name="Settings_ConsoleBaseAddr" xml:space="preserve">
+    <value>Console Base Addr:</value>
+  </data>
+  <data name="Settings_ScrollbackLines" xml:space="preserve">
+    <value>Scrollback Lines:</value>
+  </data>
+  <data name="Settings_TerminalSize" xml:space="preserve">
+    <value>Terminal Size:</value>
+  </data>
+  <data name="Settings_HddEnabled" xml:space="preserve">
+    <value>HDD Device Enabled</value>
+  </data>
+  <data name="Settings_HddBaseAddr" xml:space="preserve">
+    <value>HDD Base Addr:</value>
+  </data>
+  <data name="Settings_HddImage" xml:space="preserve">
+    <value>HDD Image</value>
+  </data>
+  <data name="Settings_ImageFile" xml:space="preserve">
+    <value>Image File:</value>
+  </data>
+  <data name="Settings_Performance" xml:space="preserve">
+    <value>Performance</value>
+  </data>
+  <data name="Settings_EnableJit" xml:space="preserve">
+    <value>Enable JIT Compiler (experimental)</value>
+  </data>
+  <data name="Settings_JitDescription" xml:space="preserve">
+    <value>Compiles register-only basic blocks to .NET IL at runtime. Currently covers a limited set of instructions (MOVEQ, MOVE.L Dn, ADD/SUB/CMP.L, AND/OR/EOR.L, Bcc.B, BRA.B). May reduce overall speed due to per-instruction overhead exceeding the benefit of compiled blocks.</value>
+  </data>
+  <data name="Settings_MinBlockLength" xml:space="preserve">
+    <value>Min Block Length:</value>
+  </data>
+  <data name="Settings_CompileThreshold" xml:space="preserve">
+    <value>Compile Threshold:</value>
+  </data>
+  <data name="Settings_Display" xml:space="preserve">
+    <value>Display</value>
+  </data>
+  <data name="Settings_FontFamily" xml:space="preserve">
+    <value>Font Family:</value>
+  </data>
+  <data name="Settings_FontSize" xml:space="preserve">
+    <value>Font Size:</value>
+  </data>
+  <data name="Settings_Browse" xml:space="preserve">
+    <value>...</value>
+  </data>
+
+  <!-- Settings Dialog Messages -->
+  <data name="Settings_SelectRomImage" xml:space="preserve">
+    <value>Select MVME147 ROM Image</value>
+  </data>
+  <data name="Settings_SelectHddImage" xml:space="preserve">
+    <value>Select HDD Image File</value>
+  </data>
+  <data name="Settings_SelectScsiDisk" xml:space="preserve">
+    <value>Select SCSI Disk Image</value>
+  </data>
+  <data name="Settings_SelectCdRomIso" xml:space="preserve">
+    <value>Select SCSI CD-ROM ISO Image</value>
+  </data>
+  <data name="Settings_CreateScsiDisk" xml:space="preserve">
+    <value>Create SCSI Disk Image</value>
+  </data>
+  <data name="Settings_CreateHddImage" xml:space="preserve">
+    <value>Create HDD Image File</value>
+  </data>
+  <data name="Settings_WriteDisklabel" xml:space="preserve">
+    <value>Write NetBSD Disklabel</value>
+  </data>
+  <data name="Settings_DisklabelConfirm" xml:space="preserve">
+    <value>Write a NetBSD disklabel to this disk image?
+
+This overwrites the first sector of the image with a NetBSD-format
+partition table. Only use this for NetBSD disk images.</value>
+  </data>
+  <data name="Settings_Disklabel" xml:space="preserve">
+    <value>Disklabel</value>
+  </data>
+  <data name="Settings_CreatedScsiDiskFormat" xml:space="preserve">
+    <value>Created {0}MB SCSI disk image ({1}): {2}</value>
+  </data>
+  <data name="Settings_CreatedHddImageFormat" xml:space="preserve">
+    <value>Created {0}MB image: {1}</value>
+  </data>
+
+  <!-- Status Messages -->
+  <data name="Status_BreakpointFormat" xml:space="preserve">
+    <value>Breakpoint at ${0:X8}</value>
+  </data>
+  <data name="Status_InfiniteLoopFormat" xml:space="preserve">
+    <value>Infinite loop detected at ${0:X8}</value>
+  </data>
+  <data name="Status_147BugReturn" xml:space="preserve">
+    <value>147Bug .RETURN</value>
+  </data>
+
+  <!-- LST Button -->
+  <data name="Disasm_LST" xml:space="preserve">
+    <value>LST</value>
+  </data>
+</root>

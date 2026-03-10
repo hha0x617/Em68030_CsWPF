@@ -1,0 +1,570 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Main Window Title -->
+  <data name="MainWindow_Title" xml:space="preserve">
+    <value>Em68030 - MC68030 エミュレータ (C#/WPF)</value>
+  </data>
+
+  <!-- File Menu -->
+  <data name="Menu_File" xml:space="preserve">
+    <value>ファイル(_F)</value>
+  </data>
+  <data name="Menu_OpenBinary" xml:space="preserve">
+    <value>バイナリを開く(_O)...</value>
+  </data>
+  <data name="Menu_OpenSRecord" xml:space="preserve">
+    <value>S-Record を開く(_S)...</value>
+  </data>
+  <data name="Menu_OpenElf" xml:space="preserve">
+    <value>ELF を開く(_E)...</value>
+  </data>
+  <data name="Menu_Exit" xml:space="preserve">
+    <value>終了(_X)</value>
+  </data>
+
+  <!-- Run Menu -->
+  <data name="Menu_Run" xml:space="preserve">
+    <value>実行(_R)</value>
+  </data>
+  <data name="Menu_RunF5" xml:space="preserve">
+    <value>実行(_R) (F5)</value>
+  </data>
+  <data name="Menu_StopShiftF5" xml:space="preserve">
+    <value>停止(_S) (Shift+F5)</value>
+  </data>
+  <data name="Menu_StepF10" xml:space="preserve">
+    <value>ステップ(_T) (F10)</value>
+  </data>
+  <data name="Menu_RunToCursor" xml:space="preserve">
+    <value>カーソルまで実行(_C) (F4)</value>
+  </data>
+  <data name="Menu_SetPCToCursor" xml:space="preserve">
+    <value>PC をカーソル位置に設定(_P)</value>
+  </data>
+  <data name="Menu_Reset" xml:space="preserve">
+    <value>リセット(_E)</value>
+  </data>
+  <data name="Menu_FullReset" xml:space="preserve">
+    <value>フルリセット(_F)</value>
+  </data>
+
+  <!-- View Menu -->
+  <data name="Menu_View" xml:space="preserve">
+    <value>表示(_V)</value>
+  </data>
+  <data name="Menu_ConsoleWindow" xml:space="preserve">
+    <value>コンソール ウィンドウ(_C)</value>
+  </data>
+  <data name="Menu_BreakpointsWindow" xml:space="preserve">
+    <value>ブレークポイント ウィンドウ(_B)</value>
+  </data>
+  <data name="Menu_ToggleLstView" xml:space="preserve">
+    <value>LST 表示切替(_L)</value>
+  </data>
+
+  <!-- Settings Menu -->
+  <data name="Menu_Settings" xml:space="preserve">
+    <value>設定(_S)</value>
+  </data>
+  <data name="Menu_EmulatorSettings" xml:space="preserve">
+    <value>エミュレータ設定(_E)...</value>
+  </data>
+
+  <!-- Help Menu -->
+  <data name="Menu_Help" xml:space="preserve">
+    <value>ヘルプ(_H)</value>
+  </data>
+  <data name="Menu_About" xml:space="preserve">
+    <value>バージョン情報(_A)...</value>
+  </data>
+
+  <!-- Toolbar Buttons -->
+  <data name="Toolbar_Run" xml:space="preserve">
+    <value>実行 (F5)</value>
+  </data>
+  <data name="Toolbar_Stop" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="Toolbar_Step" xml:space="preserve">
+    <value>ステップ (F10)</value>
+  </data>
+  <data name="Toolbar_Reset" xml:space="preserve">
+    <value>リセット</value>
+  </data>
+  <data name="Toolbar_FullReset" xml:space="preserve">
+    <value>フルリセット</value>
+  </data>
+  <data name="Toolbar_Trace" xml:space="preserve">
+    <value>トレース</value>
+  </data>
+
+  <!-- Disassembly Pane -->
+  <data name="Disasm_Title" xml:space="preserve">
+    <value>逆アセンブリ</value>
+  </data>
+  <data name="Disasm_Address" xml:space="preserve">
+    <value>アドレス:</value>
+  </data>
+  <data name="Disasm_Size" xml:space="preserve">
+    <value>サイズ:</value>
+  </data>
+  <data name="Disasm_Go" xml:space="preserve">
+    <value>移動</value>
+  </data>
+  <data name="Disasm_FollowPC" xml:space="preserve">
+    <value>PC 追従</value>
+  </data>
+
+  <!-- Registers Pane -->
+  <data name="Regs_Title" xml:space="preserve">
+    <value>レジスタ</value>
+  </data>
+  <data name="Regs_DataRegisters" xml:space="preserve">
+    <value>データ レジスタ</value>
+  </data>
+  <data name="Regs_AddressRegisters" xml:space="preserve">
+    <value>アドレス レジスタ</value>
+  </data>
+  <data name="Regs_Flags" xml:space="preserve">
+    <value>フラグ</value>
+  </data>
+  <data name="Regs_SpecialRegisters" xml:space="preserve">
+    <value>特殊レジスタ</value>
+  </data>
+  <data name="Regs_FpuRegisters" xml:space="preserve">
+    <value>FPU レジスタ</value>
+  </data>
+  <data name="Regs_Edit" xml:space="preserve">
+    <value>編集</value>
+  </data>
+  <data name="Regs_Apply" xml:space="preserve">
+    <value>適用</value>
+  </data>
+  <data name="Regs_Cancel" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+
+  <!-- Memory Dump Pane -->
+  <data name="MemDump_Title" xml:space="preserve">
+    <value>メモリ ダンプ</value>
+  </data>
+  <data name="MemDump_Address" xml:space="preserve">
+    <value>アドレス:</value>
+  </data>
+  <data name="MemDump_Size" xml:space="preserve">
+    <value>サイズ:</value>
+  </data>
+  <data name="MemDump_Go" xml:space="preserve">
+    <value>移動</value>
+  </data>
+  <data name="MemDump_Edit" xml:space="preserve">
+    <value>編集</value>
+  </data>
+  <data name="MemDump_Apply" xml:space="preserve">
+    <value>適用</value>
+  </data>
+  <data name="MemDump_Cancel" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+
+  <!-- Context Menu -->
+  <data name="Context_Copy" xml:space="preserve">
+    <value>コピー</value>
+  </data>
+  <data name="Context_RunToCursor" xml:space="preserve">
+    <value>ここまで実行</value>
+  </data>
+  <data name="Context_SetPCToAddress" xml:space="preserve">
+    <value>このアドレスを PC に設定</value>
+  </data>
+  <data name="Context_Cancel" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="Context_Paste" xml:space="preserve">
+    <value>貼り付け</value>
+  </data>
+  <data name="Context_SelectAll" xml:space="preserve">
+    <value>すべて選択</value>
+  </data>
+
+  <!-- Status Bar -->
+  <data name="Status_Running" xml:space="preserve">
+    <value>実行中</value>
+  </data>
+  <data name="Status_Halted" xml:space="preserve">
+    <value>停止 (HALT)</value>
+  </data>
+  <data name="Status_Stopped" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="Status_NotRunning" xml:space="preserve">
+    <value>待機中</value>
+  </data>
+  <data name="Status_FileNone" xml:space="preserve">
+    <value>ファイル: (なし)</value>
+  </data>
+  <data name="Status_FileFormat" xml:space="preserve">
+    <value>ファイル: {0}</value>
+  </data>
+  <data name="Status_CyclesFormat" xml:space="preserve">
+    <value>サイクル: {0}</value>
+  </data>
+  <data name="Status_MhzFormat" xml:space="preserve">
+    <value>{0:F2} MHz ({1:F2} MIPS)</value>
+  </data>
+  <data name="Status_AvgMhzFormat" xml:space="preserve">
+    <value>平均 {0:F2} MHz ({1:F2} MIPS)</value>
+  </data>
+
+  <!-- About Dialog -->
+  <data name="About_Title" xml:space="preserve">
+    <value>バージョン情報</value>
+  </data>
+  <data name="About_Subtitle" xml:space="preserve">
+    <value>MC68030 エミュレータ (C#/WPF)</value>
+  </data>
+  <data name="About_Version" xml:space="preserve">
+    <value>バージョン 0.1.0</value>
+  </data>
+  <data name="About_BuildFormat" xml:space="preserve">
+    <value>ビルド: {0}</value>
+  </data>
+  <data name="About_Copyright" xml:space="preserve">
+    <value>© 2026 hha0x617</value>
+  </data>
+  <data name="About_License" xml:space="preserve">
+    <value>Apache-2.0 ライセンス</value>
+  </data>
+
+  <!-- Window Titles -->
+  <data name="Window_Breakpoints" xml:space="preserve">
+    <value>ブレークポイント</value>
+  </data>
+  <data name="Window_Console" xml:space="preserve">
+    <value>コンソール</value>
+  </data>
+  <data name="Window_ConsoleFormat" xml:space="preserve">
+    <value>コンソール - {0}×{1}</value>
+  </data>
+  <data name="Window_Settings" xml:space="preserve">
+    <value>エミュレータ設定</value>
+  </data>
+  <data name="Window_Input" xml:space="preserve">
+    <value>入力</value>
+  </data>
+
+  <!-- Breakpoints Window -->
+  <data name="Breakpoints_ClearAll" xml:space="preserve">
+    <value>すべてクリア</value>
+  </data>
+  <data name="Breakpoints_Delete" xml:space="preserve">
+    <value>削除</value>
+  </data>
+
+  <!-- Console Window -->
+  <data name="Console_Log" xml:space="preserve">
+    <value>ログ</value>
+  </data>
+  <data name="Console_Live" xml:space="preserve">
+    <value>ライブ</value>
+  </data>
+  <data name="Console_ToggleTooltip" xml:space="preserve">
+    <value>ライブ画面とスクロールバックログの切り替え</value>
+  </data>
+
+  <!-- Dialog Buttons -->
+  <data name="Dialog_OK" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Dialog_Cancel" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+
+  <!-- File Dialogs -->
+  <data name="FileDialog_OpenBinary" xml:space="preserve">
+    <value>バイナリ ファイルを開く</value>
+  </data>
+  <data name="FileDialog_OpenSRecord" xml:space="preserve">
+    <value>S-Record ファイルを開く</value>
+  </data>
+  <data name="FileDialog_OpenElf" xml:space="preserve">
+    <value>ELF ファイルを開く</value>
+  </data>
+  <data name="FileDialog_LoadAddress" xml:space="preserve">
+    <value>ロード アドレス</value>
+  </data>
+  <data name="FileDialog_EnterLoadAddress" xml:space="preserve">
+    <value>ロード アドレスを入力してください (16進数):</value>
+  </data>
+
+  <!-- Messages -->
+  <data name="Msg_ElfLoaded" xml:space="preserve">
+    <value>ELF を読み込みました。</value>
+  </data>
+  <data name="Msg_ElfLoaderTitle" xml:space="preserve">
+    <value>ELF ローダー</value>
+  </data>
+  <data name="Msg_ElfLoaderError" xml:space="preserve">
+    <value>ELF ローダー エラー</value>
+  </data>
+  <data name="Msg_FailedToLoadElf" xml:space="preserve">
+    <value>ELF ファイルの読み込みに失敗しました:</value>
+  </data>
+  <data name="Msg_LoadError" xml:space="preserve">
+    <value>読み込みエラー</value>
+  </data>
+  <data name="Msg_FailedToLoadBinary" xml:space="preserve">
+    <value>バイナリ ファイルの読み込みに失敗しました:</value>
+  </data>
+  <data name="Msg_FailedToLoadSRecord" xml:space="preserve">
+    <value>S-Record ファイルの読み込みに失敗しました:</value>
+  </data>
+  <data name="Msg_InvalidHexAddress" xml:space="preserve">
+    <value>無効な16進アドレス: {0}</value>
+  </data>
+  <data name="Msg_Error" xml:space="preserve">
+    <value>エラー</value>
+  </data>
+  <data name="Msg_InvalidSize" xml:space="preserve">
+    <value>無効なサイズです。</value>
+  </data>
+  <data name="Msg_Success" xml:space="preserve">
+    <value>成功</value>
+  </data>
+
+  <!-- Settings Window -->
+  <data name="Settings_BoardType" xml:space="preserve">
+    <value>ボード タイプ</value>
+  </data>
+  <data name="Settings_Board" xml:space="preserve">
+    <value>ボード:</value>
+  </data>
+  <data name="Settings_Mvme147Settings" xml:space="preserve">
+    <value>MVME147 設定</value>
+  </data>
+  <data name="Settings_RomImage" xml:space="preserve">
+    <value>ROM イメージ:</value>
+  </data>
+  <data name="Settings_TargetOS" xml:space="preserve">
+    <value>ターゲット OS</value>
+  </data>
+  <data name="Settings_OperatingSystem" xml:space="preserve">
+    <value>オペレーティング システム:</value>
+  </data>
+  <data name="Settings_BootPartition" xml:space="preserve">
+    <value>ブート パーティション:</value>
+  </data>
+  <data name="Settings_CommandLine" xml:space="preserve">
+    <value>コマンド ライン:</value>
+  </data>
+  <data name="Settings_ScsiDisks" xml:space="preserve">
+    <value>SCSI ディスク</value>
+  </data>
+  <data name="Settings_AddDisk" xml:space="preserve">
+    <value>+ ディスク追加</value>
+  </data>
+  <data name="Settings_NewImageSizeMB" xml:space="preserve">
+    <value>新規イメージ サイズ (MB):</value>
+  </data>
+  <data name="Settings_Create" xml:space="preserve">
+    <value>作成</value>
+  </data>
+  <data name="Settings_ScsiCdRom" xml:space="preserve">
+    <value>SCSI CD-ROM</value>
+  </data>
+  <data name="Settings_IsoImage" xml:space="preserve">
+    <value>ISO イメージ:</value>
+  </data>
+  <data name="Settings_ScsiId" xml:space="preserve">
+    <value>SCSI ID:</value>
+  </data>
+  <data name="Settings_Network" xml:space="preserve">
+    <value>ネットワーク</value>
+  </data>
+  <data name="Settings_NetworkMode" xml:space="preserve">
+    <value>ネットワーク モード:</value>
+  </data>
+  <data name="Settings_NetworkVirtual" xml:space="preserve">
+    <value>仮想 (エコーサーバー)</value>
+  </data>
+  <data name="Settings_NetworkNat" xml:space="preserve">
+    <value>NAT (ホスト ネットワーク)</value>
+  </data>
+  <data name="Settings_GatewayIP" xml:space="preserve">
+    <value>ゲートウェイ IP:</value>
+  </data>
+  <data name="Settings_GatewayMAC" xml:space="preserve">
+    <value>ゲートウェイ MAC:</value>
+  </data>
+  <data name="Settings_Memory" xml:space="preserve">
+    <value>メモリ</value>
+  </data>
+  <data name="Settings_MemorySizeMB" xml:space="preserve">
+    <value>メモリ サイズ (MB):</value>
+  </data>
+  <data name="Settings_IoDevices" xml:space="preserve">
+    <value>I/O デバイス</value>
+  </data>
+  <data name="Settings_ConsoleEnabled" xml:space="preserve">
+    <value>コンソール デバイス有効</value>
+  </data>
+  <data name="Settings_ConsoleBaseAddr" xml:space="preserve">
+    <value>コンソール ベースアドレス:</value>
+  </data>
+  <data name="Settings_ScrollbackLines" xml:space="preserve">
+    <value>スクロールバック行数:</value>
+  </data>
+  <data name="Settings_TerminalSize" xml:space="preserve">
+    <value>ターミナル サイズ:</value>
+  </data>
+  <data name="Settings_HddEnabled" xml:space="preserve">
+    <value>HDD デバイス有効</value>
+  </data>
+  <data name="Settings_HddBaseAddr" xml:space="preserve">
+    <value>HDD ベースアドレス:</value>
+  </data>
+  <data name="Settings_HddImage" xml:space="preserve">
+    <value>HDD イメージ</value>
+  </data>
+  <data name="Settings_ImageFile" xml:space="preserve">
+    <value>イメージ ファイル:</value>
+  </data>
+  <data name="Settings_Performance" xml:space="preserve">
+    <value>パフォーマンス</value>
+  </data>
+  <data name="Settings_EnableJit" xml:space="preserve">
+    <value>JIT コンパイラを有効にする (実験的)</value>
+  </data>
+  <data name="Settings_JitDescription" xml:space="preserve">
+    <value>レジスタ操作のみの基本ブロックを実行時に .NET IL にコンパイルします。現在対応している命令セットは限定的です (MOVEQ, MOVE.L Dn, ADD/SUB/CMP.L, AND/OR/EOR.L, Bcc.B, BRA.B)。命令ごとのオーバーヘッドがコンパイル済みブロックの効果を上回り、全体的な速度が低下する場合があります。</value>
+  </data>
+  <data name="Settings_MinBlockLength" xml:space="preserve">
+    <value>最小ブロック長:</value>
+  </data>
+  <data name="Settings_CompileThreshold" xml:space="preserve">
+    <value>コンパイル閾値:</value>
+  </data>
+  <data name="Settings_Display" xml:space="preserve">
+    <value>表示</value>
+  </data>
+  <data name="Settings_FontFamily" xml:space="preserve">
+    <value>フォント ファミリ:</value>
+  </data>
+  <data name="Settings_FontSize" xml:space="preserve">
+    <value>フォント サイズ:</value>
+  </data>
+  <data name="Settings_Browse" xml:space="preserve">
+    <value>...</value>
+  </data>
+
+  <!-- Settings Dialog Messages -->
+  <data name="Settings_SelectRomImage" xml:space="preserve">
+    <value>MVME147 ROM イメージを選択</value>
+  </data>
+  <data name="Settings_SelectHddImage" xml:space="preserve">
+    <value>HDD イメージ ファイルを選択</value>
+  </data>
+  <data name="Settings_SelectScsiDisk" xml:space="preserve">
+    <value>SCSI ディスク イメージを選択</value>
+  </data>
+  <data name="Settings_SelectCdRomIso" xml:space="preserve">
+    <value>SCSI CD-ROM ISO イメージを選択</value>
+  </data>
+  <data name="Settings_CreateScsiDisk" xml:space="preserve">
+    <value>SCSI ディスク イメージを作成</value>
+  </data>
+  <data name="Settings_CreateHddImage" xml:space="preserve">
+    <value>HDD イメージ ファイルを作成</value>
+  </data>
+  <data name="Settings_WriteDisklabel" xml:space="preserve">
+    <value>NetBSD Disklabel の書き込み</value>
+  </data>
+  <data name="Settings_DisklabelConfirm" xml:space="preserve">
+    <value>このディスク イメージに NetBSD disklabel を書き込みますか？
+
+イメージの先頭セクタを NetBSD 形式のパーティション テーブルで上書きします。
+NetBSD ディスク イメージに対してのみ使用してください。</value>
+  </data>
+  <data name="Settings_Disklabel" xml:space="preserve">
+    <value>Disklabel</value>
+  </data>
+  <data name="Settings_CreatedScsiDiskFormat" xml:space="preserve">
+    <value>{0}MB SCSI ディスク イメージを作成しました ({1}): {2}</value>
+  </data>
+  <data name="Settings_CreatedHddImageFormat" xml:space="preserve">
+    <value>{0}MB イメージを作成しました: {1}</value>
+  </data>
+
+  <!-- Status Messages -->
+  <data name="Status_BreakpointFormat" xml:space="preserve">
+    <value>ブレークポイント (${0:X8})</value>
+  </data>
+  <data name="Status_InfiniteLoopFormat" xml:space="preserve">
+    <value>無限ループ検出 (${0:X8})</value>
+  </data>
+  <data name="Status_147BugReturn" xml:space="preserve">
+    <value>147Bug .RETURN</value>
+  </data>
+
+  <!-- LST Button -->
+  <data name="Disasm_LST" xml:space="preserve">
+    <value>LST</value>
+  </data>
+</root>
