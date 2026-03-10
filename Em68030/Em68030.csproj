@@ -8,6 +8,7 @@
     <UseWPF>true</UseWPF>
     <TieredPGO>true</TieredPGO>
     <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ApplicationIcon>Assets\Em68030.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

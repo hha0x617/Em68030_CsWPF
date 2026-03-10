@@ -16,6 +16,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:Em68030.ViewModels"
         Title="Em68030 - MC68030 Emulator (C#/WPF)" Height="750" Width="1100"
+        Icon="Assets/Em68030.ico"
         WindowStartupLocation="CenterScreen"
         Background="#FF1E1E1E" Foreground="#FFD4D4D4">
     <Window.InputBindings>
