@@ -38,10 +38,10 @@
             <TextBlock Text="Licensed under Apache-2.0" FontSize="13"
                        Foreground="#FFD4D4D4" Margin="0,0,0,2" />
             <TextBlock FontSize="13" Foreground="#FF569CD6">
-                <Hyperlink NavigateUri="https://github.com/hha0x617/em68030"
+                <Hyperlink NavigateUri="https://github.com/hha0x617/Em68030_CsWPF"
                            RequestNavigate="Hyperlink_RequestNavigate"
                            Foreground="#FF569CD6">
-                    https://github.com/hha0x617/em68030
+                    https://github.com/hha0x617/Em68030_CsWPF
                 </Hyperlink>
             </TextBlock>
         </StackPanel>
