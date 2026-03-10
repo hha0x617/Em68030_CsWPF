@@ -34,7 +34,7 @@ public class VirtualNetworkHandler : INetworkHandler
 
     private byte[] _guestMac = new byte[6];
     private readonly byte[] _guestIp = new byte[4];
-    private bool _guestIpKnown;
+
     private readonly Queue<byte[]> _rxQueue = new();
     private readonly Dictionary<ushort, TcpConnectionState> _tcpConnections = new();
 
@@ -99,7 +99,6 @@ public class VirtualNetworkHandler : INetworkHandler
 
         // Learn guest IP from sender protocol address (SPA at offset 28)
         System.Array.Copy(frame, 28, _guestIp, 0, 4);
-        _guestIpKnown = true;
 
         // Don't respond if TPA = guest IP (gratuitous ARP / DAD announcement)
         if (frame[38] == _guestIp[0] && frame[39] == _guestIp[1] &&
@@ -283,7 +282,7 @@ public class VirtualNetworkHandler : INetworkHandler
             {
                 // ACK the data
                 conn.TheirSeq = seq + (uint)dataLen;
-                conn.OurSeq = conn.OurSeq; // unchanged until we send data
+                // OurSeq unchanged until we send data
 
                 // Echo data back
                 int dataStart = tcpOffset + tcpDataOffset;
