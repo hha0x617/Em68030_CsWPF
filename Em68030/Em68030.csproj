@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <Resource Include="Assets\Em68030.ico" />
+    <Resource Include="Assets\em68030_icon.png" />
   </ItemGroup>
 
   <!-- Generate GitVersion.generated.cs with the current git commit hash -->
