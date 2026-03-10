@@ -348,7 +348,7 @@ public partial class SettingsWindow : Window
 
     private void UpdateNatGatewayEnabled()
     {
-        bool isNat = GetSelectedItemText(NetworkModeBox) == "NAT";
+        bool isNat = GetSelectedItemText(NetworkModeBox).Contains("NAT");
         NatGatewayIpBox.IsEnabled = isNat;
         NatGatewayMacBox.IsEnabled = isNat;
         NatGatewayIpBox.Opacity = isNat ? 1.0 : 0.35;
@@ -402,7 +402,7 @@ public partial class SettingsWindow : Window
 
         // Memory size
         if (int.TryParse(MemSizeBox.Text, out int memMB))
-            Config.MemorySize = memMB * 1024 * 1024;
+            Config.MemorySize = Math.Clamp(memMB, 4, 4096) * 1024 * 1024;
 
         Config.ConsoleEnabled = ConsoleEnabledBox.IsChecked == true;
         if (uint.TryParse(ConsoleAddrBox.Text, NumberStyles.HexNumber, null, out uint conAddr))
@@ -413,12 +413,12 @@ public partial class SettingsWindow : Window
             Config.HddBaseAddress = hddAddr;
 
         Config.HddImagePath = HddPathBox.Text;
-        if (int.TryParse(ConsoleScrollbackBox.Text, out int scrollback) && scrollback >= 0)
-            Config.ConsoleScrollbackLines = Math.Min(scrollback, 100000);
+        if (int.TryParse(ConsoleScrollbackBox.Text, out int scrollback))
+            Config.ConsoleScrollbackLines = Math.Clamp(scrollback, 0, 100000);
         if (int.TryParse(ConsoleColumnsBox.Text, out int cols))
-            Config.ConsoleColumns = Math.Max(cols, 80);
+            Config.ConsoleColumns = Math.Clamp(cols, 80, 320);
         if (int.TryParse(ConsoleRowsBox.Text, out int rows))
-            Config.ConsoleRows = Math.Max(rows, 24);
+            Config.ConsoleRows = Math.Clamp(rows, 24, 80);
         Config.FontFamily = FontFamilyBox.Text;
         if (double.TryParse(FontSizeBox.Text, out double fontSize))
             Config.FontSize = fontSize;
@@ -545,6 +545,7 @@ public partial class SettingsWindow : Window
             MessageBox.Show(Strings.Msg_InvalidSize, Strings.Msg_Error, MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
+        sizeMB = Math.Clamp(sizeMB, 100, 2097152);
 
         // Unmount currently mounted disks so the file is not locked
         _unmountScsiDisks?.Invoke();
@@ -591,6 +592,7 @@ public partial class SettingsWindow : Window
             MessageBox.Show(Strings.Msg_InvalidSize, Strings.Msg_Error, MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
+        sizeMB = Math.Clamp(sizeMB, 100, 2097152);
 
         var dlg = new SaveFileDialog
         {

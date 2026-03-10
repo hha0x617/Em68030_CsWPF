@@ -226,7 +226,8 @@
                             Background="#FF3E3E42" Foreground="#FFD4D4D4" />
                     <StackPanel Orientation="Horizontal" Margin="0,8">
                         <TextBlock Text="{x:Static p:Strings.Settings_NewImageSizeMB}" Style="{StaticResource SettingLabel}" Width="150" />
-                        <TextBox x:Name="NewScsiImageSizeBox" Width="60" Style="{StaticResource SettingTextBox}" Text="100" />
+                        <TextBox x:Name="NewScsiImageSizeBox" Width="80" Style="{StaticResource SettingTextBox}" Text="2048"
+                                 ToolTip="100-2097152" />
                         <Button Content="{x:Static p:Strings.Settings_Create}" Click="CreateScsiImage_Click" Margin="8,0"
                                 Background="#FF3E3E42" Foreground="#FFD4D4D4" Padding="8,2" />
                     </StackPanel>
@@ -270,8 +271,8 @@
                         <TextBlock Text="{x:Static p:Strings.Settings_NetworkMode}" Style="{StaticResource SettingLabel}" />
                         <ComboBox x:Name="NetworkModeBox" Grid.Column="1"
                                   SelectionChanged="NetworkMode_Changed">
-                            <ComboBoxItem Content="{x:Static p:Strings.Settings_NetworkVirtual}" />
-                            <ComboBoxItem Content="{x:Static p:Strings.Settings_NetworkNat}" />
+                            <ComboBoxItem Content="Virtual (Echo Server)" />
+                            <ComboBoxItem Content="NAT (Host Network)" />
                         </ComboBox>
                     </Grid>
                     <Grid>
@@ -300,7 +301,8 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="{x:Static p:Strings.Settings_MemorySizeMB}" Style="{StaticResource SettingLabel}" />
-                    <TextBox x:Name="MemSizeBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
+                    <TextBox x:Name="MemSizeBox" Grid.Column="1" Style="{StaticResource SettingTextBox}"
+                             ToolTip="4-4096" />
                 </Grid>
 
                 <!-- I/O Device Settings -->
@@ -322,7 +324,8 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="{x:Static p:Strings.Settings_ScrollbackLines}" Style="{StaticResource SettingLabel}" />
-                    <TextBox x:Name="ConsoleScrollbackBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
+                    <TextBox x:Name="ConsoleScrollbackBox" Grid.Column="1" Style="{StaticResource SettingTextBox}"
+                             ToolTip="0-100000" />
                 </Grid>
                 <Grid Margin="0,4,0,0">
                     <Grid.ColumnDefinitions>
@@ -332,9 +335,11 @@
                         <ColumnDefinition Width="60" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="{x:Static p:Strings.Settings_TerminalSize}" Style="{StaticResource SettingLabel}" />
-                    <TextBox x:Name="ConsoleColumnsBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
+                    <TextBox x:Name="ConsoleColumnsBox" Grid.Column="1" Style="{StaticResource SettingTextBox}"
+                             ToolTip="80-320" />
                     <TextBlock Text=" x " Grid.Column="2" Style="{StaticResource SettingLabel}" HorizontalAlignment="Center" />
-                    <TextBox x:Name="ConsoleRowsBox" Grid.Column="3" Style="{StaticResource SettingTextBox}" />
+                    <TextBox x:Name="ConsoleRowsBox" Grid.Column="3" Style="{StaticResource SettingTextBox}"
+                             ToolTip="24-80" />
                 </Grid>
 
                 <CheckBox x:Name="HddEnabledBox" Content="{x:Static p:Strings.Settings_HddEnabled}"
@@ -364,7 +369,8 @@
                 </Grid>
                 <StackPanel Orientation="Horizontal" Margin="0,8">
                     <TextBlock Text="{x:Static p:Strings.Settings_NewImageSizeMB}" Style="{StaticResource SettingLabel}" Width="150" />
-                    <TextBox x:Name="NewImageSizeBox" Width="60" Style="{StaticResource SettingTextBox}" Text="32" />
+                    <TextBox x:Name="NewImageSizeBox" Width="80" Style="{StaticResource SettingTextBox}" Text="2048"
+                             ToolTip="100-2097152" />
                     <Button Content="{x:Static p:Strings.Settings_Create}" Click="CreateImage_Click" Margin="8,0"
                             Background="#FF3E3E42" Foreground="#FFD4D4D4" Padding="8,2" />
                 </StackPanel>
