@@ -138,7 +138,6 @@ public partial class MainWindow : Window
             {
                 var result = _vm.LoadElfFile(dlg.FileName);
                 MenuShowFramebuffer.IsEnabled = _vm.FramebufferDevice != null;
-                EnsureFramebufferWindow();
 
                 MessageBox.Show(
                     $"{Strings.Msg_ElfLoaded}\n\n" +
