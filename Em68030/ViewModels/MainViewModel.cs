@@ -78,6 +78,7 @@ public class MainViewModel : INotifyPropertyChanged
     private int _scsiCdromId = -1; // Current SCSI ID of the CD-ROM (-1 = not attached)
     private LanceDevice? _lanceDevice;
     private Uart16550Device? _uartDevice;
+    private FramebufferDevice? _framebufferDevice;
     private uint _brdIdAddress; // Address of board ID packet in memory
     private bool _systemBooted; // True after first .BRD_ID call; used to detect warm reboot
 
@@ -325,6 +326,7 @@ public class MainViewModel : INotifyPropertyChanged
     public MC68030 Cpu => _cpu;
     public Memory Memory => _memory;
     public EmulatorConfig Config => _config;
+    public FramebufferDevice? FramebufferDevice => _framebufferDevice;
 
     /// <summary>
     /// Send a character to the emulated system's console input.
@@ -445,15 +447,18 @@ public class MainViewModel : INotifyPropertyChanged
         // RTC year base: NetBSD uses YEAR0=1968, Linux uses raw 2-digit year
         if (_config.TargetOS != "Linux")
             _rtcDevice.YearBase = 1968;
+        uint kernelRamEnd = _config.FramebufferEnabled
+            ? _config.ComputeVramBase()
+            : (uint)_config.MemorySize;
         _rtcDevice.SetMvme147Config(
-            onboardRamEnd: (uint)_config.MemorySize,
+            onboardRamEnd: kernelRamEnd,
             ethernetAddr: new byte[] { 0x21, 0x00, 0x00 } // 08:00:3E:21:00:00
         );
         _scsiDevice = new Wd33c93Device();
         _scsiDevice.AttachMemory(_memory);
         _lanceDevice = new LanceDevice();
         _lanceDevice.AttachMemory(_memory);
-        if (_config.NetworkMode == "NAT")
+        if (_config.NetworkMode.Contains("NAT"))
         {
             var gwIp = SlirpNetworkHandler.ParseIpAddress(_config.NatGatewayIp);
             var gwMac = SlirpNetworkHandler.ParseMacAddress(_config.NatGatewayMac);
@@ -481,6 +486,15 @@ public class MainViewModel : INotifyPropertyChanged
             _uartDevice = new Uart16550Device(0xFFFE2000);
             _uartDevice.OnTransmit = ch => { ConsoleCharOutput?.Invoke((char)ch); _traceWriter?.Write((char)ch); };
             _memory.RegisterDevice(0xFFFE2000, 8, _uartDevice);
+        }
+
+        // Framebuffer device (control registers only — VRAM is in RAM fast path)
+        if (_config.FramebufferEnabled)
+        {
+            _framebufferDevice = new FramebufferDevice(
+                _config.FramebufferWidth, _config.FramebufferHeight,
+                _config.FramebufferBpp, _config.ComputeVramBase());
+            _memory.RegisterDevice(FramebufferDevice.BaseAddress, FramebufferDevice.DeviceSize, _framebufferDevice);
         }
 
         // Wire device interrupts through PCC
@@ -564,7 +578,9 @@ public class MainViewModel : INotifyPropertyChanged
 
                 if (_config.BoardType == "MVME147")
                 {
-                    uint topOfRam = (uint)_config.MemorySize;
+                    uint topOfRam = _config.FramebufferEnabled
+                                ? _config.ComputeVramBase()
+                                : (uint)_config.MemorySize;
                     if (_config.TargetOS == "Linux")
                         SetupMvme147LinuxBootStub(topOfRam, _programEndAddress);
                     else
@@ -714,7 +730,9 @@ public class MainViewModel : INotifyPropertyChanged
 
                         if (_config.BoardType == "MVME147")
                         {
-                            uint topOfRam = (uint)_config.MemorySize;
+                            uint topOfRam = _config.FramebufferEnabled
+                                ? _config.ComputeVramBase()
+                                : (uint)_config.MemorySize;
                             if (_config.TargetOS == "Linux")
                                 SetupMvme147LinuxBootStub(topOfRam, _programEndAddress);
                             else
@@ -858,7 +876,9 @@ public class MainViewModel : INotifyPropertyChanged
 
         if (_config.BoardType == "MVME147")
         {
-            uint topOfRam = (uint)_config.MemorySize;
+            uint topOfRam = _config.FramebufferEnabled
+                                ? _config.ComputeVramBase()
+                                : (uint)_config.MemorySize;
             if (_config.TargetOS == "Linux")
                 SetupMvme147LinuxBootStub(topOfRam, _programEndAddress);
             else
@@ -1555,6 +1575,11 @@ public class MainViewModel : INotifyPropertyChanged
             }
         }
 
+        // Framebuffer device is NOT hot-swappable: VRAM is placed at the top of RAM
+        // and the kernel's memory map (BI_MEMCHUNK / RTC onboardRamEnd) is fixed at boot.
+        // Enabling/disabling framebuffer or changing resolution requires a reboot.
+        // Config values are saved and will take effect on next boot.
+
         // TargetOS change: update UART 16550, RTC year offset, and boot stub
         if (_config.BoardType == "MVME147")
         {
@@ -1581,7 +1606,9 @@ public class MainViewModel : INotifyPropertyChanged
             // Re-setup boot stub if a kernel is already loaded
             if (_programEndAddress > _programStartAddress)
             {
-                uint topOfRam = (uint)_config.MemorySize;
+                uint topOfRam = _config.FramebufferEnabled
+                                ? _config.ComputeVramBase()
+                                : (uint)_config.MemorySize;
                 if (_config.TargetOS == "Linux")
                     SetupMvme147LinuxBootStub(topOfRam, _programEndAddress);
                 else

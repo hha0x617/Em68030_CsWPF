@@ -112,6 +112,9 @@
   <data name="Menu_ConsoleWindow" xml:space="preserve">
     <value>_Console Window</value>
   </data>
+  <data name="Menu_FramebufferWindow" xml:space="preserve">
+    <value>_Framebuffer Window</value>
+  </data>
   <data name="Menu_BreakpointsWindow" xml:space="preserve">
     <value>_Breakpoints Window</value>
   </data>
@@ -500,6 +503,24 @@
   </data>
   <data name="Settings_CompileThreshold" xml:space="preserve">
     <value>Compile Threshold:</value>
+  </data>
+  <data name="Settings_Framebuffer" xml:space="preserve">
+    <value>Framebuffer</value>
+  </data>
+  <data name="Settings_EnableFramebuffer" xml:space="preserve">
+    <value>Enable Framebuffer</value>
+  </data>
+  <data name="Settings_FramebufferDescription" xml:space="preserve">
+    <value>Provides a virtual framebuffer for X Window System. VRAM is placed at the top of RAM automatically. Changes take effect after rebooting the guest OS.</value>
+  </data>
+  <data name="Settings_FbResolution" xml:space="preserve">
+    <value>Resolution:</value>
+  </data>
+  <data name="Settings_FbBpp" xml:space="preserve">
+    <value>Bits per Pixel:</value>
+  </data>
+  <data name="Settings_FbVramBase" xml:space="preserve">
+    <value>VRAM Base:</value>
   </data>
   <data name="Settings_Display" xml:space="preserve">
     <value>Display</value>

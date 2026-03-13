@@ -60,6 +60,7 @@ namespace Em68030.Properties
         // View Menu
         public static string Menu_View => ResourceManager.GetString("Menu_View", resourceCulture) ?? "";
         public static string Menu_ConsoleWindow => ResourceManager.GetString("Menu_ConsoleWindow", resourceCulture) ?? "";
+        public static string Menu_FramebufferWindow => ResourceManager.GetString("Menu_FramebufferWindow", resourceCulture) ?? "";
         public static string Menu_BreakpointsWindow => ResourceManager.GetString("Menu_BreakpointsWindow", resourceCulture) ?? "";
         public static string Menu_ToggleLstView => ResourceManager.GetString("Menu_ToggleLstView", resourceCulture) ?? "";
 
@@ -212,6 +213,12 @@ namespace Em68030.Properties
         public static string Settings_JitDescription => ResourceManager.GetString("Settings_JitDescription", resourceCulture) ?? "";
         public static string Settings_MinBlockLength => ResourceManager.GetString("Settings_MinBlockLength", resourceCulture) ?? "";
         public static string Settings_CompileThreshold => ResourceManager.GetString("Settings_CompileThreshold", resourceCulture) ?? "";
+        public static string Settings_Framebuffer => ResourceManager.GetString("Settings_Framebuffer", resourceCulture) ?? "";
+        public static string Settings_EnableFramebuffer => ResourceManager.GetString("Settings_EnableFramebuffer", resourceCulture) ?? "";
+        public static string Settings_FramebufferDescription => ResourceManager.GetString("Settings_FramebufferDescription", resourceCulture) ?? "";
+        public static string Settings_FbResolution => ResourceManager.GetString("Settings_FbResolution", resourceCulture) ?? "";
+        public static string Settings_FbBpp => ResourceManager.GetString("Settings_FbBpp", resourceCulture) ?? "";
+        public static string Settings_FbVramBase => ResourceManager.GetString("Settings_FbVramBase", resourceCulture) ?? "";
         public static string Settings_Display => ResourceManager.GetString("Settings_Display", resourceCulture) ?? "";
         public static string Settings_FontFamily => ResourceManager.GetString("Settings_FontFamily", resourceCulture) ?? "";
         public static string Settings_FontSize => ResourceManager.GetString("Settings_FontSize", resourceCulture) ?? "";

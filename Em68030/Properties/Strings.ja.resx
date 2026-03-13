@@ -112,6 +112,9 @@
   <data name="Menu_ConsoleWindow" xml:space="preserve">
     <value>コンソール ウィンドウ(_C)</value>
   </data>
+  <data name="Menu_FramebufferWindow" xml:space="preserve">
+    <value>フレームバッファ ウィンドウ(_F)</value>
+  </data>
   <data name="Menu_BreakpointsWindow" xml:space="preserve">
     <value>ブレークポイント ウィンドウ(_B)</value>
   </data>
@@ -500,6 +503,24 @@
   </data>
   <data name="Settings_CompileThreshold" xml:space="preserve">
     <value>コンパイル閾値:</value>
+  </data>
+  <data name="Settings_Framebuffer" xml:space="preserve">
+    <value>フレームバッファ</value>
+  </data>
+  <data name="Settings_EnableFramebuffer" xml:space="preserve">
+    <value>フレームバッファを有効にする</value>
+  </data>
+  <data name="Settings_FramebufferDescription" xml:space="preserve">
+    <value>X Window System 用の仮想フレームバッファを提供します。VRAM は RAM 末尾に自動配置されます。変更の反映にはゲスト OS の再起動が必要です。</value>
+  </data>
+  <data name="Settings_FbResolution" xml:space="preserve">
+    <value>解像度:</value>
+  </data>
+  <data name="Settings_FbBpp" xml:space="preserve">
+    <value>ビット深度:</value>
+  </data>
+  <data name="Settings_FbVramBase" xml:space="preserve">
+    <value>VRAM ベースアドレス:</value>
   </data>
   <data name="Settings_Display" xml:space="preserve">
     <value>表示</value>

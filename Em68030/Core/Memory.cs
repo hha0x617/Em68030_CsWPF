@@ -49,6 +49,14 @@ public class Memory
     // Last-hit region cache for non-fastRAM accesses (e.g., ROM at $FF800000)
     private MemoryRegion? _lastRegion;
 
+    /// <summary>
+    /// Direct access to the base-0 RAM array for the framebuffer renderer.
+    /// The renderer reads VRAM data from this array on the UI thread.
+    /// No locking needed — worst case is a single torn frame.
+    /// </summary>
+    public byte[]? FastRam => _fastRam;
+    public uint FastRamSize => _fastRamSize;
+
     public int Size
     {
         get

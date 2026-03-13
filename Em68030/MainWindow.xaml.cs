@@ -30,6 +30,7 @@ public partial class MainWindow : Window
     private MainViewModel _vm;
     private ConsoleWindow? _consoleWindow;
     private BreakpointsWindow? _breakpointsWindow;
+    private FramebufferWindow? _framebufferWindow;
 
     public MainWindow()
     {
@@ -72,6 +73,9 @@ public partial class MainWindow : Window
                     ScrollDisasmToCenter(index);
             });
         };
+
+        // Initialize menu state from saved config
+        MenuShowFramebuffer.IsEnabled = _vm.FramebufferDevice != null;
     }
 
     private ConsoleWindow EnsureConsoleWindow()
@@ -133,6 +137,8 @@ public partial class MainWindow : Window
             try
             {
                 var result = _vm.LoadElfFile(dlg.FileName);
+                MenuShowFramebuffer.IsEnabled = _vm.FramebufferDevice != null;
+                EnsureFramebufferWindow();
 
                 MessageBox.Show(
                     $"{Strings.Msg_ElfLoaded}\n\n" +
@@ -176,6 +182,11 @@ public partial class MainWindow : Window
         EnsureConsoleWindow();
     }
 
+    private void ShowFramebuffer_Click(object sender, RoutedEventArgs e)
+    {
+        EnsureFramebufferWindow();
+    }
+
     private void ShowBreakpoints_Click(object sender, RoutedEventArgs e)
     {
         EnsureBreakpointsWindow();
@@ -195,6 +206,22 @@ public partial class MainWindow : Window
             _breakpointsWindow.Activate();
         }
         _breakpointsWindow.RefreshList();
+    }
+
+    private void EnsureFramebufferWindow()
+    {
+        if (_vm.FramebufferDevice == null) return;
+        if (_framebufferWindow == null || !_framebufferWindow.IsLoaded)
+        {
+            _framebufferWindow = new FramebufferWindow(_vm.Memory, _vm.FramebufferDevice);
+            _framebufferWindow.Owner = this;
+            _framebufferWindow.Closed += (_, _) => _framebufferWindow = null;
+            _framebufferWindow.Show();
+        }
+        else
+        {
+            _framebufferWindow.Activate();
+        }
     }
 
     private void ToggleLst_Click(object sender, RoutedEventArgs e)
@@ -223,6 +250,7 @@ public partial class MainWindow : Window
         if (settings.ShowDialog() == true)
         {
             _vm.ApplyConfig(settings.Config);
+            MenuShowFramebuffer.IsEnabled = settings.Config.FramebufferEnabled;
             _consoleWindow?.SetScrollbackLines(settings.Config.ConsoleScrollbackLines);
             _consoleWindow?.SetTerminalSize(settings.Config.ConsoleColumns, settings.Config.ConsoleRows);
         }

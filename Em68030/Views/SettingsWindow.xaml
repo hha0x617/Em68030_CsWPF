@@ -293,6 +293,41 @@
                     </Grid>
                 </StackPanel>
 
+                <!-- Framebuffer -->
+                <TextBlock Text="{x:Static p:Strings.Settings_Framebuffer}" Style="{StaticResource SectionHeader}" />
+                <CheckBox x:Name="FramebufferEnabledBox" Content="{x:Static p:Strings.Settings_EnableFramebuffer}"
+                          Foreground="#FFD4D4D4" Margin="0,4" />
+                <TextBlock Text="{x:Static p:Strings.Settings_FramebufferDescription}"
+                           Foreground="#FF9E9E9E" FontSize="11" TextWrapping="Wrap" Margin="20,0,0,4" />
+                <Grid Margin="24,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{x:Static p:Strings.Settings_FbResolution}" Style="{StaticResource SettingLabel}" />
+                    <ComboBox x:Name="FbResolutionBox" Grid.Column="1" Width="140" HorizontalAlignment="Left">
+                        <ComboBoxItem Content="320 x 240" />
+                        <ComboBoxItem Content="640 x 480" />
+                        <ComboBoxItem Content="800 x 600" />
+                        <ComboBoxItem Content="1024 x 768" />
+                        <ComboBoxItem Content="1280 x 720" />
+                        <ComboBoxItem Content="1280 x 1024" />
+                        <ComboBoxItem Content="1920 x 1080" />
+                    </ComboBox>
+                </Grid>
+                <Grid Margin="24,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{x:Static p:Strings.Settings_FbBpp}" Style="{StaticResource SettingLabel}" />
+                    <ComboBox x:Name="FbBppBox" Grid.Column="1" Width="80" HorizontalAlignment="Left">
+                        <ComboBoxItem Content="8" />
+                        <ComboBoxItem Content="16" />
+                        <ComboBoxItem Content="32" />
+                    </ComboBox>
+                </Grid>
+
                 <!-- Memory Settings -->
                 <TextBlock Text="{x:Static p:Strings.Settings_Memory}" Style="{StaticResource SectionHeader}" />
                 <Grid>

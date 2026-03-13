@@ -107,6 +107,18 @@ public partial class SettingsWindow : Window
         JitEnabledBox.IsChecked = Config.JitEnabled;
         JitMinBlockLengthBox.Text = Config.JitMinBlockLength.ToString();
         JitCompileThresholdBox.Text = Config.JitCompileThreshold.ToString();
+
+        // Framebuffer
+        FramebufferEnabledBox.IsChecked = Config.FramebufferEnabled;
+        int[][] presets = [[320,240],[640,480],[800,600],[1024,768],[1280,720],[1280,1024],[1920,1080]];
+        int resIdx = 1; // default 640x480
+        for (int i = 0; i < presets.Length; i++)
+        {
+            if (presets[i][0] == Config.FramebufferWidth && presets[i][1] == Config.FramebufferHeight)
+            { resIdx = i; break; }
+        }
+        FbResolutionBox.SelectedIndex = resIdx;
+        FbBppBox.SelectedIndex = Config.FramebufferBpp switch { 8 => 0, 32 => 2, _ => 1 };
     }
 
     // ========================================================================
@@ -427,6 +439,35 @@ public partial class SettingsWindow : Window
             Config.JitMinBlockLength = Math.Clamp(minBlock, 1, 64);
         if (int.TryParse(JitCompileThresholdBox.Text, out int threshold))
             Config.JitCompileThreshold = Math.Clamp(threshold, 1, 255);
+
+        // Framebuffer
+        Config.FramebufferEnabled = FramebufferEnabledBox.IsChecked == true;
+        {
+            int[][] presets = [[320,240],[640,480],[800,600],[1024,768],[1280,720],[1280,1024],[1920,1080]];
+            int idx = FbResolutionBox.SelectedIndex;
+            if (idx >= 0 && idx < presets.Length)
+            {
+                Config.FramebufferWidth = presets[idx][0];
+                Config.FramebufferHeight = presets[idx][1];
+            }
+        }
+        if (FbBppBox.SelectedItem is ComboBoxItem bppItem &&
+            int.TryParse(bppItem.Content?.ToString(), out int bpp))
+            Config.FramebufferBpp = bpp;
+
+        // Validate: framebuffer enabled requires enough RAM for kernel (min 32MB usable)
+        if (Config.FramebufferEnabled)
+        {
+            const uint minKernelRam = 32u * 1024 * 1024; // 32MB
+            uint vramBase = Config.ComputeVramBase();
+            if (vramBase < minKernelRam)
+            {
+                uint vramSize = (uint)(Config.FramebufferWidth * Config.FramebufferHeight * Config.FramebufferBpp / 8);
+                int requiredMB = (int)((minKernelRam + vramSize + 0xFFFFF) / (1024 * 1024));
+                Config.MemorySize = requiredMB * 1024 * 1024;
+                MemSizeBox.Text = requiredMB.ToString();
+            }
+        }
 
         DialogResult = true;
     }

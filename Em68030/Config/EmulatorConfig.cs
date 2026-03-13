@@ -81,6 +81,21 @@ public class EmulatorConfig
     public int ConsoleColumns { get; set; } = 80;
     public int ConsoleRows { get; set; } = 24;
 
+    // Framebuffer (for X Window System)
+    // VRAM is placed at the top of RAM (auto-calculated: MemorySize - VramSize, 1MB aligned).
+    // The kernel is told RAM ends at the VRAM base, so it never touches VRAM.
+    public bool FramebufferEnabled { get; set; } = false;
+    public int FramebufferWidth { get; set; } = 640;
+    public int FramebufferHeight { get; set; } = 480;
+    public int FramebufferBpp { get; set; } = 16; // 8, 16, or 32
+
+    /// <summary>Compute VRAM base address (top of RAM, 1MB aligned).</summary>
+    public uint ComputeVramBase()
+    {
+        uint vramSize = (uint)(FramebufferWidth * FramebufferHeight * FramebufferBpp / 8);
+        return ((uint)MemorySize - vramSize) & ~0xFFFFFu;
+    }
+
     // JIT compiler: experimental feature, disabled by default
     public bool JitEnabled { get; set; } = false;
     public int JitMinBlockLength { get; set; } = 3;
