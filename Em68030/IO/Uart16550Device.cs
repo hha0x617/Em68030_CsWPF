@@ -52,12 +52,8 @@ public class Uart16550Device : IMemoryMappedDevice
     private const byte IIR_THRI      = 0x02; // Transmitter Holding Register Empty
     private const byte IIR_FIFO_MASK = 0xC0; // FIFO enabled bits
 
-    // RX FIFO
-    private const int RxFifoSize = 64;
-    private readonly byte[] _rxFifo = new byte[RxFifoSize];
-    private int _rxHead;
-    private int _rxTail;
-    private int _rxCount;
+    // RX FIFO (unbounded queue to avoid dropping characters on paste)
+    private readonly Queue<byte> _rxFifo = new();
     private readonly object _rxLock = new();
 
     // Registers
@@ -92,11 +88,9 @@ public class Uart16550Device : IMemoryMappedDevice
                     return _dll;
                 lock (_rxLock)
                 {
-                    if (_rxCount > 0)
+                    if (_rxFifo.Count > 0)
                     {
-                        byte ch = _rxFifo[_rxHead];
-                        _rxHead = (_rxHead + 1) % RxFifoSize;
-                        _rxCount--;
+                        byte ch = _rxFifo.Dequeue();
                         UpdateInterrupt();
                         return ch;
                     }
@@ -117,7 +111,7 @@ public class Uart16550Device : IMemoryMappedDevice
                 byte lsr = LSR_THRE | LSR_TEMT; // TX always ready
                 lock (_rxLock)
                 {
-                    if (_rxCount > 0)
+                    if (_rxFifo.Count > 0)
                         lsr |= LSR_DR;
                 }
                 return lsr;
@@ -163,14 +157,11 @@ public class Uart16550Device : IMemoryMappedDevice
                     if ((_mcr & 0x10) != 0)
                     {
                         // Loopback mode: feed THR data back to RX FIFO
+                        // Limit to 16 entries to match real 16550A FIFO size.
                         lock (_rxLock)
                         {
-                            if (_rxCount < RxFifoSize)
-                            {
-                                _rxFifo[_rxTail] = value;
-                                _rxTail = (_rxTail + 1) % RxFifoSize;
-                                _rxCount++;
-                            }
+                            if (_rxFifo.Count < 16)
+                                _rxFifo.Enqueue(value);
                         }
                     }
                     else
@@ -199,7 +190,7 @@ public class Uart16550Device : IMemoryMappedDevice
                 {
                     lock (_rxLock)
                     {
-                        _rxHead = _rxTail = _rxCount = 0;
+                        _rxFifo.Clear();
                     }
                 }
                 break;
@@ -229,12 +220,7 @@ public class Uart16550Device : IMemoryMappedDevice
     {
         lock (_rxLock)
         {
-            if (_rxCount < RxFifoSize)
-            {
-                _rxFifo[_rxTail] = ch;
-                _rxTail = (_rxTail + 1) % RxFifoSize;
-                _rxCount++;
-            }
+            _rxFifo.Enqueue(ch);
         }
         UpdateInterrupt();
     }
@@ -244,7 +230,7 @@ public class Uart16550Device : IMemoryMappedDevice
         byte fifoFlag = _fifoEnabled ? IIR_FIFO_MASK : (byte)0;
 
         // Priority: RX data > TX empty
-        if ((_ier & IER_RDI) != 0 && _rxCount > 0)
+        if ((_ier & IER_RDI) != 0 && _rxFifo.Count > 0)
             return (byte)(IIR_RDI | fifoFlag);
 
         if ((_ier & IER_THRI) != 0 && _thrEmpty)

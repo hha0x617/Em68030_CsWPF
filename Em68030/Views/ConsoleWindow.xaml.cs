@@ -298,7 +298,7 @@ public partial class ConsoleWindow : Window
                 Key.Right    => arrow + "C",
                 Key.Home     => "\x1B[H",
                 Key.End      => "\x1B[F",
-                Key.Back     => "\b",
+                Key.Back     => "\x7F",
                 Key.Delete   => "\x1B[3~",
                 Key.Tab      => "\t",
                 Key.Escape   => "\x1B",
