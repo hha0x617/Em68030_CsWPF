@@ -356,6 +356,12 @@ CONFIG_EXT2_FS=y              # (File systems > Second extended fs support)
 CONFIG_PROC_FS=y              # (File systems > Pseudo filesystems > /proc file system support)
 CONFIG_SERIAL_8250=y          # (Device Drivers > Character devices > Serial drivers > 8250/16550 and compatible serial support)
 CONFIG_SERIAL_8250_CONSOLE=y  # (Device Drivers > Character devices > Serial drivers > Console on 8250/16550 and compatible serial port)
+CONFIG_NET=y                  # (Networking support)
+CONFIG_INET=y                 # (Networking support > Networking options > TCP/IP networking)
+CONFIG_NETDEVICES=y           # (Device Drivers > Network device support)
+CONFIG_ETHERNET=y             # (Device Drivers > Network device support > Ethernet driver support)
+CONFIG_NET_VENDOR_AMD=y       # (Device Drivers > Network device support > Ethernet driver support > AMD devices)
+CONFIG_MVME147_NET=y          # (Device Drivers > Network device support > Ethernet driver support > AMD devices > MVME147 (LANCE) Ethernet support)
 ```
 
 > **注意**: `CONFIG_SERIAL_8250` と `CONFIG_SERIAL_8250_CONSOLE` は必須です。これらがないと、カーネルは仮想 16550 UART を使用できず、ユーザー空間にコンソールがありません (`Warning: unable to open an initial console`)。
@@ -369,7 +375,7 @@ CONFIG_SERIAL_8250_CONSOLE=y  # (Device Drivers > Character devices > Serial dri
 menuconfig で設定を保存した後、`grep` で確認できます:
 
 ```bash
-grep -E "CONFIG_(M68030|MVME147|MVME147_SCSI|SCSI|BLK_DEV_SD|EXT2_FS|SERIAL_8250|SERIAL_8250_CONSOLE)=" .config
+grep -E "CONFIG_(M68030|MVME147|MVME147_SCSI|MVME147_NET|SCSI|BLK_DEV_SD|EXT2_FS|SERIAL_8250|SERIAL_8250_CONSOLE|NET_VENDOR_AMD)=" .config
 ```
 
 すべてのオプションが `=y` と表示されていれば正しく設定されています。オプションが表示されない、または `# CONFIG_XXX is not set` となっている場合は、`menuconfig` を再実行して有効化してください。

@@ -247,6 +247,16 @@ deb http://ftp.ports.debian.org/debian-ports/ unreleased main
 EOF
 ```
 
+#### Debian Ports アーカイブ署名鍵
+
+Debian Ports アーカイブはデフォルトの `debian-keyring` に含まれない独自の署名鍵を使用します。
+この鍵がないと `apt update` が `NO_PUBKEY C6894E6BB25B9C99` で失敗します。
+chroot セットアップ中に鍵パッケージをインストールしてください:
+
+```bash
+sudo chroot /mnt/debian /bin/sh -c "apt -o Acquire::AllowInsecureRepositories=true update && apt install -y debian-ports-archive-keyring"
+```
+
 ### 1.6 アンマウント
 
 ```bash
@@ -373,6 +383,12 @@ CONFIG_EXT4_FS=y              # (File systems > The Extended 4 (ext4) filesystem
 CONFIG_PROC_FS=y              # (File systems > Pseudo filesystems > /proc file system support)
 CONFIG_SERIAL_8250=y          # (Device Drivers > Character devices > Serial drivers > 8250/16550 and compatible serial support)
 CONFIG_SERIAL_8250_CONSOLE=y  # (Device Drivers > Character devices > Serial drivers > Console on 8250/16550 and compatible serial port)
+CONFIG_NET=y                  # (Networking support)
+CONFIG_INET=y                 # (Networking support > Networking options > TCP/IP networking)
+CONFIG_NETDEVICES=y           # (Device Drivers > Network device support)
+CONFIG_ETHERNET=y             # (Device Drivers > Network device support > Ethernet driver support)
+CONFIG_NET_VENDOR_AMD=y       # (Device Drivers > Network device support > Ethernet driver support > AMD devices)
+CONFIG_MVME147_NET=y          # (Device Drivers > Network device support > Ethernet driver support > AMD devices > MVME147 (LANCE) Ethernet support)
 CONFIG_CGROUPS=y              # (General setup > Control Group support) -- systemd に必要
 CONFIG_MEMCG=y                # (General setup > Control Group support > Memory controller)
 CONFIG_CGROUP_PIDS=y          # (General setup > Control Group support > PIDs controller)
@@ -392,7 +408,7 @@ CONFIG_CGROUP_BPF=y           # (General setup > Control Group support > Support
 menuconfig で設定を保存した後、`grep` で確認できます:
 
 ```bash
-grep -E "CONFIG_(M68030|MVME147|MVME147_SCSI|SCSI|BLK_DEV_SD|EXT4_FS|SERIAL_8250|SERIAL_8250_CONSOLE|CGROUPS|MEMCG|CGROUP_PIDS|CGROUP_FREEZER|CGROUP_DEVICE|CGROUP_BPF)=" .config
+grep -E "CONFIG_(M68030|MVME147|MVME147_SCSI|MVME147_NET|SCSI|BLK_DEV_SD|EXT4_FS|SERIAL_8250|SERIAL_8250_CONSOLE|NET_VENDOR_AMD|CGROUPS|MEMCG|CGROUP_PIDS|CGROUP_FREEZER|CGROUP_DEVICE|CGROUP_BPF)=" .config
 ```
 
 すべてのオプションが `=y` と表示されていれば正しく設定されています。オプションが表示されない、または `# CONFIG_XXX is not set` となっている場合は、`menuconfig` を再実行して有効化してください。

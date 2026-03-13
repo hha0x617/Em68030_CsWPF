@@ -356,6 +356,12 @@ CONFIG_EXT2_FS=y              # (File systems > Second extended fs support)
 CONFIG_PROC_FS=y              # (File systems > Pseudo filesystems > /proc file system support)
 CONFIG_SERIAL_8250=y          # (Device Drivers > Character devices > Serial drivers > 8250/16550 and compatible serial support)
 CONFIG_SERIAL_8250_CONSOLE=y  # (Device Drivers > Character devices > Serial drivers > Console on 8250/16550 and compatible serial port)
+CONFIG_NET=y                  # (Networking support)
+CONFIG_INET=y                 # (Networking support > Networking options > TCP/IP networking)
+CONFIG_NETDEVICES=y           # (Device Drivers > Network device support)
+CONFIG_ETHERNET=y             # (Device Drivers > Network device support > Ethernet driver support)
+CONFIG_NET_VENDOR_AMD=y       # (Device Drivers > Network device support > Ethernet driver support > AMD devices)
+CONFIG_MVME147_NET=y          # (Device Drivers > Network device support > Ethernet driver support > AMD devices > MVME147 (LANCE) Ethernet support)
 ```
 
 > **Note**: `CONFIG_SERIAL_8250` and `CONFIG_SERIAL_8250_CONSOLE` are essential. Without them, the kernel cannot use the virtual 16550 UART and userspace will have no console (`Warning: unable to open an initial console`).
@@ -369,7 +375,7 @@ CONFIG_SERIAL_8250_CONSOLE=y  # (Device Drivers > Character devices > Serial dri
 After saving the configuration in menuconfig, verify with `grep`:
 
 ```bash
-grep -E "CONFIG_(M68030|MVME147|MVME147_SCSI|SCSI|BLK_DEV_SD|EXT2_FS|SERIAL_8250|SERIAL_8250_CONSOLE)=" .config
+grep -E "CONFIG_(M68030|MVME147|MVME147_SCSI|MVME147_NET|SCSI|BLK_DEV_SD|EXT2_FS|SERIAL_8250|SERIAL_8250_CONSOLE|NET_VENDOR_AMD)=" .config
 ```
 
 All options should show `=y`. If an option is missing or shows `# CONFIG_XXX is not set`, re-run `menuconfig` and enable it.
