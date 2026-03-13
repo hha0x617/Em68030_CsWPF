@@ -34,6 +34,7 @@ public class LanceDevice : IMemoryMappedDevice
     private ushort _rap; // Selected CSR number
     private readonly ushort[] _csr = new ushort[4];
     public Action<bool>? InterruptOutput;
+    public ReadOnlySpan<byte> GetMacAddress() => _macAddress;
 
     // CSR0 bit constants
     private const ushort CSR0_ERR  = 0x8000;
@@ -250,16 +251,17 @@ public class LanceDevice : IMemoryMappedDevice
         // +0x02: padr[0..2] (3 × 16-bit) → MAC address 6 bytes
         // LANCE stores MAC in little-endian word pairs, but with BSWP
         // the CPU writes them in its natural big-endian order.
-        // PeekWord returns big-endian, so byte order is preserved.
+        // AM7990 LANCE is little-endian: kernel writes MAC byte-swapped within each 16-bit word.
+        // PeekWord returns big-endian, so we reverse the byte order within each word.
         ushort padr0 = _memory.PeekWord(iadr + 0x02);
         ushort padr1 = _memory.PeekWord(iadr + 0x04);
         ushort padr2 = _memory.PeekWord(iadr + 0x06);
-        _macAddress[0] = (byte)(padr0 >> 8);
-        _macAddress[1] = (byte)(padr0 & 0xFF);
-        _macAddress[2] = (byte)(padr1 >> 8);
-        _macAddress[3] = (byte)(padr1 & 0xFF);
-        _macAddress[4] = (byte)(padr2 >> 8);
-        _macAddress[5] = (byte)(padr2 & 0xFF);
+        _macAddress[0] = (byte)(padr0 & 0xFF);
+        _macAddress[1] = (byte)(padr0 >> 8);
+        _macAddress[2] = (byte)(padr1 & 0xFF);
+        _macAddress[3] = (byte)(padr1 >> 8);
+        _macAddress[4] = (byte)(padr2 & 0xFF);
+        _macAddress[5] = (byte)(padr2 >> 8);
 
         // +0x08: ladrf[0..3] (4 × 16-bit) → multicast filter (read but not used in Phase 1)
         // Skip reading for now

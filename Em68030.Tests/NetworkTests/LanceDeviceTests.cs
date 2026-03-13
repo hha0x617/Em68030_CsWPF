@@ -151,6 +151,22 @@ public class LanceDeviceTests
         Assert.NotEqual(0, csr0 & 0x0010); // TXON
     }
 
+    [Fact]
+    public void Init_ParsesMacAddress_LittleEndianWordOrder()
+    {
+        // AM7990 init block stores MAC byte-swapped within 16-bit words.
+        // MAC 08:00:3E:21:00:00 → words 0x0008, 0x213E, 0x0000
+        SetupAndStartLance();
+
+        var mac = _lance.GetMacAddress();
+        Assert.Equal(0x08, mac[0]);
+        Assert.Equal(0x00, mac[1]);
+        Assert.Equal(0x3E, mac[2]);
+        Assert.Equal(0x21, mac[3]);
+        Assert.Equal(0x00, mac[4]);
+        Assert.Equal(0x00, mac[5]);
+    }
+
     // ====================================================================
     // Interrupt
     // ====================================================================
@@ -306,6 +322,14 @@ public class LanceDeviceTests
         byte etLow = _memory.PeekByte(bufAddr + 13);
         Assert.Equal(0x08, etHigh);
         Assert.Equal(0x06, etLow);
+
+        // Verify ARP reply destination MAC matches guest MAC (08:00:3E:21:00:00)
+        Assert.Equal(0x08, _memory.PeekByte(bufAddr + 0));
+        Assert.Equal(0x00, _memory.PeekByte(bufAddr + 1));
+        Assert.Equal(0x3E, _memory.PeekByte(bufAddr + 2));
+        Assert.Equal(0x21, _memory.PeekByte(bufAddr + 3));
+        Assert.Equal(0x00, _memory.PeekByte(bufAddr + 4));
+        Assert.Equal(0x00, _memory.PeekByte(bufAddr + 5));
     }
 
     // ====================================================================
@@ -334,8 +358,10 @@ public class LanceDeviceTests
         // Mode
         _memory.PokeWord(InitBlockAddr, 0x0000);
         // PADR (MAC): 08:00:3E:21:00:00
-        _memory.PokeWord(InitBlockAddr + 0x02, 0x0800);
-        _memory.PokeWord(InitBlockAddr + 0x04, 0x3E21);
+        // AM7990 LANCE is little-endian: bytes are swapped within each 16-bit word.
+        // 08:00 → word 0x0008, 3E:21 → word 0x213E, 00:00 → word 0x0000
+        _memory.PokeWord(InitBlockAddr + 0x02, 0x0008);
+        _memory.PokeWord(InitBlockAddr + 0x04, 0x213E);
         _memory.PokeWord(InitBlockAddr + 0x06, 0x0000);
         // LADRF (multicast filter, all zeros)
         for (uint i = 0x08; i < 0x10; i += 2)

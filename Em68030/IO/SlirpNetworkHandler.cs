@@ -104,6 +104,10 @@ public class SlirpNetworkHandler : INetworkHandler
         public DateTime LastActivity;
         public CancellationTokenSource? Cts;
         public bool ReceiveLoopRunning;
+        // Flow control: track guest's ACK and advertised window
+        public uint TheirAck;
+        public ushort TheirWindow = 65535;
+        public readonly object WindowLock = new();
     }
 
     private enum TcpState { Connecting, SynAckSent, Established, FinWait, Closed }
@@ -524,6 +528,7 @@ public class SlirpNetworkHandler : INetworkHandler
                         session.OurSeq, session.TheirSeq, SYN | ACK, null, 0, 0);
                     _rxQueue.Enqueue(synAck);
                     session.OurSeq++; // SYN consumes 1 seq
+                    session.TheirAck = session.OurSeq; // Guest will ACK this value
 
                     // Start receive loop
                     StartTcpReceiveLoop(session, key);
@@ -555,6 +560,18 @@ public class SlirpNetworkHandler : INetworkHandler
 
         sess.LastActivity = DateTime.UtcNow;
 
+        // Update flow control from guest ACK
+        if ((flags & ACK) != 0)
+        {
+            ushort guestWindow = NetworkUtils.ReadBE16(frame, tcpOffset + 14);
+            lock (sess.WindowLock)
+            {
+                sess.TheirAck = ack;
+                sess.TheirWindow = guestWindow;
+                Monitor.PulseAll(sess.WindowLock);
+            }
+        }
+
         // ACK of our SYN+ACK → Established
         if (sess.State == TcpState.SynAckSent && (flags & ACK) != 0)
         {
@@ -581,7 +598,11 @@ public class SlirpNetworkHandler : INetworkHandler
         // Data from guest
         if ((flags & ACK) != 0 && sess.State == TcpState.Established)
         {
-            int dataLen = length - tcpOffset - tcpDataOffset;
+            // Use IP Total Length instead of Ethernet frame length to exclude padding.
+            // Short frames (e.g. pure ACK = 54 bytes) are padded to 60 bytes by the
+            // Ethernet driver; using frame length would send padding as TCP data.
+            ushort ipTotalLen = NetworkUtils.ReadBE16(frame, 16);
+            int dataLen = ipTotalLen - ipHeaderLen - tcpDataOffset;
             if (dataLen > 0 && sess.Stream != null)
             {
                 sess.TheirSeq = seq + (uint)dataLen;
@@ -652,6 +673,20 @@ public class SlirpNetworkHandler : INetworkHandler
 
                     session.LastActivity = DateTime.UtcNow;
 
+                    // Wait for guest TCP window to have room for this segment
+                    lock (session.WindowLock)
+                    {
+                        while (!_disposed && session.Cts?.IsCancellationRequested != true)
+                        {
+                            uint inFlight = session.OurSeq - session.TheirAck;
+                            if (inFlight + (uint)bytesRead <= session.TheirWindow)
+                                break;
+                            Monitor.Wait(session.WindowLock, 100);
+                        }
+                        if (_disposed || session.Cts?.IsCancellationRequested == true)
+                            break;
+                    }
+
                     // Send data to guest as TCP segment(s)
                     const byte PSH = 0x08;
                     byte[] dataPkt = BuildTcpPacket(session.DestIp, session.GuestDstPort, session.GuestSrcPort,
@@ -707,6 +742,7 @@ public class SlirpNetworkHandler : INetworkHandler
     {
         session.State = TcpState.Closed;
         try { session.Cts?.Cancel(); } catch { }
+        lock (session.WindowLock) { Monitor.PulseAll(session.WindowLock); } // Wake up receive loop
         try { session.Stream?.Dispose(); } catch { }
         try { session.Client?.Dispose(); } catch { }
         try { session.Cts?.Dispose(); } catch { }
