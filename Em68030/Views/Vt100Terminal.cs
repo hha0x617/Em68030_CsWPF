@@ -328,6 +328,32 @@ public class Vt100Terminal
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Render the full terminal output with a block cursor at the current position.
+    /// </summary>
+    public string RenderFullWithCursor()
+    {
+        var sb = new System.Text.StringBuilder(
+            _scrollbackCount * (Cols + 1) + Rows * (Cols + 1));
+        for (int i = 0; i < _scrollbackCount; i++)
+        {
+            sb.Append(_scrollback[(_scrollbackHead + i) % _maxScrollback]);
+            sb.Append('\n');
+        }
+        for (int r = 0; r < Rows; r++)
+        {
+            if (r > 0) sb.Append('\n');
+            for (int c = 0; c < Cols; c++)
+            {
+                if (r == _cursorRow && c == _cursorCol)
+                    sb.Append('\u2588');
+                else
+                    sb.Append(_screen[r, c]);
+            }
+        }
+        return sb.ToString();
+    }
+
     public int ScrollbackLineCount => _scrollbackCount;
 
     public int CursorRow => _cursorRow;

@@ -321,17 +321,6 @@
     <value>削除</value>
   </data>
 
-  <!-- Console Window -->
-  <data name="Console_Log" xml:space="preserve">
-    <value>履歴閲覧モード</value>
-  </data>
-  <data name="Console_Live" xml:space="preserve">
-    <value>ライブ</value>
-  </data>
-  <data name="Console_ToggleTooltip" xml:space="preserve">
-    <value>ライブ画面とスクロールバックログの切り替え</value>
-  </data>
-
   <!-- Dialog Buttons -->
   <data name="Dialog_OK" xml:space="preserve">
     <value>OK</value>

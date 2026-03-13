@@ -19,15 +19,13 @@
         Background="#FF0C0C0C"
         WindowStartupLocation="CenterOwner"
         InputMethod.IsInputMethodEnabled="False">
-    <DockPanel>
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Background="#FF2D2D30" Margin="0,2,0,0">
-            <Button x:Name="ScrollbackButton" Content="{x:Static p:Strings.Console_Log}" Click="ScrollbackToggle_Click" Margin="4"
-                    Background="#FF3E3E42" Foreground="#FFD4D4D4"
-                    BorderBrush="#FF555555" Padding="8,3"
-                    Focusable="False"
-                    ToolTip="{x:Static p:Strings.Console_ToggleTooltip}" />
-        </StackPanel>
-        <TextBox x:Name="OutputBox"
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBox x:Name="OutputBox" Grid.Row="0"
                  TextWrapping="NoWrap"
                  VerticalScrollBarVisibility="Auto"
                  HorizontalScrollBarVisibility="Disabled"
@@ -38,5 +36,20 @@
                  AcceptsReturn="True"
                  IsUndoEnabled="False"
                  InputMethod.IsInputMethodEnabled="False" />
-    </DockPanel>
+
+        <!-- Focus indicator bar (WinUI3-style accent bar at the bottom) -->
+        <Border x:Name="FocusIndicator" Grid.Row="1" Height="2"
+                Background="{x:Static SystemParameters.WindowGlassBrush}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsKeyboardFocused, ElementName=OutputBox}" Value="True">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+        </Border>
+    </Grid>
 </Window>

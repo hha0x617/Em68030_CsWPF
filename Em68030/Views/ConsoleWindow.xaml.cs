@@ -13,10 +13,12 @@
 
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -26,6 +28,14 @@ namespace Em68030.Views;
 
 public partial class ConsoleWindow : Window
 {
+    // Win32 interop for focus-follows-mouse (bypass foreground lock)
+    [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hWnd);
+    [DllImport("user32.dll")] private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+    private const byte VK_MENU = 0x12;
+    private const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
+    private const uint KEYEVENTF_KEYUP = 0x0002;
+
     private readonly Queue<char> _charBuffer = new();
     private readonly Queue<string> _lineBuffer = new();
     private readonly object _lock = new();
@@ -33,7 +43,7 @@ public partial class ConsoleWindow : Window
     private readonly Vt100Terminal _terminal;
     private readonly DispatcherTimer _renderTimer;
     private bool _autoScroll = true;
-    private bool _showScrollback; // When true, display full scrollback + screen
+    private bool _suppressScrollEvent;
 
     // Thread-safe output queue: emulation thread enqueues, UI thread drains
     private readonly ConcurrentQueue<char> _outputQueue = new();
@@ -64,7 +74,7 @@ public partial class ConsoleWindow : Window
         var decoder = BitmapDecoder.Create(iconUri, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
         Icon = decoder.Frames.OrderByDescending(f => f.PixelWidth).First();
 
-        // Track user scroll position to determine auto-scroll behavior
+        // Detect user scroll to toggle auto-scroll state
         OutputBox.AddHandler(ScrollViewer.ScrollChangedEvent,
             new ScrollChangedEventHandler(OnOutputScrollChanged));
 
@@ -108,15 +118,32 @@ public partial class ConsoleWindow : Window
         };
         Activated += (_, _) => OutputBox.Focus();
         SizeChanged += OnWindowSizeChanged;
-    }
 
+        // Focus-follows-mouse: activate window and focus OutputBox when mouse enters
+        OutputBox.MouseEnter += (_, _) =>
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (hwnd == IntPtr.Zero || GetForegroundWindow() == hwnd)
+                return;
+            // Bypass Windows foreground lock restriction by simulating Alt key
+            keybd_event(VK_MENU, 0, KEYEVENTF_EXTENDEDKEY, UIntPtr.Zero);
+            keybd_event(VK_MENU, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, UIntPtr.Zero);
+            SetForegroundWindow(hwnd);
+            Activate();
+            OutputBox.Focus();
+        };
+    }
     private void OnOutputScrollChanged(object sender, ScrollChangedEventArgs e)
     {
-        // Ignore scroll changes caused by content updates (new text added)
-        if (e.ExtentHeightChange != 0) return;
+        // Ignore scroll events caused by programmatic text updates
+        if (_suppressScrollEvent) return;
 
-        // User scrolled: auto-scroll if at (or near) the bottom
+        bool wasAutoScroll = _autoScroll;
         _autoScroll = e.VerticalOffset + e.ViewportHeight >= e.ExtentHeight - 2;
+
+        // Returning to auto-scroll: force render to show latest content
+        if (_autoScroll && !wasAutoScroll)
+            _terminal.SetDirty();
     }
 
     /// <summary>
@@ -231,31 +258,24 @@ public partial class ConsoleWindow : Window
 
         _terminal.ClearDirty();
 
-        if (_showScrollback)
-        {
-            OutputBox.Text = _terminal.RenderFull();
-            if (_autoScroll)
-                OutputBox.ScrollToEnd();
-        }
-        else
-        {
-            OutputBox.Text = _cursorVisible
-                ? _terminal.RenderWithCursor()
-                : _terminal.Render();
-        }
-    }
+        // While the user is browsing scrollback history, do NOT update the
+        // TextBox text — replacing text resets the scroll position, and all
+        // attempts to restore it fight with the TextBox's internal caret-scroll.
+        // The terminal still processes output (above), so when the user scrolls
+        // back to the bottom, the latest content will be shown.
+        if (!_autoScroll) return;
 
-    private void ScrollbackToggle_Click(object sender, RoutedEventArgs e)
-    {
-        _showScrollback = !_showScrollback;
-        ScrollbackButton.Content = _showScrollback ? Strings.Console_Live : Strings.Console_Log;
+        _suppressScrollEvent = true;
 
-        // Force re-render with the new mode
-        _terminal.SetDirty();
-        RenderScreen();
+        OutputBox.Text = _cursorVisible
+            ? _terminal.RenderFullWithCursor()
+            : _terminal.RenderFull();
 
-        if (_showScrollback && _autoScroll)
-            OutputBox.ScrollToEnd();
+        OutputBox.CaretIndex = OutputBox.Text.Length;
+
+        // Clear at Input priority (5) — after Render (7) and Loaded (6) process
+        // all deferred scroll events from the text/caret update.
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () => _suppressScrollEvent = false);
     }
 
     public char ReadChar()

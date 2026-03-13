@@ -321,17 +321,6 @@
     <value>Del</value>
   </data>
 
-  <!-- Console Window -->
-  <data name="Console_Log" xml:space="preserve">
-    <value>History Mode</value>
-  </data>
-  <data name="Console_Live" xml:space="preserve">
-    <value>Live</value>
-  </data>
-  <data name="Console_ToggleTooltip" xml:space="preserve">
-    <value>Toggle between live screen and full scrollback log</value>
-  </data>
-
   <!-- Dialog Buttons -->
   <data name="Dialog_OK" xml:space="preserve">
     <value>OK</value>
