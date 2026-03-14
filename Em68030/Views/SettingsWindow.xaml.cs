@@ -86,6 +86,37 @@ public partial class SettingsWindow : Window
         SelectItemByText(TargetOSBox, Config.TargetOS);
         LinuxCommandLineBox.Text = Config.LinuxCommandLine;
         UpdateTargetOSVisibility();
+        // Enumerate TAP adapters
+        var tapAdapters = TapNetworkHandler.EnumerateAdapters();
+        TapAdapterBox.Items.Clear();
+        if (tapAdapters.Count == 0)
+        {
+            TapModeItem.IsEnabled = false;
+            TapModeItem.Opacity = 0.35;
+        }
+        else
+        {
+            foreach (var adapter in tapAdapters)
+            {
+                string displayName = string.IsNullOrEmpty(adapter.Name)
+                    ? adapter.Description
+                    : adapter.Name;
+                TapAdapterBox.Items.Add(new ComboBoxItem
+                {
+                    Content = displayName,
+                    Tag = adapter.Guid
+                });
+            }
+            // Select the saved adapter
+            int tapIdx = 0;
+            for (int i = 0; i < TapAdapterBox.Items.Count; i++)
+            {
+                if (TapAdapterBox.Items[i] is ComboBoxItem ci && (string)ci.Tag == Config.TapAdapterGuid)
+                { tapIdx = i; break; }
+            }
+            TapAdapterBox.SelectedIndex = tapIdx;
+        }
+
         SelectItemByText(NetworkModeBox, Config.NetworkMode);
         NatGatewayIpBox.Text = Config.NatGatewayIp;
         NatGatewayMacBox.Text = Config.NatGatewayMac;
@@ -360,11 +391,17 @@ public partial class SettingsWindow : Window
 
     private void UpdateNatGatewayEnabled()
     {
-        bool isNat = GetSelectedItemText(NetworkModeBox).Contains("NAT");
+        string mode = GetSelectedItemText(NetworkModeBox);
+        bool isNat = mode.Contains("NAT");
+        bool isTap = mode.Contains("TAP");
+
         NatGatewayIpBox.IsEnabled = isNat;
         NatGatewayMacBox.IsEnabled = isNat;
         NatGatewayIpBox.Opacity = isNat ? 1.0 : 0.35;
         NatGatewayMacBox.Opacity = isNat ? 1.0 : 0.35;
+
+        TapAdapterGrid.Visibility = isTap ? Visibility.Visible : Visibility.Collapsed;
+        TapAdapterBox.IsEnabled = isTap;
     }
 
     private void BoardType_Changed(object sender, SelectionChangedEventArgs e)
@@ -405,6 +442,10 @@ public partial class SettingsWindow : Window
         Config.TargetOS = GetSelectedItemText(TargetOSBox);
         Config.LinuxCommandLine = LinuxCommandLineBox.Text;
         Config.NetworkMode = GetSelectedItemText(NetworkModeBox);
+
+        // Save TAP adapter GUID
+        if (TapAdapterBox.SelectedItem is ComboBoxItem tapItem && tapItem.Tag is string tapGuid)
+            Config.TapAdapterGuid = tapGuid;
 
         // Validate and save gateway IP/MAC (fallback to default on invalid input)
         var parsedIp = SlirpNetworkHandler.ParseIpAddress(NatGatewayIpBox.Text);

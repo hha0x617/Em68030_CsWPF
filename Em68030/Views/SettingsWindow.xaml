@@ -275,7 +275,16 @@
                                   SelectionChanged="NetworkMode_Changed">
                             <ComboBoxItem Content="Virtual (Echo Server)" />
                             <ComboBoxItem Content="NAT (Host Network)" />
+                            <ComboBoxItem x:Name="TapModeItem" Content="TAP (Bridge)" />
                         </ComboBox>
+                    </Grid>
+                    <Grid x:Name="TapAdapterGrid">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="TAP Adapter:" Style="{StaticResource SettingLabel}" />
+                        <ComboBox x:Name="TapAdapterBox" Grid.Column="1" />
                     </Grid>
                     <Grid>
                         <Grid.ColumnDefinitions>

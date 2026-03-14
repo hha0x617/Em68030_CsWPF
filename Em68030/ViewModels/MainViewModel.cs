@@ -462,7 +462,13 @@ public class MainViewModel : INotifyPropertyChanged
         _scsiDevice.AttachMemory(_memory);
         _lanceDevice = new LanceDevice();
         _lanceDevice.AttachMemory(_memory);
-        if (_config.NetworkMode.Contains("NAT"))
+        if (_config.NetworkMode.Contains("TAP"))
+        {
+            var tapHandler = new TapNetworkHandler(_config.TapAdapterGuid);
+            tapHandler.DiagnosticOutput = msg => _traceWriter?.Write(msg);
+            _lanceDevice.SetNetworkHandler(tapHandler);
+        }
+        else if (_config.NetworkMode.Contains("NAT"))
         {
             var gwIp = SlirpNetworkHandler.ParseIpAddress(_config.NatGatewayIp);
             var gwMac = SlirpNetworkHandler.ParseMacAddress(_config.NatGatewayMac);

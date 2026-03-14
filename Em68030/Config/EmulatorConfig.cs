@@ -64,6 +64,9 @@ public class EmulatorConfig
     // Network mode: "Virtual" (internal echo server) or "NAT" (host network via user-mode NAT)
     public string NetworkMode { get; set; } = "Virtual";
 
+    // TAP adapter GUID (used when NetworkMode == "TAP (Bridge)")
+    public string TapAdapterGuid { get; set; } = "";
+
     // NAT gateway address (shared by SlirpNetworkHandler and VirtualNetworkHandler)
     public string NatGatewayIp { get; set; } = "10.0.2.2";
     public string NatGatewayMac { get; set; } = "52:54:00:12:34:56";
