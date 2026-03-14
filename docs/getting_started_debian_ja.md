@@ -495,6 +495,12 @@ mvme147 login:
 
 通常の使用では `root=/dev/sda1 console=ttyS0,9600` で十分です。
 
+### フレームバッファと X Window System（オプション）
+
+フレームバッファコンソール (fbcon) や X Window System などのグラフィカルディスプレイの
+設定については、[フレームバッファディスプレイ セットアップガイド](setup_framebuffer_ja.md)
+を参照してください。
+
 ---
 
 ## Debian と Gentoo の比較 (m68k)

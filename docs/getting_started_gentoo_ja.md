@@ -456,6 +456,12 @@ make ARCH=m68k CROSS_COMPILE=m68k-linux-gnu- vmlinux -j$(nproc)
 
 通常の使用では `root=/dev/sda1 console=ttyS0,9600` で十分です。
 
+### フレームバッファと X Window System（オプション）
+
+フレームバッファコンソール (fbcon) や X Window System などのグラフィカルディスプレイの
+設定については、[フレームバッファディスプレイ セットアップガイド](setup_framebuffer_ja.md)
+を参照してください。
+
 ---
 
 ## 既知の制限事項

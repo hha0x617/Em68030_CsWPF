@@ -456,6 +456,11 @@ You can also press **Shift+F5** at any time to stop the emulator.
 
 For normal operation, `root=/dev/sda1 console=ttyS0,9600` is sufficient.
 
+### Framebuffer and X Window System (Optional)
+
+For graphical display support including framebuffer console (fbcon) and X Window System,
+see [Framebuffer Display Setup Guide](setup_framebuffer.md).
+
 ---
 
 ## Known Limitations
