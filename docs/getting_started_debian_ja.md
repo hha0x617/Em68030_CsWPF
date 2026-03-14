@@ -238,6 +238,12 @@ systemd-networkd を有効化します:
 sudo chroot /mnt/debian /bin/sh -c "systemctl enable systemd-networkd 2>/dev/null"
 ```
 
+#### TAP ブリッジモード（オプション）
+
+TAP ブリッジモードはゲストをホスト LAN に直接接続し、DHCP や完全なネットワーク参加を
+可能にします。TAP-Windows ドライバのインストールと Windows ブリッジ設定が必要です。
+詳細は [TAP ブリッジ セットアップガイド](setup_tap_bridge_ja.md) を参照してください。
+
 #### APT ソース (将来のパッケージインストール用)
 
 ```bash

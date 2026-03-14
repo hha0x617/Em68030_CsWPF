@@ -318,6 +318,11 @@ Register map:
 
 Guest driver: `em68030input` kernel module (in [em68030-guest-linux](https://github.com/hha0x617/em68030-guest-linux) repository).
 
+**Clipboard paste:** The framebuffer window supports Ctrl+Shift+V to paste clipboard
+text as a sequence of key events. Characters are converted to Linux KEY_* codes
+with appropriate Shift modifier handling (US keyboard layout). CR characters in
+CRLF line endings are automatically skipped.
+
 ### MK48T02 NVRAM/RTC
 
 | Item | Detail |
@@ -471,6 +476,7 @@ Features:
 |---------|------|-------------|--------|
 | VirtualNetworkHandler | `IO/VirtualNetworkHandler.h/.cpp` | Internal echo server (ARP, ICMP, TCP/UDP echo). No host network access. | NetworkMode = "Virtual" (default) |
 | SlirpNetworkHandler | `IO/SlirpNetworkHandler.h/.cpp` | User-mode NAT via libslirp. Full host network access. | NetworkMode = "NAT" |
+| TapNetworkHandler | `IO/TapNetworkHandler.h/.cpp` | TAP-Windows bridge. Guest connects directly to host LAN. | NetworkMode = "TAP" |
 
 ### MVME147 I/O Space Catch-all
 
@@ -504,6 +510,7 @@ Features:
 | Ethernet | AMD AM7990 | 0xFFFE1800 | MVME147 | Complete |
 | Virtual Net | Echo server | backend | MVME147 | Complete |
 | NAT Net | libslirp | backend | MVME147 | Complete |
+| TAP Bridge | TAP-Windows | via LANCE | MVME147 | Complete |
 | Framebuffer | Virtual EMFB | 0xFFFE8000 | MVME147 | Complete |
 | Input | Virtual EMKM | 0xFFFE9000 | MVME147 | Complete |
 | I/O Catch-all | - | 0xFFFE0000 | MVME147 | Complete |

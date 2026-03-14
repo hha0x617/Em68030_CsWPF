@@ -222,6 +222,12 @@ nameserver 8.8.8.8
 EOF
 ```
 
+#### TAP Bridge Mode (Optional)
+
+TAP bridge mode connects the guest directly to the host LAN, allowing DHCP and full
+network participation. Requires TAP-Windows driver installation and Windows bridge
+configuration. See [TAP Bridge Setup Guide](setup_tap_bridge.md) for detailed instructions.
+
 ### 1.6 Unmount
 
 Make sure your current directory is outside the mount point before unmounting.
