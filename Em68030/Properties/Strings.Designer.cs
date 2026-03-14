@@ -185,6 +185,7 @@ namespace Em68030.Properties
         public static string Settings_BootPartition => ResourceManager.GetString("Settings_BootPartition", resourceCulture) ?? "";
         public static string Settings_CommandLine => ResourceManager.GetString("Settings_CommandLine", resourceCulture) ?? "";
         public static string Settings_ScsiDisks => ResourceManager.GetString("Settings_ScsiDisks", resourceCulture) ?? "";
+        public static string Settings_ScsiDescription => ResourceManager.GetString("Settings_ScsiDescription", resourceCulture) ?? "";
         public static string Settings_AddDisk => ResourceManager.GetString("Settings_AddDisk", resourceCulture) ?? "";
         public static string Settings_NewImageSizeMB => ResourceManager.GetString("Settings_NewImageSizeMB", resourceCulture) ?? "";
         public static string Settings_Create => ResourceManager.GetString("Settings_Create", resourceCulture) ?? "";

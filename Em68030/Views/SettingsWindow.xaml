@@ -220,6 +220,8 @@
 
                     <!-- SCSI Disk Settings -->
                     <TextBlock Text="{x:Static p:Strings.Settings_ScsiDisks}" Style="{StaticResource SectionHeader}" />
+                    <TextBlock Text="{x:Static p:Strings.Settings_ScsiDescription}"
+                               Foreground="#FF808080" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
                     <StackPanel x:Name="ScsiDiskListPanel" />
                     <Button x:Name="AddScsiDiskBtn" Content="{x:Static p:Strings.Settings_AddDisk}" Click="AddScsiDisk_Click"
                             Margin="0,4" Padding="8,2"

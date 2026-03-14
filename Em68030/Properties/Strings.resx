@@ -409,6 +409,9 @@
   <data name="Settings_ScsiDisks" xml:space="preserve">
     <value>SCSI Disks</value>
   </data>
+  <data name="Settings_ScsiDescription" xml:space="preserve">
+    <value>SCSI disk changes take effect after rebooting the guest OS. CD-ROM image can be swapped at any time.</value>
+  </data>
   <data name="Settings_AddDisk" xml:space="preserve">
     <value>+ Add Disk</value>
   </data>

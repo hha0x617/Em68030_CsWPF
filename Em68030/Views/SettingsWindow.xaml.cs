@@ -491,6 +491,7 @@ public partial class SettingsWindow : Window
         }
         AddDiskRow("", freeId);
         RefreshScsiIdOptions();
+        UpdateTargetOSVisibility();
     }
 
     private void RemoveScsiDisk_Click(object sender, RoutedEventArgs e)

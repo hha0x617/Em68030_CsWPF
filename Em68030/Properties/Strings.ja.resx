@@ -409,6 +409,9 @@
   <data name="Settings_ScsiDisks" xml:space="preserve">
     <value>SCSI ディスク</value>
   </data>
+  <data name="Settings_ScsiDescription" xml:space="preserve">
+    <value>SCSI ディスクの変更はゲスト OS の再起動後に反映されます。CD-ROM イメージはいつでも交換できます。</value>
+  </data>
   <data name="Settings_AddDisk" xml:space="preserve">
     <value>+ ディスク追加</value>
   </data>

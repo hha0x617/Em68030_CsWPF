@@ -1505,6 +1505,40 @@ public class MainViewModel : INotifyPropertyChanged
 
     public void ApplyConfig(EmulatorConfig newConfig)
     {
+        // Hardware configuration changes (memory map, SCSI bus, UART, boot stub) are
+        // NOT safe while the guest CPU is running on another thread. When running,
+        // only save the config and apply JIT settings. All hardware changes take
+        // effect on next reboot or when settings are applied while the CPU is stopped.
+        if (_isRunning)
+        {
+            _config = newConfig;
+
+            // JIT settings are safe to change at runtime (atomic flags)
+            _cpu.JitEnabled = _config.JitEnabled;
+            _cpu.JitMinBlockLength = _config.JitMinBlockLength;
+            _cpu.JitCompileThreshold = _config.JitCompileThreshold;
+            if (!_config.JitEnabled)
+                _cpu.JitCache.InvalidateAll();
+
+            // CD-ROM ISO mount/unmount is safe at runtime (media swap, no bus change)
+            if (_scsiCdrom != null)
+            {
+                if (!string.IsNullOrEmpty(_config.Mvme147ScsiCdromPath) &&
+                    File.Exists(_config.Mvme147ScsiCdromPath))
+                    _scsiCdrom.MountImage(_config.Mvme147ScsiCdromPath);
+                else
+                    _scsiCdrom.UnmountImage();
+            }
+
+            _config.Save();
+            OnPropertyChanged(nameof(Config));
+            OnPropertyChanged(nameof(NetworkModeText));
+            OnPropertyChanged(nameof(JitStatusText));
+            return;
+        }
+
+        // --- CPU is stopped: safe to modify all hardware state ---
+
         // Unregister old devices
         _memory.UnregisterDevice(_config.ConsoleBaseAddress, 256);
         _memory.UnregisterDevice(_config.HddBaseAddress, 256);
@@ -1526,7 +1560,7 @@ public class MainViewModel : INotifyPropertyChanged
         else
             _hddDevice.UnmountImage();
 
-        // Hot-swap SCSI disks (MVME147 mode only)
+        // Reconfigure SCSI disks
         if (_scsiDevice != null)
         {
             // Detach all old SCSI disk IDs from the bus before destroying disk objects
