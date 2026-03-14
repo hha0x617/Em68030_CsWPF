@@ -395,8 +395,6 @@
                 <Button Content="{x:Static p:Strings.Toolbar_FullReset}" Command="{Binding FullResetCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button Content="{x:Static p:Strings.Toolbar_Trace}" Command="{Binding ToggleTraceCommand}" Style="{StaticResource ToolBarButton}" />
                 <Separator />
-                <TextBlock Text="{Binding FileStatusText}" VerticalAlignment="Center"
-                           Style="{StaticResource MonoText}" Margin="8,0" />
                 <TextBlock Text="{Binding CyclesText}" VerticalAlignment="Center"
                            Style="{StaticResource MonoText}" Margin="8,0" />
                 <TextBlock Text="{Binding EstimatedMHz}" Foreground="LightGreen" VerticalAlignment="Center"
@@ -465,6 +463,8 @@
                                          IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" />
                             <Button Content="{x:Static p:Strings.Disasm_LST}" Click="ToggleLst_Click" Style="{StaticResource ToolBarButton}"
                                     Margin="8,2" Visibility="{Binding HasLstFile, Converter={StaticResource BoolToVis}}" IsEnabled="False" />
+                            <TextBlock Text="{Binding FileStatusText}" VerticalAlignment="Center"
+                                       Style="{StaticResource MonoText}" Foreground="#FF9B9B9B" Margin="12,0" />
                         </StackPanel>
                         <ListBox x:Name="DisasmList" ItemsSource="{Binding DisassemblyLines}"
                                  Background="#FF1E1E1E" BorderThickness="0"
