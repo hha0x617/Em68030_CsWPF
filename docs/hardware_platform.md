@@ -107,6 +107,8 @@ Emulates a Motorola MVME147 VMEbus single-board computer running NetBSD/mvme68k 
 | 0xFFFE2000 - 0xFFFE2007 | 8 B | 16550A UART (Linux only, virtual) |
 | 0xFFFE3000 - 0xFFFE3003 | 4 B | Z8530 SCC (Serial Controller) |
 | 0xFFFE4000 - 0xFFFE4001 | 2 B | WD33C93 SCSI Controller |
+| 0xFFFE8000 - 0xFFFE803F | 64 B | Framebuffer Control (EMFB, virtual) |
+| 0xFFFE9000 - 0xFFFE901F | 32 B | Input Device (EMKM, virtual) |
 | 0xFFFE0000 - 0xFFFEFFFF | 64 KB | I/O Space Catch-all (fallback) |
 
 ### Interrupt Routing
@@ -240,6 +242,81 @@ Register map (DLAB=1, LCR bit 7 set):
 |--------|----------|
 | $0 | DLL (Divisor Latch Low) |
 | $1 | DLM (Divisor Latch High) |
+
+### Virtual Framebuffer Control (EMFB)
+
+| Item | Detail |
+|------|--------|
+| File | `IO/FramebufferDevice.h/.cpp` |
+| Chip | Virtual device (not present on real MVME147) |
+| Base Address | 0xFFFE8000 |
+| Size | 64 bytes |
+| Magic | `0x454D4642` ("EMFB") |
+| Activated | Only when Framebuffer is enabled in settings |
+| Status | Fully implemented |
+
+Provides identification and palette registers for the emulated framebuffer.
+VRAM itself resides in the main RAM array (fast path) and is not routed through this device.
+
+Register map:
+
+| Offset | R/W | Register |
+|--------|-----|----------|
+| $00-$03 | R | MAGIC (0x454D4642) |
+| $04-$05 | R | WIDTH |
+| $06-$07 | R | HEIGHT |
+| $08 | R | BPP (8/16/32) |
+| $0A-$0B | R | STRIDE (bytes per row) |
+| $0C-$0F | R | VRAM_BASE (physical address) |
+| $10-$13 | R | VRAM_SIZE (bytes) |
+| $14 | RW | ENABLE (1=on, 0=off) |
+| $20 | W | PAL_INDEX (palette index 0-255) |
+| $21 | W | PAL_R (red component) |
+| $22 | W | PAL_G (green component) |
+| $23 | W | PAL_B (blue, auto-increments index) |
+
+Guest driver: `em68030fb` kernel module (in [em68030-guest-linux](https://github.com/hha0x617/em68030-guest-linux) repository).
+
+### Virtual Input Device (EMKM)
+
+| Item | Detail |
+|------|--------|
+| File | `IO/InputDevice.h/.cpp` |
+| Chip | Virtual device (not present on real MVME147) |
+| Base Address | 0xFFFE9000 |
+| Size | 32 bytes |
+| Magic | `0x454D4B4D` ("EMKM") |
+| Activated | Only when Framebuffer is enabled in settings |
+| Status | Fully implemented |
+
+Provides virtual keyboard and mouse input via a host-to-guest event FIFO.
+The emulator's framebuffer window captures keyboard and pointer events and
+pushes them into this device. The guest driver polls the FIFO and reports
+events to the Linux input subsystem or NetBSD wscons.
+
+Event types: key press/release (Linux `KEY_*` codes), mouse move (absolute
+or relative), mouse button press/release (`BTN_LEFT`/`BTN_RIGHT`/`BTN_MIDDLE`).
+
+Register map:
+
+| Offset | R/W | Register |
+|--------|-----|----------|
+| $00-$03 | R | MAGIC (0x454D4B4D) |
+| $04 | R | EVENT_COUNT (0-255, clamped) |
+| $05 | R | EVENT_TYPE (1=key, 2=mouse-move, 3=mouse-btn) |
+| $06-$07 | R | EVENT_CODE (scancode or button code) |
+| $08-$09 | R | EVENT_VALUE (key: 0/1, mouse-move: delta-X or abs-X) |
+| $0A-$0B | R | EVENT_VALUE2 (mouse-move: delta-Y or abs-Y) |
+| $0C | W | EVENT_ACK (write to dequeue front event) |
+| $10 | RW | IRQ_ENABLE (bit 0) |
+| $11 | R | IRQ_STATUS (bit 0: events pending) |
+| $14-$15 | R | MOUSE_ABS_X |
+| $16-$17 | R | MOUSE_ABS_Y |
+| $18 | RW | MOUSE_MODE (0=relative, 1=absolute) |
+| $1C-$1D | R | SCREEN_WIDTH |
+| $1E-$1F | R | SCREEN_HEIGHT |
+
+Guest driver: `em68030input` kernel module (in [em68030-guest-linux](https://github.com/hha0x617/em68030-guest-linux) repository).
 
 ### MK48T02 NVRAM/RTC
 
@@ -427,4 +504,6 @@ Features:
 | Ethernet | AMD AM7990 | 0xFFFE1800 | MVME147 | Complete |
 | Virtual Net | Echo server | backend | MVME147 | Complete |
 | NAT Net | libslirp | backend | MVME147 | Complete |
+| Framebuffer | Virtual EMFB | 0xFFFE8000 | MVME147 | Complete |
+| Input | Virtual EMKM | 0xFFFE9000 | MVME147 | Complete |
 | I/O Catch-all | - | 0xFFFE0000 | MVME147 | Complete |
