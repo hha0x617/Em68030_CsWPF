@@ -434,4 +434,133 @@ public class KeyMappingTests
         Assert.Equal((ushort)0, KeyMapping.WindowsVkToLinuxKey(0xFF));
         Assert.Equal((ushort)0, KeyMapping.WindowsVkToLinuxKey(0x5B));   // VK_LWIN
     }
+
+    // ============================================================================
+    // CharToLinuxKey tests
+    // ============================================================================
+
+    [Fact]
+    public void CharToLinuxKey_LowercaseA_NoShift()
+    {
+        var (code, shift) = KeyMapping.CharToLinuxKey('a');
+        Assert.Equal((ushort)30, code);
+        Assert.False(shift);
+    }
+
+    [Fact]
+    public void CharToLinuxKey_UppercaseA_WithShift()
+    {
+        var (code, shift) = KeyMapping.CharToLinuxKey('A');
+        Assert.Equal((ushort)30, code);
+        Assert.True(shift);
+    }
+
+    [Fact]
+    public void CharToLinuxKey_LowercaseZ()
+    {
+        var (code, shift) = KeyMapping.CharToLinuxKey('z');
+        Assert.Equal((ushort)44, code);
+        Assert.False(shift);
+    }
+
+    [Fact]
+    public void CharToLinuxKey_Digit0()
+    {
+        var (code, shift) = KeyMapping.CharToLinuxKey('0');
+        Assert.Equal((ushort)11, code);
+        Assert.False(shift);
+    }
+
+    [Fact]
+    public void CharToLinuxKey_Space()
+    {
+        var (code, shift) = KeyMapping.CharToLinuxKey(' ');
+        Assert.Equal((ushort)57, code);
+        Assert.False(shift);
+    }
+
+    [Fact]
+    public void CharToLinuxKey_Enter()
+    {
+        var (code, shift) = KeyMapping.CharToLinuxKey('\n');
+        Assert.Equal((ushort)28, code);
+        Assert.False(shift);
+    }
+
+    [Fact]
+    public void CharToLinuxKey_Tab()
+    {
+        var (code, shift) = KeyMapping.CharToLinuxKey('\t');
+        Assert.Equal((ushort)15, code);
+        Assert.False(shift);
+    }
+
+    [Fact]
+    public void CharToLinuxKey_Slash_NoShift()
+    {
+        var (code, shift) = KeyMapping.CharToLinuxKey('/');
+        Assert.Equal((ushort)53, code);
+        Assert.False(shift);
+    }
+
+    [Fact]
+    public void CharToLinuxKey_QuestionMark_WithShift()
+    {
+        var (code, shift) = KeyMapping.CharToLinuxKey('?');
+        Assert.Equal((ushort)53, code);
+        Assert.True(shift);
+    }
+
+    [Fact]
+    public void CharToLinuxKey_ExclamationMark_Shift1()
+    {
+        var (code, shift) = KeyMapping.CharToLinuxKey('!');
+        Assert.Equal((ushort)2, code);
+        Assert.True(shift);
+    }
+
+    [Fact]
+    public void CharToLinuxKey_Tilde_ShiftGrave()
+    {
+        var (code, shift) = KeyMapping.CharToLinuxKey('~');
+        Assert.Equal((ushort)41, code);
+        Assert.True(shift);
+    }
+
+    [Fact]
+    public void CharToLinuxKey_Pipe_ShiftBackslash()
+    {
+        var (code, shift) = KeyMapping.CharToLinuxKey('|');
+        Assert.Equal((ushort)43, code);
+        Assert.True(shift);
+    }
+
+    [Fact]
+    public void CharToLinuxKey_UnmappedChar_ReturnsZero()
+    {
+        var (code, _) = KeyMapping.CharToLinuxKey('\x01');
+        Assert.Equal((ushort)0, code);
+    }
+
+    [Fact]
+    public void CharToLinuxKey_AllLowercase_AreMapped()
+    {
+        for (char ch = 'a'; ch <= 'z'; ch++)
+        {
+            var (code, shift) = KeyMapping.CharToLinuxKey(ch);
+            Assert.NotEqual((ushort)0, code);
+            Assert.False(shift);
+        }
+    }
+
+    [Fact]
+    public void CharToLinuxKey_AllDigits_AreMapped()
+    {
+        for (char ch = '0'; ch <= '9'; ch++)
+        {
+            var (code, shift) = KeyMapping.CharToLinuxKey(ch);
+            Assert.NotEqual((ushort)0, code);
+            Assert.False(shift);
+        }
+    }
 }

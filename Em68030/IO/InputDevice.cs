@@ -251,4 +251,33 @@ public class InputDevice : IMemoryMappedDevice
             _screenHeight = height;
         }
     }
+
+    /// <summary>Update absolute mouse position registers without pushing a FIFO event.</summary>
+    public void SetMouseAbsPosition(ushort x, ushort y)
+    {
+        lock (_lock)
+        {
+            _mouseAbsX = x;
+            _mouseAbsY = y;
+        }
+    }
+
+    /// <summary>Push a string as a sequence of key press/release events (for paste).</summary>
+    public void PushTextInput(string text)
+    {
+        const ushort KEY_LEFTSHIFT = 42;
+        foreach (char ch in text)
+        {
+            if (ch == '\r') continue; // Skip CR in CRLF — LF alone produces KEY_ENTER
+            var (keyCode, needShift) = KeyMapping.CharToLinuxKey(ch);
+            if (keyCode == 0) continue;
+
+            if (needShift)
+                PushKeyEvent(KEY_LEFTSHIFT, 1);
+            PushKeyEvent(keyCode, 1);
+            PushKeyEvent(keyCode, 0);
+            if (needShift)
+                PushKeyEvent(KEY_LEFTSHIFT, 0);
+        }
+    }
 }

@@ -147,4 +147,82 @@ public static class KeyMapping
             default: return 0;
         }
     }
+
+    /// <summary>
+    /// Maps an ASCII character to a Linux KEY_* code and whether Shift is needed.
+    /// Returns (keyCode, needShift). keyCode==0 means unmapped.
+    /// US keyboard layout assumed.
+    /// </summary>
+    public static (ushort keyCode, bool needShift) CharToLinuxKey(char ch)
+    {
+        // Letters
+        if (ch >= 'a' && ch <= 'z')
+        {
+            ReadOnlySpan<ushort> map = [30,48,46,32,18,33,34,35,23,36,37,38,50,49,24,25,16,19,31,20,22,47,17,45,21,44];
+            return (map[ch - 'a'], false);
+        }
+        if (ch >= 'A' && ch <= 'Z')
+        {
+            ReadOnlySpan<ushort> map = [30,48,46,32,18,33,34,35,23,36,37,38,50,49,24,25,16,19,31,20,22,47,17,45,21,44];
+            return (map[ch - 'A'], true);
+        }
+
+        return ch switch
+        {
+            '0' => (11, false),
+            '1' => (2, false),
+            '2' => (3, false),
+            '3' => (4, false),
+            '4' => (5, false),
+            '5' => (6, false),
+            '6' => (7, false),
+            '7' => (8, false),
+            '8' => (9, false),
+            '9' => (10, false),
+
+            // Unshifted punctuation
+            '-' => (12, false),
+            '=' => (13, false),
+            '[' => (26, false),
+            ']' => (27, false),
+            '\\' => (43, false),
+            ';' => (39, false),
+            '\'' => (40, false),
+            '`' => (41, false),
+            ',' => (51, false),
+            '.' => (52, false),
+            '/' => (53, false),
+
+            // Shifted punctuation
+            '!' => (2, true),
+            '@' => (3, true),
+            '#' => (4, true),
+            '$' => (5, true),
+            '%' => (6, true),
+            '^' => (7, true),
+            '&' => (8, true),
+            '*' => (9, true),
+            '(' => (10, true),
+            ')' => (11, true),
+            '_' => (12, true),
+            '+' => (13, true),
+            '{' => (26, true),
+            '}' => (27, true),
+            '|' => (43, true),
+            ':' => (39, true),
+            '"' => (40, true),
+            '~' => (41, true),
+            '<' => (51, true),
+            '>' => (52, true),
+            '?' => (53, true),
+
+            // Whitespace
+            ' ' => (57, false),
+            '\n' => (28, false),
+            '\r' => (28, false),
+            '\t' => (15, false),
+
+            _ => (0, false)
+        };
+    }
 }

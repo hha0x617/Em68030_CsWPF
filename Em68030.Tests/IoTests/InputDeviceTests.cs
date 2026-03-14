@@ -266,6 +266,45 @@ public class InputDeviceTests
     }
 
     // ============================================================================
+    // SetMouseAbsPosition (register-only, no FIFO event)
+    // ============================================================================
+
+    [Fact]
+    public void SetMouseAbsPosition_UpdatesRegisters()
+    {
+        _device.SetMouseAbsPosition(400, 300);
+        Assert.Equal(400, _device.ReadWord(Base + 0x14));
+        Assert.Equal(300, _device.ReadWord(Base + 0x16));
+    }
+
+    [Fact]
+    public void SetMouseAbsPosition_DoesNotPushEvent()
+    {
+        _device.SetMouseAbsPosition(100, 200);
+        Assert.Equal(0, _device.ReadByte(Base + 0x04));
+    }
+
+    [Fact]
+    public void SetMouseAbsPosition_UpdatesIndependently()
+    {
+        _device.SetMouseAbsPosition(100, 200);
+        _device.SetMouseAbsPosition(500, 400);
+        Assert.Equal(500, _device.ReadWord(Base + 0x14));
+        Assert.Equal(400, _device.ReadWord(Base + 0x16));
+        Assert.Equal(0, _device.ReadByte(Base + 0x04));
+    }
+
+    [Fact]
+    public void SetMouseAbsPosition_CoexistsWithFifoEvents()
+    {
+        _device.PushKeyEvent(30, 1);
+        _device.SetMouseAbsPosition(200, 150);
+        Assert.Equal(1, _device.ReadByte(Base + 0x04));
+        Assert.Equal(200, _device.ReadWord(Base + 0x14));
+        Assert.Equal(150, _device.ReadWord(Base + 0x16));
+    }
+
+    // ============================================================================
     // Mouse mode register
     // ============================================================================
 
@@ -363,5 +402,126 @@ public class InputDeviceTests
     public void WriteUnknownOffset_DoesNotCrash()
     {
         _device.WriteByte(Base + 0x1F, 0xFF);
+    }
+
+    // ============================================================================
+    // PushTextInput tests
+    // ============================================================================
+
+    [Fact]
+    public void PushTextInput_SingleChar_GeneratesKeyPressAndRelease()
+    {
+        _device.PushTextInput("a");
+        Assert.Equal(2, _device.ReadByte(Base + 0x04));
+
+        Assert.Equal(InputDevice.EventKey, _device.ReadByte(Base + 0x05));
+        Assert.Equal(30, _device.ReadWord(Base + 0x06)); // KEY_A
+        Assert.Equal(1, _device.ReadWord(Base + 0x08));   // press
+        _device.WriteByte(Base + 0x0C, 0);
+
+        Assert.Equal(30, _device.ReadWord(Base + 0x06));
+        Assert.Equal(0, _device.ReadWord(Base + 0x08));   // release
+        _device.WriteByte(Base + 0x0C, 0);
+
+        Assert.Equal(0, _device.ReadByte(Base + 0x04));
+    }
+
+    [Fact]
+    public void PushTextInput_UpperCase_GeneratesShiftSequence()
+    {
+        _device.PushTextInput("A");
+        Assert.Equal(4, _device.ReadByte(Base + 0x04));
+
+        // LSHIFT press
+        Assert.Equal(42, _device.ReadWord(Base + 0x06));
+        Assert.Equal(1, _device.ReadWord(Base + 0x08));
+        _device.WriteByte(Base + 0x0C, 0);
+
+        // KEY_A press
+        Assert.Equal(30, _device.ReadWord(Base + 0x06));
+        Assert.Equal(1, _device.ReadWord(Base + 0x08));
+        _device.WriteByte(Base + 0x0C, 0);
+
+        // KEY_A release
+        Assert.Equal(30, _device.ReadWord(Base + 0x06));
+        Assert.Equal(0, _device.ReadWord(Base + 0x08));
+        _device.WriteByte(Base + 0x0C, 0);
+
+        // LSHIFT release
+        Assert.Equal(42, _device.ReadWord(Base + 0x06));
+        Assert.Equal(0, _device.ReadWord(Base + 0x08));
+        _device.WriteByte(Base + 0x0C, 0);
+
+        Assert.Equal(0, _device.ReadByte(Base + 0x04));
+    }
+
+    [Fact]
+    public void PushTextInput_MultipleChars_GeneratesCorrectSequence()
+    {
+        _device.PushTextInput("ls");
+        Assert.Equal(4, _device.ReadByte(Base + 0x04));
+
+        Assert.Equal(38, _device.ReadWord(Base + 0x06)); // KEY_L
+        _device.WriteByte(Base + 0x0C, 0);
+        Assert.Equal(38, _device.ReadWord(Base + 0x06)); // KEY_L release
+        _device.WriteByte(Base + 0x0C, 0);
+        Assert.Equal(31, _device.ReadWord(Base + 0x06)); // KEY_S
+        _device.WriteByte(Base + 0x0C, 0);
+        Assert.Equal(31, _device.ReadWord(Base + 0x06)); // KEY_S release
+        _device.WriteByte(Base + 0x0C, 0);
+
+        Assert.Equal(0, _device.ReadByte(Base + 0x04));
+    }
+
+    [Fact]
+    public void PushTextInput_WithNewline_EndsWithEnter()
+    {
+        _device.PushTextInput("x\n");
+        Assert.Equal(4, _device.ReadByte(Base + 0x04));
+
+        _device.WriteByte(Base + 0x0C, 0); // skip 'x' press
+        _device.WriteByte(Base + 0x0C, 0); // skip 'x' release
+
+        Assert.Equal(28, _device.ReadWord(Base + 0x06)); // KEY_ENTER
+        Assert.Equal(1, _device.ReadWord(Base + 0x08));
+    }
+
+    [Fact]
+    public void PushTextInput_UnmappedCharsSkipped()
+    {
+        _device.PushTextInput("\x01\x02");
+        Assert.Equal(0, _device.ReadByte(Base + 0x04));
+    }
+
+    [Fact]
+    public void PushTextInput_EmptyString_NoEvents()
+    {
+        _device.PushTextInput("");
+        Assert.Equal(0, _device.ReadByte(Base + 0x04));
+    }
+
+    [Fact]
+    public void PushTextInput_LongString_AllEventsQueued()
+    {
+        _device.PushTextInput(new string('a', 100));
+        Assert.Equal(200, _device.ReadByte(Base + 0x04));
+    }
+
+    [Fact]
+    public void PushTextInput_ShiftedPunctuation()
+    {
+        _device.PushTextInput("!");
+        Assert.Equal(4, _device.ReadByte(Base + 0x04));
+
+        Assert.Equal(42, _device.ReadWord(Base + 0x06)); // LSHIFT
+        _device.WriteByte(Base + 0x0C, 0);
+        Assert.Equal(2, _device.ReadWord(Base + 0x06));  // KEY_1
+        _device.WriteByte(Base + 0x0C, 0);
+        Assert.Equal(2, _device.ReadWord(Base + 0x06));  // KEY_1 release
+        _device.WriteByte(Base + 0x0C, 0);
+        Assert.Equal(42, _device.ReadWord(Base + 0x06)); // LSHIFT release
+        _device.WriteByte(Base + 0x0C, 0);
+
+        Assert.Equal(0, _device.ReadByte(Base + 0x04));
     }
 }

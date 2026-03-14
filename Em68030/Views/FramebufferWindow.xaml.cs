@@ -60,8 +60,8 @@ public partial class FramebufferWindow : Window
         // Wire input event handlers
         if (_inputDevice != null)
         {
-            KeyDown += OnKeyDown;
-            KeyUp += OnKeyUp;
+            PreviewKeyDown += OnKeyDown;
+            PreviewKeyUp += OnKeyUp;
             DisplayImage.MouseMove += OnMouseMove;
             DisplayImage.MouseLeftButtonDown += OnMouseLeftButtonDown;
             DisplayImage.MouseLeftButtonUp += OnMouseLeftButtonUp;
@@ -187,6 +187,22 @@ public partial class FramebufferWindow : Window
     private void OnKeyDown(object sender, KeyEventArgs e)
     {
         if (_inputDevice == null) return;
+
+        // Ctrl+Shift+V: paste clipboard text as key events
+        if (e.Key == Key.V && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
+        {
+            if (Clipboard.ContainsText())
+            {
+                // Release Ctrl and Shift first — they were already sent to the guest as key presses,
+                // so the guest would interpret pasted keys as modified keys without this.
+                _inputDevice.PushKeyEvent(42, 0);  // KEY_LEFTSHIFT release
+                _inputDevice.PushKeyEvent(29, 0);  // KEY_LEFTCTRL release
+                _inputDevice.PushTextInput(Clipboard.GetText());
+            }
+            e.Handled = true;
+            return;
+        }
+
         var code = KeyMapping.WindowsVkToLinuxKey(KeyInterop.VirtualKeyFromKey(e.Key));
         if (code != 0)
         {
@@ -210,13 +226,17 @@ public partial class FramebufferWindow : Window
     {
         if (_inputDevice == null) return;
         var pos = e.GetPosition(DisplayImage);
+
+        // Scale pointer position to framebuffer coordinates and update absolute registers.
+        // The guest driver polls these registers directly for mouse position.
         double actualW = DisplayImage.ActualWidth;
         double actualH = DisplayImage.ActualHeight;
-        if (actualW <= 0 || actualH <= 0) return;
-
-        var x = (ushort)Math.Clamp(pos.X * _width / actualW, 0, _width - 1);
-        var y = (ushort)Math.Clamp(pos.Y * _height / actualH, 0, _height - 1);
-        _inputDevice.PushMouseAbsEvent(x, y);
+        if (actualW > 0 && actualH > 0)
+        {
+            var absX = (ushort)Math.Clamp(pos.X * _width / actualW, 0, _width - 1);
+            var absY = (ushort)Math.Clamp(pos.Y * _height / actualH, 0, _height - 1);
+            _inputDevice.SetMouseAbsPosition(absX, absY);
+        }
     }
 
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
