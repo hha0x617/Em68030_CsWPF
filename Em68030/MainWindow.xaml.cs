@@ -74,6 +74,11 @@ public partial class MainWindow : Window
             });
         };
 
+        _vm.OnFramebufferDeviceReset = () =>
+        {
+            Dispatcher.BeginInvoke(() => ReopenFramebufferWindow());
+        };
+
         // Initialize menu state from saved config
         MenuShowFramebuffer.IsEnabled = _vm.FramebufferDevice != null;
     }
@@ -137,6 +142,7 @@ public partial class MainWindow : Window
             try
             {
                 var result = _vm.LoadElfFile(dlg.FileName);
+                ReopenFramebufferWindow();
                 MenuShowFramebuffer.IsEnabled = _vm.FramebufferDevice != null;
 
                 MessageBox.Show(
@@ -212,7 +218,7 @@ public partial class MainWindow : Window
         if (_vm.FramebufferDevice == null) return;
         if (_framebufferWindow == null || !_framebufferWindow.IsLoaded)
         {
-            _framebufferWindow = new FramebufferWindow(_vm.Memory, _vm.FramebufferDevice);
+            _framebufferWindow = new FramebufferWindow(_vm.Memory, _vm.FramebufferDevice, _vm.InputDevice);
             _framebufferWindow.Owner = this;
             _framebufferWindow.Closed += (_, _) => _framebufferWindow = null;
             _framebufferWindow.Show();
@@ -220,6 +226,21 @@ public partial class MainWindow : Window
         else
         {
             _framebufferWindow.Activate();
+        }
+    }
+
+    private void ReopenFramebufferWindow()
+    {
+        if (_framebufferWindow == null || !_framebufferWindow.IsLoaded) return;
+        var left = _framebufferWindow.Left;
+        var top = _framebufferWindow.Top;
+        _framebufferWindow.Close();
+        _framebufferWindow = null;
+        EnsureFramebufferWindow();
+        if (_framebufferWindow != null)
+        {
+            _framebufferWindow.Left = left;
+            _framebufferWindow.Top = top;
         }
     }
 

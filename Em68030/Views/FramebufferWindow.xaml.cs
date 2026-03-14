@@ -12,11 +12,14 @@
 // limitations under the License.
 
 using System.Windows;
+using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Em68030.Core;
 using Em68030.IO;
+using InputDevice = Em68030.IO.InputDevice;
 
 namespace Em68030.Views;
 
@@ -24,6 +27,7 @@ public partial class FramebufferWindow : Window
 {
     private readonly Memory _memory;
     private readonly FramebufferDevice _device;
+    private readonly InputDevice? _inputDevice;
     private readonly WriteableBitmap _bitmap;
     private readonly DispatcherTimer _renderTimer;
     private readonly byte[] _pixelBuffer;
@@ -33,12 +37,13 @@ public partial class FramebufferWindow : Window
     private readonly uint _vramOffset;
     private readonly int _vramBytes;
 
-    public FramebufferWindow(Memory memory, FramebufferDevice device)
+    public FramebufferWindow(Memory memory, FramebufferDevice device, InputDevice? inputDevice = null)
     {
         InitializeComponent();
 
         _memory = memory;
         _device = device;
+        _inputDevice = inputDevice;
         _width = device.Width;
         _height = device.Height;
         _bpp = device.Bpp;
@@ -51,6 +56,18 @@ public partial class FramebufferWindow : Window
         _bitmap = new WriteableBitmap(_width, _height, 96, 96, PixelFormats.Bgra32, null);
         _pixelBuffer = new byte[_width * _height * 4]; // BGRA32
         DisplayImage.Source = _bitmap;
+
+        // Wire input event handlers
+        if (_inputDevice != null)
+        {
+            KeyDown += OnKeyDown;
+            KeyUp += OnKeyUp;
+            DisplayImage.MouseMove += OnMouseMove;
+            DisplayImage.MouseLeftButtonDown += OnMouseLeftButtonDown;
+            DisplayImage.MouseLeftButtonUp += OnMouseLeftButtonUp;
+            DisplayImage.MouseRightButtonDown += OnMouseRightButtonDown;
+            DisplayImage.MouseRightButtonUp += OnMouseRightButtonUp;
+        }
 
         // 30fps render timer
         _renderTimer = new DispatcherTimer(DispatcherPriority.Render)
@@ -161,6 +178,71 @@ public partial class FramebufferWindow : Window
             _pixelBuffer[dstOffset + 3] = a; // A
             dstOffset += 4;
         }
+    }
+
+    // ========================================================================
+    // Input event handlers
+    // ========================================================================
+
+    private void OnKeyDown(object sender, KeyEventArgs e)
+    {
+        if (_inputDevice == null) return;
+        var code = KeyMapping.WindowsVkToLinuxKey(KeyInterop.VirtualKeyFromKey(e.Key));
+        if (code != 0)
+        {
+            _inputDevice.PushKeyEvent(code, 1);
+            e.Handled = true;
+        }
+    }
+
+    private void OnKeyUp(object sender, KeyEventArgs e)
+    {
+        if (_inputDevice == null) return;
+        var code = KeyMapping.WindowsVkToLinuxKey(KeyInterop.VirtualKeyFromKey(e.Key));
+        if (code != 0)
+        {
+            _inputDevice.PushKeyEvent(code, 0);
+            e.Handled = true;
+        }
+    }
+
+    private void OnMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_inputDevice == null) return;
+        var pos = e.GetPosition(DisplayImage);
+        double actualW = DisplayImage.ActualWidth;
+        double actualH = DisplayImage.ActualHeight;
+        if (actualW <= 0 || actualH <= 0) return;
+
+        var x = (ushort)Math.Clamp(pos.X * _width / actualW, 0, _width - 1);
+        var y = (ushort)Math.Clamp(pos.Y * _height / actualH, 0, _height - 1);
+        _inputDevice.PushMouseAbsEvent(x, y);
+    }
+
+    private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_inputDevice == null) return;
+        DisplayImage.CaptureMouse();
+        _inputDevice.PushMouseButtonEvent(0x110, 1); // BTN_LEFT
+    }
+
+    private void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_inputDevice == null) return;
+        DisplayImage.ReleaseMouseCapture();
+        _inputDevice.PushMouseButtonEvent(0x110, 0); // BTN_LEFT
+    }
+
+    private void OnMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_inputDevice == null) return;
+        _inputDevice.PushMouseButtonEvent(0x111, 1); // BTN_RIGHT
+    }
+
+    private void OnMouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_inputDevice == null) return;
+        _inputDevice.PushMouseButtonEvent(0x111, 0); // BTN_RIGHT
     }
 
     protected override void OnClosed(EventArgs e)

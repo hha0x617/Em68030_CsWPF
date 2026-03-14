@@ -25,6 +25,7 @@ using Em68030.Config;
 using Em68030.Core;
 using Em68030.IO;
 using Em68030.Properties;
+using InputDevice = Em68030.IO.InputDevice;
 
 public class MainViewModel : INotifyPropertyChanged
 {
@@ -79,6 +80,7 @@ public class MainViewModel : INotifyPropertyChanged
     private LanceDevice? _lanceDevice;
     private Uart16550Device? _uartDevice;
     private FramebufferDevice? _framebufferDevice;
+    private InputDevice? _inputDevice;
     private uint _brdIdAddress; // Address of board ID packet in memory
     private bool _systemBooted; // True after first .BRD_ID call; used to detect warm reboot
 
@@ -327,6 +329,8 @@ public class MainViewModel : INotifyPropertyChanged
     public Memory Memory => _memory;
     public EmulatorConfig Config => _config;
     public FramebufferDevice? FramebufferDevice => _framebufferDevice;
+    public InputDevice? InputDevice => _inputDevice;
+    public Action? OnFramebufferDeviceReset;
 
     /// <summary>
     /// Send a character to the emulated system's console input.
@@ -495,6 +499,10 @@ public class MainViewModel : INotifyPropertyChanged
                 _config.FramebufferWidth, _config.FramebufferHeight,
                 _config.FramebufferBpp, _config.ComputeVramBase());
             _memory.RegisterDevice(FramebufferDevice.BaseAddress, FramebufferDevice.DeviceSize, _framebufferDevice);
+
+            _inputDevice = new InputDevice((ushort)_config.FramebufferWidth, (ushort)_config.FramebufferHeight);
+            _memory.RegisterDevice(InputDevice.BaseAddress, InputDevice.DeviceSize, _inputDevice);
+            ClearVram();
         }
 
         // Wire device interrupts through PCC
@@ -568,6 +576,9 @@ public class MainViewModel : INotifyPropertyChanged
             // FlushAll triggers OnFlush which invalidates fetch/data caches and JIT.
             _cpu.Mmu.Reset();
             _cpu.Mmu.FlushAll();
+
+            RecreateFramebufferDeviceIfNeeded();
+            ClearVram();
 
             if (!string.IsNullOrEmpty(_config.LastOpenedFile) && System.IO.File.Exists(_config.LastOpenedFile))
             {
@@ -719,7 +730,12 @@ public class MainViewModel : INotifyPropertyChanged
                     // We reload the ELF to give the kernel fresh .text/.data/.bss sections.
                     _cpu.DiagnosticOutput?.Invoke("\n[EMU] Warm reboot detected — reloading kernel and resetting\n");
                     _pccDevice?.HardwareReset();
+                    _scsiDevice?.ResetBusState();
                     _systemBooted = false;
+                    _cpu.Mmu.Reset();
+                    _cpu.Mmu.FlushAll();
+                    RecreateFramebufferDeviceIfNeeded();
+                    ClearVram();
 
                     if (!string.IsNullOrEmpty(_config.LastOpenedFile) && System.IO.File.Exists(_config.LastOpenedFile))
                     {
@@ -763,6 +779,52 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     private static byte ToBcd(int val) => (byte)(((val / 10) << 4) | (val % 10));
+
+    private void ClearVram()
+    {
+        if (_framebufferDevice == null) return;
+        var ram = _memory.FastRam;
+        if (ram != null)
+            Array.Clear(ram, (int)_framebufferDevice.VramBase, (int)_framebufferDevice.VramSize);
+    }
+
+    private void RecreateFramebufferDeviceIfNeeded()
+    {
+        bool changed = false;
+
+        if (_framebufferDevice != null)
+        {
+            if (_framebufferDevice.Width != _config.FramebufferWidth ||
+                _framebufferDevice.Height != _config.FramebufferHeight ||
+                _framebufferDevice.Bpp != _config.FramebufferBpp ||
+                !_config.FramebufferEnabled)
+            {
+                _memory.UnregisterDevice(FramebufferDevice.BaseAddress, FramebufferDevice.DeviceSize);
+                _framebufferDevice = null;
+                if (_inputDevice != null)
+                {
+                    _memory.UnregisterDevice(InputDevice.BaseAddress, InputDevice.DeviceSize);
+                    _inputDevice = null;
+                }
+                changed = true;
+            }
+        }
+
+        if (_framebufferDevice == null && _config.FramebufferEnabled)
+        {
+            _framebufferDevice = new FramebufferDevice(
+                _config.FramebufferWidth, _config.FramebufferHeight,
+                _config.FramebufferBpp, _config.ComputeVramBase());
+            _memory.RegisterDevice(FramebufferDevice.BaseAddress, FramebufferDevice.DeviceSize, _framebufferDevice);
+
+            _inputDevice = new InputDevice((ushort)_config.FramebufferWidth, (ushort)_config.FramebufferHeight);
+            _memory.RegisterDevice(InputDevice.BaseAddress, InputDevice.DeviceSize, _inputDevice);
+            changed = true;
+        }
+
+        if (changed)
+            OnFramebufferDeviceReset?.Invoke();
+    }
 
     /// <summary>
     /// Writes an mvmeprom_brdid structure for MVME147 at the given address.
@@ -1609,10 +1671,7 @@ public class MainViewModel : INotifyPropertyChanged
             }
         }
 
-        // Framebuffer device is NOT hot-swappable: VRAM is placed at the top of RAM
-        // and the kernel's memory map (BI_MEMCHUNK / RTC onboardRamEnd) is fixed at boot.
-        // Enabling/disabling framebuffer or changing resolution requires a reboot.
-        // Config values are saved and will take effect on next boot.
+        RecreateFramebufferDeviceIfNeeded();
 
         // TargetOS change: update UART 16550, RTC year offset, and boot stub
         if (_config.BoardType == "MVME147")
