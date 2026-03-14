@@ -138,12 +138,23 @@ public partial class ConsoleWindow : Window
         // Ignore scroll events caused by programmatic text updates
         if (_suppressScrollEvent) return;
 
-        bool wasAutoScroll = _autoScroll;
-        _autoScroll = e.VerticalOffset + e.ViewportHeight >= e.ExtentHeight - 2;
+        bool atBottom = e.VerticalOffset + e.ViewportHeight >= e.ExtentHeight - 2;
 
-        // Returning to auto-scroll: force render to show latest content
-        if (_autoScroll && !wasAutoScroll)
-            _terminal.SetDirty();
+        if (_autoScroll)
+        {
+            // Only leave auto-scroll when user explicitly scrolls up
+            if (e.VerticalChange < 0 && !atBottom)
+                _autoScroll = false;
+        }
+        else
+        {
+            // Return to auto-scroll when user scrolls to bottom
+            if (atBottom)
+            {
+                _autoScroll = true;
+                _terminal.SetDirty();
+            }
+        }
     }
 
     /// <summary>
