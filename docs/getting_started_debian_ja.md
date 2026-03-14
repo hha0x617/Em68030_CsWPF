@@ -403,6 +403,8 @@ CONFIG_CGROUP_BPF=y           # (General setup > Control Group support > Support
 
 > **注意**: `mvme16x_defconfig` では `CONFIG_M68040` と `CONFIG_M68060` がデフォルトで有効です。カーネルは実行時に CPU タイプを検出するため、有効のままでも問題ありません。無効にするとカーネルサイズが若干小さくなります。
 
+> **注意**: `CONFIG_TRIM_UNUSED_KSYMS` は `mvme16x_defconfig` でデフォルト有効です。外部カーネルモジュール（例: `em68030fb`）をビルドする予定がある場合はこのオプションを無効にしてください。有効のままだと、カーネルから未使用のエクスポートシンボルが削除され、`insmod` 時に "Unknown symbol in module" エラーが発生します。menuconfig: **General setup > Enable unused/obsolete exported symbols** → `n` で無効化（このメニュー項目を `n` にすると `CONFIG_TRIM_UNUSED_KSYMS=y` が設定されます。紛らわしいですが、メニュー項目の `y` が trimming の *無効化* に相当します）。
+
 > **ヒント**: menuconfig で `/` キーを押すとシンボル名で検索できます (例: `SERIAL_8250`)。各オプションの階層と依存関係が表示されます。
 
 menuconfig で設定を保存した後、`grep` で確認できます:

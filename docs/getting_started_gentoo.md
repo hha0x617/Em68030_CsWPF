@@ -370,6 +370,8 @@ CONFIG_MVME147_NET=y          # (Device Drivers > Network device support > Ether
 
 > **Note**: `CONFIG_M68040` and `CONFIG_M68060` are enabled by default in `mvme16x_defconfig`. They can be left enabled -- the kernel detects the CPU type at runtime. Disabling them slightly reduces the kernel size.
 
+> **Note**: `CONFIG_TRIM_UNUSED_KSYMS` is enabled by default in `mvme16x_defconfig`. If you plan to build out-of-tree kernel modules (e.g., `em68030fb`), disable this option. It strips unexported symbols from the kernel, causing `insmod` to fail with "Unknown symbol in module". In menuconfig: **General setup > Enable unused/obsolete exported symbols** → `n` (which sets `CONFIG_TRIM_UNUSED_KSYMS=y`; confusingly, `y` for the menu entry *disables* trimming).
+
 > **Tip**: In menuconfig, press `/` to search for a config symbol by name (e.g., `SERIAL_8250`) to see its location and dependencies.
 
 After saving the configuration in menuconfig, verify with `grep`:
