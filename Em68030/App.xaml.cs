@@ -11,8 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-﻿using System.Configuration;
-using System.Data;
+using System.Globalization;
 using System.Windows;
 
 namespace Em68030;
@@ -22,5 +21,25 @@ namespace Em68030;
 /// </summary>
 public partial class App : Application
 {
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        // --lang=xx-XX command line argument to override UI language
+        foreach (var arg in e.Args)
+        {
+            if (arg.StartsWith("--lang=", StringComparison.OrdinalIgnoreCase))
+            {
+                var lang = arg["--lang=".Length..];
+                if (!string.IsNullOrEmpty(lang))
+                {
+                    var culture = new CultureInfo(lang);
+                    Thread.CurrentThread.CurrentUICulture = culture;
+                    Thread.CurrentThread.CurrentCulture = culture;
+                    CultureInfo.DefaultThreadCurrentUICulture = culture;
+                }
+                break;
+            }
+        }
+        base.OnStartup(e);
+    }
 }
 
