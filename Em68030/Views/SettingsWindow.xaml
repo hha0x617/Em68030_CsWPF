@@ -278,6 +278,8 @@
                             <ComboBoxItem x:Name="TapModeItem" Content="TAP (Bridge)" />
                         </ComboBox>
                     </Grid>
+                    <TextBlock Text="{x:Static p:Strings.Settings_NetworkDescription}"
+                               Foreground="#FF808080" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
                     <Grid x:Name="TapAdapterGrid">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="150" />

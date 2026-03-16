@@ -457,6 +457,9 @@
   <data name="Settings_MemoryDescription" xml:space="preserve">
     <value>メモリサイズの変更はカーネルイメージの再読み込み後に反映されます。</value>
   </data>
+  <data name="Settings_NetworkDescription" xml:space="preserve">
+    <value>ネットワークモードの変更はカーネルイメージの再読み込み後に反映されます。</value>
+  </data>
   <data name="Settings_IoDevices" xml:space="preserve">
     <value>I/O デバイス</value>
   </data>

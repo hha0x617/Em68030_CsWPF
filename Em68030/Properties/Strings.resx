@@ -457,6 +457,9 @@
   <data name="Settings_MemoryDescription" xml:space="preserve">
     <value>Memory size changes take effect after reloading the kernel image.</value>
   </data>
+  <data name="Settings_NetworkDescription" xml:space="preserve">
+    <value>Network mode changes take effect after reloading the kernel image.</value>
+  </data>
   <data name="Settings_IoDevices" xml:space="preserve">
     <value>I/O Devices</value>
   </data>
