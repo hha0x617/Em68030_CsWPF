@@ -818,9 +818,13 @@ public class MainViewModel : INotifyPropertyChanged
 
         if (_framebufferDevice == null && _config.FramebufferEnabled)
         {
+            // Use actual memory size for VRAM base — config MemorySize may differ
+            uint actualMem = _memory.FastRamSize;
+            uint vramSize = (uint)(_config.FramebufferWidth * _config.FramebufferHeight * _config.FramebufferBpp / 8);
+            uint vramBase = (actualMem - vramSize) & ~0xFFFFFu;
             _framebufferDevice = new FramebufferDevice(
                 _config.FramebufferWidth, _config.FramebufferHeight,
-                _config.FramebufferBpp, _config.ComputeVramBase());
+                _config.FramebufferBpp, vramBase);
             _memory.RegisterDevice(FramebufferDevice.BaseAddress, FramebufferDevice.DeviceSize, _framebufferDevice);
 
             _inputDevice = new InputDevice((ushort)_config.FramebufferWidth, (ushort)_config.FramebufferHeight);
@@ -1702,12 +1706,14 @@ public class MainViewModel : INotifyPropertyChanged
             if (_rtcDevice != null)
                 _rtcDevice.YearBase = _config.TargetOS == "Linux" ? 0 : 1968;
 
-            // Re-setup boot stub if a kernel is already loaded
+            // Re-setup boot stub if a kernel is already loaded.
+            // Use actual Memory size (not config) — memory is not resized until ELF reload.
             if (_programEndAddress > _programStartAddress)
             {
+                uint actualMemSize = _memory.FastRamSize;
                 uint topOfRam = _config.FramebufferEnabled
-                                ? _config.ComputeVramBase()
-                                : (uint)_config.MemorySize;
+                                ? Math.Min(_config.ComputeVramBase(), actualMemSize)
+                                : actualMemSize;
                 if (_config.TargetOS == "Linux")
                     SetupMvme147LinuxBootStub(topOfRam, _programEndAddress);
                 else
