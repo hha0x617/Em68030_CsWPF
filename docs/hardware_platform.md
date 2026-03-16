@@ -243,6 +243,22 @@ Register map (DLAB=1, LCR bit 7 set):
 | $0 | DLL (Divisor Latch Low) |
 | $1 | DLM (Divisor Latch High) |
 
+**Serial console keyboard shortcuts:**
+
+| Shortcut | Action |
+|----------|--------|
+| Ctrl+C | Copy selected text (or send ETX if no selection) |
+| Ctrl+V | Paste clipboard text |
+| Ctrl+Shift+F | Open search bar |
+| F3 | Find next match (search mode only) |
+| Shift+F3 | Find previous match (search mode only) |
+| Escape | Close search bar (search mode only) |
+
+The search bar supports plain text search (case-insensitive) and regular expression
+search via the `.*` toggle button. In regex mode, the C# WPF version supports
+inline modifiers such as `(?-i)` for case-sensitive matching. The C++ WinUI3 version
+uses ECMAScript regex syntax which does not support inline modifiers.
+
 ### Virtual Framebuffer Control (EMFB)
 
 | Item | Detail |

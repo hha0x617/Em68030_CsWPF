@@ -32,7 +32,7 @@ Developed through vibe coding with [Claude Code](https://docs.anthropic.com/en/d
 - Register display and editing (D0-D7, A0-A7, PC, SR, SSP, VBR, FP0-FP7)
 - Memory dump and editing
 - Breakpoints
-- Console window (VT100 terminal with scrollback and paste support)
+- Serial console window (VT100 terminal with scrollback, search, copy and paste support)
 - ELF / S-Record / binary file loading
 - Warm reboot (RESET instruction) and halt detection
 
