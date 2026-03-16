@@ -27,7 +27,7 @@
 
         <TextBox x:Name="OutputBox" Grid.Row="0"
                  TextWrapping="Wrap"
-                 VerticalScrollBarVisibility="Auto"
+                 VerticalScrollBarVisibility="Visible"
                  HorizontalScrollBarVisibility="Disabled"
                  FontFamily="Consolas" FontSize="14"
                  Background="#FF0C0C0C" Foreground="#FF00FF00"
@@ -46,19 +46,8 @@
             </TextBox.ContextMenu>
         </TextBox>
 
-        <!-- Focus indicator bar (WinUI3-style accent bar at the bottom) -->
+        <!-- Focus indicator bar (accent bar at the bottom) -->
         <Border x:Name="FocusIndicator" Grid.Row="1" Height="2"
-                Background="{x:Static SystemParameters.WindowGlassBrush}">
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Setter Property="Visibility" Value="Collapsed" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsKeyboardFocused, ElementName=OutputBox}" Value="True">
-                            <Setter Property="Visibility" Value="Visible" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
-        </Border>
+                Background="#FF4CC2FF" Visibility="Collapsed" />
     </Grid>
 </Window>

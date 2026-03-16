@@ -114,7 +114,8 @@ public partial class ConsoleWindow : Window
             // Resize window to fit the configured terminal dimensions
             if (_charMeasured && _charWidth > 0 && _charHeight > 0)
             {
-                double contentWidth = _terminal.Cols * _charWidth + 8;
+                double scrollBarW = SystemParameters.VerticalScrollBarWidth;
+                double contentWidth = _terminal.Cols * _charWidth + 8 + scrollBarW;
                 double contentHeight = _terminal.Rows * _charHeight + 8;
                 double chromeWidth = ActualWidth - OutputBox.ActualWidth;
                 double chromeHeight = ActualHeight - OutputBox.ActualHeight;
@@ -124,6 +125,10 @@ public partial class ConsoleWindow : Window
         };
         Activated += (_, _) => OutputBox.Focus();
         SizeChanged += OnWindowSizeChanged;
+
+        // Show/hide focus indicator bar based on keyboard focus
+        OutputBox.GotKeyboardFocus += (_, _) => FocusIndicator.Visibility = Visibility.Visible;
+        OutputBox.LostKeyboardFocus += (_, _) => FocusIndicator.Visibility = Visibility.Collapsed;
 
         // Focus-follows-mouse: activate window and focus OutputBox when mouse enters
         OutputBox.MouseEnter += (_, _) =>
@@ -188,7 +193,8 @@ public partial class ConsoleWindow : Window
         // Adjust window size to fit the new terminal dimensions
         if (_charMeasured && _charWidth > 0 && _charHeight > 0)
         {
-            double contentWidth = cols * _charWidth + 8; // Padding="4" left+right
+            double scrollBarWidth = SystemParameters.VerticalScrollBarWidth;
+            double contentWidth = cols * _charWidth + 8 + scrollBarWidth; // Padding + scrollbar
             double contentHeight = rows * _charHeight + 8; // Padding="4" top+bottom
             double chromeWidth = ActualWidth - OutputBox.ActualWidth;
             double chromeHeight = ActualHeight - OutputBox.ActualHeight;
@@ -212,7 +218,7 @@ public partial class ConsoleWindow : Window
         if (!_charMeasured) return;
         double chromeWidth = ActualWidth - OutputBox.ActualWidth;
         double chromeHeight = ActualHeight - OutputBox.ActualHeight;
-        MinWidth = 80 * _charWidth + 8 + chromeWidth;  // Padding="4" left+right
+        MinWidth = 80 * _charWidth + 8 + SystemParameters.VerticalScrollBarWidth + chromeWidth;
         MinHeight = 24 * _charHeight + 8 + chromeHeight; // Padding="4" top+bottom
     }
 
@@ -225,7 +231,9 @@ public partial class ConsoleWindow : Window
     {
         if (!_charMeasured || _charWidth <= 0 || _charHeight <= 0) return;
 
-        double availableWidth = OutputBox.ActualWidth - 8; // padding
+        // Subtract padding (4+4=8) and scrollbar width from text area
+        double scrollBarWidth = SystemParameters.VerticalScrollBarWidth;
+        double availableWidth = OutputBox.ActualWidth - 8 - scrollBarWidth; // padding + scrollbar
         double availableHeight = OutputBox.ActualHeight - 8;
         if (availableWidth <= 0 || availableHeight <= 0) return;
 
