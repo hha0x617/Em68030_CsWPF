@@ -25,6 +25,11 @@ public class Vt100Terminal
     public int Rows { get; private set; }
 
     private char[,] _screen;
+
+    // Soft-wrap flags: true if this row is a continuation of the previous row
+    // (auto-wrap at column limit, not a real newline from the guest).
+    private bool[] _softWrap;
+
     private int _cursorRow;
     private int _cursorCol;
     private bool _dirty = true;
@@ -32,6 +37,7 @@ public class Vt100Terminal
     // Scrollback buffer: circular ring buffer of lines that scrolled off the top.
     // Using a fixed array + head/count avoids O(N) RemoveAt(0) on every scroll.
     private string[] _scrollback;
+    private bool[] _scrollbackSoftWrap; // true if line is a soft-wrap continuation
     private int _scrollbackHead;  // Index of oldest line
     private int _scrollbackCount; // Number of lines stored
     private int _maxScrollback;
@@ -58,6 +64,10 @@ public class Vt100Terminal
 
     // Alternate character set (line drawing)
     private bool _alternateCharset;
+
+    // UTF-8 decoder state: accumulates multibyte sequences
+    private int _utf8Remaining;   // bytes remaining in current sequence
+    private int _utf8CodePoint;   // accumulated code point
 
     // VT100 line drawing characters mapped from ASCII
     private static readonly Dictionary<char, char> LineDrawingMap = new()
@@ -87,7 +97,9 @@ public class Vt100Terminal
         Rows = rows;
         _maxScrollback = Math.Clamp(maxScrollback, 0, 100000);
         _scrollback = new string[_maxScrollback > 0 ? _maxScrollback : 1];
+        _scrollbackSoftWrap = new bool[_scrollback.Length];
         _screen = new char[rows, cols];
+        _softWrap = new bool[rows];
         _scrollTop = 0;
         _scrollBottom = rows - 1;
         ClearScreen();
@@ -108,13 +120,18 @@ public class Vt100Terminal
         if (newMax == _maxScrollback) return;
 
         var newBuf = new string[newMax > 0 ? newMax : 1];
+        var newWrap = new bool[newBuf.Length];
         if (newMax > 0 && _scrollbackCount > 0)
         {
             // Copy the most recent lines into the new buffer
             int copyCount = Math.Min(_scrollbackCount, newMax);
             int srcStart = (_scrollbackHead + _scrollbackCount - copyCount) % _maxScrollback;
             for (int i = 0; i < copyCount; i++)
-                newBuf[i] = _scrollback[(srcStart + i) % _maxScrollback];
+            {
+                int srcIdx = (srcStart + i) % _maxScrollback;
+                newBuf[i] = _scrollback[srcIdx];
+                newWrap[i] = _scrollbackSoftWrap[srcIdx];
+            }
             _scrollbackHead = 0;
             _scrollbackCount = copyCount;
         }
@@ -125,6 +142,7 @@ public class Vt100Terminal
         }
 
         _scrollback = newBuf;
+        _scrollbackSoftWrap = newWrap;
         _maxScrollback = newMax;
         _dirty = true;
     }
@@ -244,6 +262,50 @@ public class Vt100Terminal
 
     public void Write(char ch)
     {
+        // UTF-8 decode: the caller passes raw bytes as char values.
+        // Multibyte sequences (0x80+) need to be accumulated and decoded.
+        int b = ch & 0xFF;
+        if (_utf8Remaining > 0)
+        {
+            if ((b & 0xC0) == 0x80) // continuation byte
+            {
+                _utf8CodePoint = (_utf8CodePoint << 6) | (b & 0x3F);
+                _utf8Remaining--;
+                if (_utf8Remaining == 0)
+                {
+                    // Sequence complete — emit the decoded character
+                    ch = _utf8CodePoint <= 0xFFFF ? (char)_utf8CodePoint : '?';
+                }
+                else
+                {
+                    return; // still accumulating
+                }
+            }
+            else
+            {
+                // Invalid continuation — reset and process this byte normally
+                _utf8Remaining = 0;
+            }
+        }
+        else if (b >= 0xC0 && b <= 0xDF) // 2-byte sequence start
+        {
+            _utf8CodePoint = b & 0x1F;
+            _utf8Remaining = 1;
+            return;
+        }
+        else if (b >= 0xE0 && b <= 0xEF) // 3-byte sequence start
+        {
+            _utf8CodePoint = b & 0x0F;
+            _utf8Remaining = 2;
+            return;
+        }
+        else if (b >= 0xF0 && b <= 0xF7) // 4-byte sequence start
+        {
+            _utf8CodePoint = b & 0x07;
+            _utf8Remaining = 3;
+            return;
+        }
+
         switch (_state)
         {
             case State.Normal:
@@ -280,8 +342,14 @@ public class Vt100Terminal
         var sb = new System.Text.StringBuilder(Rows * (Cols + 1));
         for (int r = 0; r < Rows; r++)
         {
-            if (r > 0) sb.Append('\n');
-            for (int c = 0; c < Cols; c++)
+            // Insert newline before this row, unless it's a soft-wrap continuation
+            if (r > 0 && !_softWrap[r]) sb.Append('\n');
+
+            // Trim trailing spaces, but keep cursor row consistent with RenderWithCursor
+            int lastCol = Cols - 1;
+            while (lastCol >= 0 && _screen[r, lastCol] == ' ') lastCol--;
+            if (r == _cursorRow && _cursorCol > lastCol) lastCol = _cursorCol;
+            for (int c = 0; c <= lastCol; c++)
                 sb.Append(_screen[r, c]);
         }
         return sb.ToString();
@@ -295,8 +363,14 @@ public class Vt100Terminal
         var sb = new System.Text.StringBuilder(Rows * (Cols + 1));
         for (int r = 0; r < Rows; r++)
         {
-            if (r > 0) sb.Append('\n');
-            for (int c = 0; c < Cols; c++)
+            if (r > 0 && !_softWrap[r]) sb.Append('\n');
+
+            // Trim trailing spaces, but ensure cursor column is included
+            int lastCol = Cols - 1;
+            while (lastCol >= 0 && _screen[r, lastCol] == ' ') lastCol--;
+            if (r == _cursorRow && _cursorCol > lastCol) lastCol = _cursorCol;
+
+            for (int c = 0; c <= lastCol; c++)
             {
                 if (r == _cursorRow && c == _cursorCol)
                     sb.Append('\u2588'); // Full block cursor
@@ -316,13 +390,22 @@ public class Vt100Terminal
             _scrollbackCount * (Cols + 1) + Rows * (Cols + 1));
         for (int i = 0; i < _scrollbackCount; i++)
         {
-            sb.Append(_scrollback[(_scrollbackHead + i) % _maxScrollback]);
-            sb.Append('\n');
+            int idx = (_scrollbackHead + i) % _maxScrollback;
+            if (i > 0 && !_scrollbackSoftWrap[idx])
+                sb.Append('\n');
+            sb.Append(_scrollback[idx]);
         }
         for (int r = 0; r < Rows; r++)
         {
-            if (r > 0) sb.Append('\n');
-            for (int c = 0; c < Cols; c++)
+            if (_scrollbackCount > 0 || r > 0)
+            {
+                if (!_softWrap[r])
+                    sb.Append('\n');
+            }
+            int lastCol = Cols - 1;
+            while (lastCol >= 0 && _screen[r, lastCol] == ' ') lastCol--;
+            if (r == _cursorRow && _cursorCol > lastCol) lastCol = _cursorCol;
+            for (int c = 0; c <= lastCol; c++)
                 sb.Append(_screen[r, c]);
         }
         return sb.ToString();
@@ -337,13 +420,22 @@ public class Vt100Terminal
             _scrollbackCount * (Cols + 1) + Rows * (Cols + 1));
         for (int i = 0; i < _scrollbackCount; i++)
         {
-            sb.Append(_scrollback[(_scrollbackHead + i) % _maxScrollback]);
-            sb.Append('\n');
+            int idx = (_scrollbackHead + i) % _maxScrollback;
+            if (i > 0 && !_scrollbackSoftWrap[idx])
+                sb.Append('\n');
+            sb.Append(_scrollback[idx]);
         }
         for (int r = 0; r < Rows; r++)
         {
-            if (r > 0) sb.Append('\n');
-            for (int c = 0; c < Cols; c++)
+            if (_scrollbackCount > 0 || r > 0)
+            {
+                if (!_softWrap[r])
+                    sb.Append('\n');
+            }
+            int lastCol = Cols - 1;
+            while (lastCol >= 0 && _screen[r, lastCol] == ' ') lastCol--;
+            if (r == _cursorRow && _cursorCol > lastCol) lastCol = _cursorCol;
+            for (int c = 0; c <= lastCol; c++)
             {
                 if (r == _cursorRow && c == _cursorCol)
                     sb.Append('\u2588');
@@ -375,6 +467,7 @@ public class Vt100Terminal
             case '\n': // LF — also do CR (the write bypass skips tty ONLCR processing)
                 _cursorCol = 0;
                 LineFeed();
+                _softWrap[_cursorRow] = false; // Real newline, not a continuation
                 break;
             case '\b': // BS
                 if (_cursorCol > 0) _cursorCol--;
@@ -407,9 +500,10 @@ public class Vt100Terminal
 
         if (_cursorCol >= Cols)
         {
-            // Auto-wrap
+            // Auto-wrap: mark the next line as a soft-wrap continuation
             _cursorCol = 0;
             LineFeed();
+            _softWrap[_cursorRow] = true;
         }
 
         _screen[_cursorRow, _cursorCol] = ch;
@@ -508,8 +602,11 @@ public class Vt100Terminal
             return;
         }
 
-        if (ch == ';')
+        if (ch == ';' || ch == ':')
         {
+            // Semicolon separates parameters; colon separates sub-parameters
+            // (e.g., SGR 38:5:185 for 256-color). Treat colon like semicolon
+            // since we don't use sub-parameter semantics.
             _csiParams.Add(_hasCurrentParam ? _currentParam : 0);
             _currentParam = 0;
             _hasCurrentParam = false;
@@ -810,17 +907,23 @@ public class Vt100Terminal
                     line[c] = _screen[_scrollTop, c];
                 int writeIdx = (_scrollbackHead + _scrollbackCount) % _maxScrollback;
                 _scrollback[writeIdx] = new string(line).TrimEnd();
+                _scrollbackSoftWrap[writeIdx] = _softWrap[_scrollTop];
                 if (_scrollbackCount < _maxScrollback)
                     _scrollbackCount++;
                 else
                     _scrollbackHead = (_scrollbackHead + 1) % _maxScrollback; // Overwrite oldest
             }
 
+            // Shift soft-wrap flags along with screen rows
             for (int r = _scrollTop; r < _scrollBottom; r++)
+            {
                 for (int c = 0; c < Cols; c++)
                     _screen[r, c] = _screen[r + 1, c];
+                _softWrap[r] = _softWrap[r + 1];
+            }
             for (int c = 0; c < Cols; c++)
                 _screen[_scrollBottom, c] = ' ';
+            _softWrap[_scrollBottom] = false;
         }
         _dirty = true;
     }
@@ -830,10 +933,14 @@ public class Vt100Terminal
         for (int i = 0; i < n; i++)
         {
             for (int r = _scrollBottom; r > _scrollTop; r--)
+            {
                 for (int c = 0; c < Cols; c++)
                     _screen[r, c] = _screen[r - 1, c];
+                _softWrap[r] = _softWrap[r - 1];
+            }
             for (int c = 0; c < Cols; c++)
                 _screen[_scrollTop, c] = ' ';
+            _softWrap[_scrollTop] = false;
         }
         _dirty = true;
     }
@@ -845,6 +952,7 @@ public class Vt100Terminal
         for (int r = 0; r < Rows; r++)
             for (int c = 0; c < Cols; c++)
                 _screen[r, c] = ' ';
+        if (_softWrap != null) Array.Fill(_softWrap, false);
         _dirty = true;
     }
 

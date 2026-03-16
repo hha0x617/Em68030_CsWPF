@@ -97,6 +97,12 @@ public partial class ConsoleWindow : Window
             ApplicationCommands.Paste, OnPasteCommand,
             (_, args) => { args.CanExecute = true; args.Handled = true; }));
 
+        // Explicitly enable Select All in context menu
+        OutputBox.CommandBindings.Add(new CommandBinding(
+            ApplicationCommands.SelectAll,
+            (_, _) => OutputBox.SelectAll(),
+            (_, args) => { args.CanExecute = true; args.Handled = true; }));
+
         // Focus the output area for keyboard capture
         Loaded += (_, _) =>
         {
@@ -138,7 +144,9 @@ public partial class ConsoleWindow : Window
         // Ignore scroll events caused by programmatic text updates
         if (_suppressScrollEvent) return;
 
-        bool atBottom = e.VerticalOffset + e.ViewportHeight >= e.ExtentHeight - 2;
+        // Threshold: one line height to account for TextWrapping layout changes
+        double threshold = _charHeight > 0 ? _charHeight : 20;
+        bool atBottom = e.VerticalOffset + e.ViewportHeight >= e.ExtentHeight - threshold;
 
         if (_autoScroll)
         {

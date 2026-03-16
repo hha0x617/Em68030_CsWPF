@@ -26,7 +26,7 @@
         </Grid.RowDefinitions>
 
         <TextBox x:Name="OutputBox" Grid.Row="0"
-                 TextWrapping="NoWrap"
+                 TextWrapping="Wrap"
                  VerticalScrollBarVisibility="Auto"
                  HorizontalScrollBarVisibility="Disabled"
                  FontFamily="Consolas" FontSize="14"
@@ -35,7 +35,16 @@
                  Padding="4"
                  AcceptsReturn="True"
                  IsUndoEnabled="False"
-                 InputMethod.IsInputMethodEnabled="False" />
+                 InputMethod.IsInputMethodEnabled="False">
+            <TextBox.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Command="ApplicationCommands.Copy" />
+                    <MenuItem Command="ApplicationCommands.Paste" />
+                    <Separator />
+                    <MenuItem Command="ApplicationCommands.SelectAll" />
+                </ContextMenu>
+            </TextBox.ContextMenu>
+        </TextBox>
 
         <!-- Focus indicator bar (WinUI3-style accent bar at the bottom) -->
         <Border x:Name="FocusIndicator" Grid.Row="1" Height="2"
