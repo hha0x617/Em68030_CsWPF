@@ -200,6 +200,7 @@ namespace Em68030.Properties
         public static string Settings_GatewayMAC => ResourceManager.GetString("Settings_GatewayMAC", resourceCulture) ?? "";
         public static string Settings_Memory => ResourceManager.GetString("Settings_Memory", resourceCulture) ?? "";
         public static string Settings_MemorySizeMB => ResourceManager.GetString("Settings_MemorySizeMB", resourceCulture) ?? "";
+        public static string Settings_MemoryDescription => ResourceManager.GetString("Settings_MemoryDescription", resourceCulture) ?? "";
         public static string Settings_IoDevices => ResourceManager.GetString("Settings_IoDevices", resourceCulture) ?? "";
         public static string Settings_ConsoleEnabled => ResourceManager.GetString("Settings_ConsoleEnabled", resourceCulture) ?? "";
         public static string Settings_ConsoleBaseAddr => ResourceManager.GetString("Settings_ConsoleBaseAddr", resourceCulture) ?? "";

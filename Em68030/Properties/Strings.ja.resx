@@ -110,7 +110,7 @@
     <value>表示(_V)</value>
   </data>
   <data name="Menu_ConsoleWindow" xml:space="preserve">
-    <value>コンソール ウィンドウ(_C)</value>
+    <value>シリアルコンソール ウィンドウ(_C)</value>
   </data>
   <data name="Menu_FramebufferWindow" xml:space="preserve">
     <value>フレームバッファ ウィンドウ(_F)</value>
@@ -301,10 +301,10 @@
     <value>ブレークポイント</value>
   </data>
   <data name="Window_Console" xml:space="preserve">
-    <value>コンソール</value>
+    <value>シリアルコンソール</value>
   </data>
   <data name="Window_ConsoleFormat" xml:space="preserve">
-    <value>コンソール - {0}×{1}</value>
+    <value>シリアルコンソール - {0}×{1}</value>
   </data>
   <data name="Window_Settings" xml:space="preserve">
     <value>エミュレータ設定</value>
@@ -453,6 +453,9 @@
   </data>
   <data name="Settings_MemorySizeMB" xml:space="preserve">
     <value>メモリ サイズ (MB):</value>
+  </data>
+  <data name="Settings_MemoryDescription" xml:space="preserve">
+    <value>メモリサイズの変更はカーネルイメージの再読み込み後に反映されます。</value>
   </data>
   <data name="Settings_IoDevices" xml:space="preserve">
     <value>I/O デバイス</value>

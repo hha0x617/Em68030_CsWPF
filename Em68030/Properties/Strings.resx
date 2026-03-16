@@ -110,7 +110,7 @@
     <value>_View</value>
   </data>
   <data name="Menu_ConsoleWindow" xml:space="preserve">
-    <value>_Console Window</value>
+    <value>_Serial Console Window</value>
   </data>
   <data name="Menu_FramebufferWindow" xml:space="preserve">
     <value>_Framebuffer Window</value>
@@ -301,10 +301,10 @@
     <value>Breakpoints</value>
   </data>
   <data name="Window_Console" xml:space="preserve">
-    <value>Console</value>
+    <value>Serial Console</value>
   </data>
   <data name="Window_ConsoleFormat" xml:space="preserve">
-    <value>Console - {0}×{1}</value>
+    <value>Serial Console - {0}×{1}</value>
   </data>
   <data name="Window_Settings" xml:space="preserve">
     <value>Emulator Settings</value>
@@ -453,6 +453,9 @@
   </data>
   <data name="Settings_MemorySizeMB" xml:space="preserve">
     <value>Memory Size (MB):</value>
+  </data>
+  <data name="Settings_MemoryDescription" xml:space="preserve">
+    <value>Memory size changes take effect after reloading the kernel image.</value>
   </data>
   <data name="Settings_IoDevices" xml:space="preserve">
     <value>I/O Devices</value>

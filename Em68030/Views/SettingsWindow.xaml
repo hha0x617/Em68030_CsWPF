@@ -350,6 +350,8 @@
                     <TextBox x:Name="MemSizeBox" Grid.Column="1" Style="{StaticResource SettingTextBox}"
                              ToolTip="4-4096" />
                 </Grid>
+                <TextBlock Text="{x:Static p:Strings.Settings_MemoryDescription}"
+                           Foreground="#FF808080" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
 
                 <!-- I/O Device Settings -->
                 <TextBlock Text="{x:Static p:Strings.Settings_IoDevices}" Style="{StaticResource SectionHeader}" />
