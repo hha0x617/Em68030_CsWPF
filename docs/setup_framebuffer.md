@@ -124,6 +124,9 @@ EOF
 
 Other lightweight options: `fvwm`, `icewm`, `openbox` (if available for m68k).
 
+> **Note:** Some window managers require `dbus-x11`. If the window manager fails
+> to start, installing `dbus-x11` may resolve the issue: `apt install dbus-x11`
+
 ### Start X
 
 ```bash
