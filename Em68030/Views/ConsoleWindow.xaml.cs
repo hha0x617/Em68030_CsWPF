@@ -130,6 +130,26 @@ public partial class ConsoleWindow : Window
         OutputBox.GotKeyboardFocus += (_, _) => FocusIndicator.Visibility = Visibility.Visible;
         OutputBox.LostKeyboardFocus += (_, _) => FocusIndicator.Visibility = Visibility.Collapsed;
 
+        // Search box key handling
+        SearchBox.PreviewKeyDown += (_, args) =>
+        {
+            if (args.Key == Key.Enter)
+            {
+                FindNext();
+                args.Handled = true;
+            }
+            else if (args.Key == Key.Escape)
+            {
+                CloseSearch();
+                args.Handled = true;
+            }
+            else if (args.Key == Key.F3)
+            {
+                if ((Keyboard.Modifiers & ModifierKeys.Shift) != 0) FindPrev(); else FindNext();
+                args.Handled = true;
+            }
+        };
+
         // Focus-follows-mouse: activate window and focus OutputBox when mouse enters
         OutputBox.MouseEnter += (_, _) =>
         {
@@ -330,6 +350,35 @@ public partial class ConsoleWindow : Window
         // Resolve the actual key — IME may wrap arrow/function keys as ImeProcessed
         var key = e.Key == Key.ImeProcessed ? e.ImeProcessedKey : e.Key;
 
+        // Ctrl+Shift+F: open search bar (works in all modes)
+        if (key == Key.F && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
+        {
+            OpenSearch();
+            e.Handled = true;
+            return;
+        }
+
+        // Search mode: intercept F3/Shift+F3 and Escape
+        if (_searchMode)
+        {
+            if (key == Key.F3)
+            {
+                if ((Keyboard.Modifiers & ModifierKeys.Shift) != 0) FindPrev(); else FindNext();
+                e.Handled = true;
+                return;
+            }
+            if (key == Key.Escape)
+            {
+                CloseSearch();
+                e.Handled = true;
+                return;
+            }
+        }
+
+        // Don't process keys when SearchBox has focus (let the user type)
+        if (SearchBox.IsFocused)
+            return;
+
         if (OnCharInput != null)
         {
             // MVME147 mode: send VT100 sequences for special keys
@@ -486,6 +535,13 @@ public partial class ConsoleWindow : Window
             return;
         }
 
+        // Don't intercept text input when SearchBox has focus
+        if (SearchBox.IsFocused)
+        {
+            base.OnPreviewTextInput(e);
+            return;
+        }
+
         if (OnCharInput != null)
         {
             // MVME147 mode: send each character directly to SCC
@@ -584,5 +640,153 @@ public partial class ConsoleWindow : Window
         if (OnCharInput == null) return;
         foreach (char c in data)
             OnCharInput((byte)c);
+    }
+
+    // ========================================================================
+    // Search
+    // ========================================================================
+
+    private bool _searchMode;
+    private int _searchIndex = -1;
+    private string _lastSearchText = "";
+
+    private void SearchNext_Click(object sender, RoutedEventArgs e) => FindNext();
+    private void SearchPrev_Click(object sender, RoutedEventArgs e) => FindPrev();
+    private void SearchClose_Click(object sender, RoutedEventArgs e) => CloseSearch();
+
+    private void OpenSearch()
+    {
+        _searchMode = true;
+        SearchBar.Visibility = Visibility.Visible;
+
+        // Pre-fill with selected text if any
+        if (OutputBox.SelectionLength > 0)
+            SearchBox.Text = OutputBox.SelectedText;
+
+        SearchBox.Focus();
+        SearchBox.SelectAll();
+    }
+
+    private void CloseSearch()
+    {
+        _searchMode = false;
+        _searchIndex = -1;
+        _lastSearchText = "";
+        SearchBar.Visibility = Visibility.Collapsed;
+        SearchStatus.Text = "";
+        OutputBox.Focus();
+    }
+
+    private List<(int pos, int length)> CollectMatches(string text, string searchText, bool regexMode)
+    {
+        var matches = new List<(int, int)>();
+        if (string.IsNullOrEmpty(searchText) || string.IsNullOrEmpty(text)) return matches;
+
+        if (regexMode)
+        {
+            try
+            {
+                var regex = new System.Text.RegularExpressions.Regex(searchText,
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                foreach (System.Text.RegularExpressions.Match m in regex.Matches(text))
+                    matches.Add((m.Index, m.Length));
+            }
+            catch (ArgumentException) { /* invalid regex */ }
+        }
+        else
+        {
+            int pos = 0;
+            while ((pos = text.IndexOf(searchText, pos, StringComparison.OrdinalIgnoreCase)) >= 0)
+            {
+                matches.Add((pos, searchText.Length));
+                pos += searchText.Length;
+            }
+        }
+        return matches;
+    }
+
+    private void FindNext()
+    {
+        var searchText = SearchBox.Text;
+        if (string.IsNullOrEmpty(searchText)) return;
+
+        var text = OutputBox.Text;
+        if (string.IsNullOrEmpty(text)) return;
+
+        bool regexMode = RegexToggle.IsChecked == true;
+
+        if (searchText != _lastSearchText)
+        {
+            _searchIndex = -1;
+            _lastSearchText = searchText;
+        }
+
+        var matches = CollectMatches(text, searchText, regexMode);
+        if (matches.Count == 0)
+        {
+            _searchIndex = -1;
+            SearchStatus.Text = regexMode ? "No match" : "Not found";
+            return;
+        }
+
+        int nextIdx = -1;
+        for (int i = 0; i < matches.Count; i++)
+        {
+            if (matches[i].pos > _searchIndex) { nextIdx = i; break; }
+        }
+        if (nextIdx < 0) nextIdx = 0; // wrap
+
+        _searchIndex = matches[nextIdx].pos;
+        HighlightMatch(matches[nextIdx].pos, matches[nextIdx].length,
+                        nextIdx + 1, matches.Count);
+    }
+
+    private void FindPrev()
+    {
+        var searchText = SearchBox.Text;
+        if (string.IsNullOrEmpty(searchText)) return;
+
+        var text = OutputBox.Text;
+        if (string.IsNullOrEmpty(text)) return;
+
+        bool regexMode = RegexToggle.IsChecked == true;
+
+        if (searchText != _lastSearchText)
+        {
+            _searchIndex = text.Length;
+            _lastSearchText = searchText;
+        }
+
+        var matches = CollectMatches(text, searchText, regexMode);
+        if (matches.Count == 0)
+        {
+            _searchIndex = -1;
+            SearchStatus.Text = regexMode ? "No match" : "Not found";
+            return;
+        }
+
+        int prevIdx = -1;
+        for (int i = matches.Count - 1; i >= 0; i--)
+        {
+            if (matches[i].pos < _searchIndex) { prevIdx = i; break; }
+        }
+        if (prevIdx < 0) prevIdx = matches.Count - 1; // wrap
+
+        _searchIndex = matches[prevIdx].pos;
+        HighlightMatch(matches[prevIdx].pos, matches[prevIdx].length,
+                        prevIdx + 1, matches.Count);
+    }
+
+    private void HighlightMatch(int pos, int length, int current, int total)
+    {
+        OutputBox.Focus();
+
+        _suppressScrollEvent = true;
+        OutputBox.Select(pos, length);
+        _autoScroll = false;
+
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () => _suppressScrollEvent = false);
+
+        SearchStatus.Text = $"{current}/{total}";
     }
 }
