@@ -2,7 +2,7 @@
 
 [Motorola MC68030](https://en.wikipedia.org/wiki/Motorola_68030) マイクロプロセッサのエミュレータです。MC68030 は 1980 年代後半にワークステーションや組み込みシステムで広く使われた 32-bit CPU です。本エミュレータは MC68030 を搭載した VMEbus シングルボードコンピュータ [MVME147](https://en.wikipedia.org/wiki/MVME147) をエミュレートし、NetBSD の mvme68k ポートである [NetBSD/mvme68k](https://www.netbsd.org/ports/mvme68k/) を起動できます。
 
-[Claude Code](https://docs.anthropic.com/en/docs/claude-code) との vibe coding により開発されました。
+[Claude Code](https://docs.anthropic.com/en/docs/claude-code) との vibe coding により開発されました。アプリケーションアイコンは [Claude](https://claude.ai/) で生成しました。
 
 [English documentation (README.md)](README.md)
 

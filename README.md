@@ -2,7 +2,7 @@
 
 An emulator for the [Motorola MC68030](https://en.wikipedia.org/wiki/Motorola_68030) microprocessor, a 32-bit CPU from the late 1980s used in workstations, embedded systems, and single-board computers. This emulator targets the [MVME147](https://en.wikipedia.org/wiki/MVME147), a VMEbus single-board computer built around the MC68030, and can boot [NetBSD/mvme68k](https://www.netbsd.org/ports/mvme68k/), the mvme68k port of the NetBSD operating system.
 
-Developed through vibe coding with [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
+Developed through vibe coding with [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Application icon generated with [Claude](https://claude.ai/).
 
 [Japanese documentation (README_ja.md)](README_ja.md)
 
