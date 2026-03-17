@@ -8,7 +8,7 @@
 
 <a href="docs/screenshot_jit_off.png"><img src="docs/screenshot_jit_off.png" alt="NetBSD booting on Em68030" width="50%"></a>
 
-**ドキュメント**: [はじめに](docs/getting_started_ja.md) | [命令セット一覧](docs/instruction_set_ja.md) | [ハードウェアプラットフォーム](docs/hardware_platform_ja.md)
+**ドキュメント**: [ユーザーガイド](docs/user_guide_ja.md) | [はじめに](docs/getting_started_ja.md) | [命令セット一覧](docs/instruction_set_ja.md) | [ハードウェアプラットフォーム](docs/hardware_platform_ja.md)
 
 ## 特徴
 
