@@ -31,10 +31,14 @@ public partial class App : Application
                 var lang = arg["--lang=".Length..];
                 if (!string.IsNullOrEmpty(lang))
                 {
-                    var culture = new CultureInfo(lang);
-                    Thread.CurrentThread.CurrentUICulture = culture;
-                    Thread.CurrentThread.CurrentCulture = culture;
-                    CultureInfo.DefaultThreadCurrentUICulture = culture;
+                    try
+                    {
+                        var culture = new CultureInfo(lang);
+                        Thread.CurrentThread.CurrentUICulture = culture;
+                        Thread.CurrentThread.CurrentCulture = culture;
+                        CultureInfo.DefaultThreadCurrentUICulture = culture;
+                    }
+                    catch (CultureNotFoundException) { /* invalid language code, ignore */ }
                 }
                 break;
             }
