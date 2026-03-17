@@ -1,5 +1,6 @@
 # Visual Studio
 .vs/
+**/Properties/launchSettings.json
 
 # Build output
 bin/
