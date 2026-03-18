@@ -350,7 +350,15 @@ public class Vt100Terminal
             while (lastCol >= 0 && _screen[r, lastCol] == ' ') lastCol--;
             if (r == _cursorRow && _cursorCol > lastCol) lastCol = _cursorCol;
             for (int c = 0; c <= lastCol; c++)
-                sb.Append(_screen[r, c]);
+            {
+                char ch = _screen[r, c];
+                // Use non-breaking space at cursor position to prevent TextBox
+                // from collapsing trailing spaces at wrap boundaries (jitter fix)
+                if (r == _cursorRow && c == _cursorCol && ch == ' ')
+                    sb.Append('\u00A0');
+                else
+                    sb.Append(ch);
+            }
         }
         return sb.ToString();
     }
@@ -406,7 +414,13 @@ public class Vt100Terminal
             while (lastCol >= 0 && _screen[r, lastCol] == ' ') lastCol--;
             if (r == _cursorRow && _cursorCol > lastCol) lastCol = _cursorCol;
             for (int c = 0; c <= lastCol; c++)
-                sb.Append(_screen[r, c]);
+            {
+                char ch = _screen[r, c];
+                if (r == _cursorRow && c == _cursorCol && ch == ' ')
+                    sb.Append('\u00A0');
+                else
+                    sb.Append(ch);
+            }
         }
         return sb.ToString();
     }

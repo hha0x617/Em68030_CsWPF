@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -188,6 +189,14 @@ public partial class FramebufferWindow : Window
     {
         if (_inputDevice == null) return;
 
+        // Ctrl+Shift+G: toggle mouse grab
+        if (e.Key == Key.G && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
+        {
+            if (_mouseGrabbed) UngrabMouse(); else GrabMouse();
+            e.Handled = true;
+            return;
+        }
+
         // Ctrl+Shift+V: paste clipboard text as key events
         if (e.Key == Key.V && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
         {
@@ -267,7 +276,87 @@ public partial class FramebufferWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        UngrabMouse();
         _renderTimer.Stop();
         base.OnClosed(e);
+    }
+
+    protected override void OnDeactivated(EventArgs e)
+    {
+        UngrabMouse();
+        base.OnDeactivated(e);
+    }
+
+    protected override void OnLocationChanged(EventArgs e)
+    {
+        UpdateGrabRect();
+        base.OnLocationChanged(e);
+    }
+
+    protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+    {
+        UpdateGrabRect();
+        base.OnRenderSizeChanged(sizeInfo);
+    }
+
+    // ========================================================================
+    // Mouse grab (pointer confinement)
+    // ========================================================================
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT { public int Left, Top, Right, Bottom; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT { public int X, Y; }
+
+    [DllImport("user32.dll")] private static extern bool ClipCursor(ref RECT rect);
+    [DllImport("user32.dll")] private static extern bool ClipCursor(IntPtr ptr); // null to release
+    [DllImport("user32.dll")] private static extern bool GetClientRect(IntPtr hwnd, out RECT rect);
+    [DllImport("user32.dll")] private static extern bool ClientToScreen(IntPtr hwnd, ref POINT point);
+
+    private bool _mouseGrabbed;
+
+    private void GrabMouse()
+    {
+        if (_mouseGrabbed) return;
+        _mouseGrabbed = true;
+        UpdateGrabRect();
+        UpdateTitleGrabStatus();
+    }
+
+    private void UngrabMouse()
+    {
+        if (!_mouseGrabbed) return;
+        _mouseGrabbed = false;
+        ClipCursor(IntPtr.Zero);
+        UpdateTitleGrabStatus();
+    }
+
+    private void UpdateGrabRect()
+    {
+        if (!_mouseGrabbed) return;
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd == IntPtr.Zero) return;
+
+        GetClientRect(hwnd, out RECT clientRect);
+        var topLeft = new POINT { X = clientRect.Left, Y = clientRect.Top };
+        var bottomRight = new POINT { X = clientRect.Right, Y = clientRect.Bottom };
+        ClientToScreen(hwnd, ref topLeft);
+        ClientToScreen(hwnd, ref bottomRight);
+
+        var clipRect = new RECT
+        {
+            Left = topLeft.X, Top = topLeft.Y,
+            Right = bottomRight.X, Bottom = bottomRight.Y
+        };
+        ClipCursor(ref clipRect);
+    }
+
+    private void UpdateTitleGrabStatus()
+    {
+        var baseTitle = $"Em68030 Framebuffer - {_width}x{_height}x{_bpp}bpp";
+        if (_mouseGrabbed)
+            baseTitle += " [Mouse Grabbed - Ctrl+Shift+G to release]";
+        Title = baseTitle;
     }
 }
