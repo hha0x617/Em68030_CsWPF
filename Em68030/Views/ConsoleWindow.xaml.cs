@@ -677,7 +677,8 @@ public partial class ConsoleWindow : Window
         OutputBox.Focus();
     }
 
-    private List<(int pos, int length)> CollectMatches(string text, string searchText, bool regexMode)
+    private List<(int pos, int length)> CollectMatches(string text, string searchText,
+        bool regexMode, bool caseSensitive)
     {
         var matches = new List<(int, int)>();
         if (string.IsNullOrEmpty(searchText) || string.IsNullOrEmpty(text)) return matches;
@@ -686,8 +687,10 @@ public partial class ConsoleWindow : Window
         {
             try
             {
-                var regex = new System.Text.RegularExpressions.Regex(searchText,
-                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                var options = caseSensitive
+                    ? System.Text.RegularExpressions.RegexOptions.None
+                    : System.Text.RegularExpressions.RegexOptions.IgnoreCase;
+                var regex = new System.Text.RegularExpressions.Regex(searchText, options);
                 foreach (System.Text.RegularExpressions.Match m in regex.Matches(text))
                     matches.Add((m.Index, m.Length));
             }
@@ -695,8 +698,11 @@ public partial class ConsoleWindow : Window
         }
         else
         {
+            var comparison = caseSensitive
+                ? StringComparison.Ordinal
+                : StringComparison.OrdinalIgnoreCase;
             int pos = 0;
-            while ((pos = text.IndexOf(searchText, pos, StringComparison.OrdinalIgnoreCase)) >= 0)
+            while ((pos = text.IndexOf(searchText, pos, comparison)) >= 0)
             {
                 matches.Add((pos, searchText.Length));
                 pos += searchText.Length;
@@ -721,7 +727,8 @@ public partial class ConsoleWindow : Window
             _lastSearchText = searchText;
         }
 
-        var matches = CollectMatches(text, searchText, regexMode);
+        bool caseSensitive = CaseSensitiveToggle.IsChecked == true;
+        var matches = CollectMatches(text, searchText, regexMode, caseSensitive);
         if (matches.Count == 0)
         {
             _searchIndex = -1;
@@ -757,7 +764,8 @@ public partial class ConsoleWindow : Window
             _lastSearchText = searchText;
         }
 
-        var matches = CollectMatches(text, searchText, regexMode);
+        bool caseSensitive = CaseSensitiveToggle.IsChecked == true;
+        var matches = CollectMatches(text, searchText, regexMode, caseSensitive);
         if (matches.Count == 0)
         {
             _searchIndex = -1;
