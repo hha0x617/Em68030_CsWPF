@@ -321,6 +321,7 @@ public partial class FramebufferWindow : Window
         if (_mouseGrabbed) return;
         _mouseGrabbed = true;
         UpdateGrabRect();
+        Cursor = Cursors.None;
         UpdateTitleGrabStatus();
     }
 
@@ -329,6 +330,7 @@ public partial class FramebufferWindow : Window
         if (!_mouseGrabbed) return;
         _mouseGrabbed = false;
         ClipCursor(IntPtr.Zero);
+        Cursor = Cursors.Arrow;
         UpdateTitleGrabStatus();
     }
 
