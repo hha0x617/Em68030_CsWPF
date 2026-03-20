@@ -127,6 +127,14 @@ Other lightweight options: `fvwm`, `icewm`, `openbox` (if available for m68k).
 > **Note:** Some window managers require `dbus-x11`. If the window manager fails
 > to start, installing `dbus-x11` may resolve the issue: `apt install dbus-x11`
 
+> **Limitation:** The emulator does not provide a virtual GPU — the framebuffer
+> (`simplefb`) is a plain memory-mapped pixel buffer with no acceleration.
+> Additionally, the emulated MC68030 (~44 MIPS) lacks the processing power for
+> software-based compositing or rendering. As a result, window managers that require
+> a compositor or OpenGL will not work. This includes Enlightenment, Compiz, KWin,
+> Mutter (GNOME), and xfwm4. Use lightweight, non-compositing window managers such
+> as `twm`, `fvwm`, `icewm`, `openbox`, or `fluxbox`.
+
 ### Start X
 
 ```bash
@@ -189,3 +197,10 @@ Place `console=ttyS0` last to direct systemd output to the serial console:
 ```
 console=tty0 console=ttyS0
 ```
+
+### xeyes pupils do not follow the mouse cursor
+
+The emulator's mouse input device uses absolute coordinates (tablet mode).
+Some X applications like `xeyes` track relative pointer motion to determine
+the cursor direction, and do not respond to absolute positioning devices.
+This is expected behavior and not a bug.
