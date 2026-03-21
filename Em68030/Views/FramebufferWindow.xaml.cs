@@ -231,21 +231,36 @@ public partial class FramebufferWindow : Window
         }
     }
 
+    private double _lastMouseX, _lastMouseY;
+    private bool _lastMouseValid;
+
     private void OnMouseMove(object sender, MouseEventArgs e)
     {
         if (_inputDevice == null) return;
         var pos = e.GetPosition(DisplayImage);
 
         // Scale pointer position to framebuffer coordinates and update absolute registers.
-        // The guest driver polls these registers directly for mouse position.
+        // The guest driver polls these registers directly for mouse position (tablet device).
         double actualW = DisplayImage.ActualWidth;
         double actualH = DisplayImage.ActualHeight;
-        if (actualW > 0 && actualH > 0)
+        if (actualW <= 0 || actualH <= 0) return;
+
+        var absX = (ushort)Math.Clamp(pos.X * _width / actualW, 0, _width - 1);
+        var absY = (ushort)Math.Clamp(pos.Y * _height / actualH, 0, _height - 1);
+        _inputDevice.SetMouseAbsPosition(absX, absY);
+
+        // Also push relative deltas to FIFO for the relative mouse device (gpm).
+        // MouseMove only fires inside the window, so no window re-entry jumps.
+        if (_lastMouseValid)
         {
-            var absX = (ushort)Math.Clamp(pos.X * _width / actualW, 0, _width - 1);
-            var absY = (ushort)Math.Clamp(pos.Y * _height / actualH, 0, _height - 1);
-            _inputDevice.SetMouseAbsPosition(absX, absY);
+            var dx = (short)(absX - _lastMouseX);
+            var dy = (short)(absY - _lastMouseY);
+            if (dx != 0 || dy != 0)
+                _inputDevice.PushMouseMoveEvent(dx, dy);
         }
+        _lastMouseX = absX;
+        _lastMouseY = absY;
+        _lastMouseValid = true;
     }
 
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
