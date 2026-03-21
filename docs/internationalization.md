@@ -137,7 +137,7 @@ Or in `launchSettings.json` for Visual Studio:
 | `MemDump_` | Memory dump pane | `MemDump_Title`, `MemDump_Go` |
 | `Context_` | Context menu items | `Context_Copy`, `Context_Paste` |
 | `Status_` | Status bar text | `Status_Running`, `Status_MhzFormat` |
-| `About_` | About dialog | `About_Title`, `About_Version` |
+| `About_` | About dialog | `About_Title`, `About_VersionFormat` |
 | `Window_` | Window titles | `Window_Console`, `Window_Breakpoints` |
 | `Breakpoints_` | Breakpoints window | `Breakpoints_ClearAll` |
 | `Console_` | Console window | `Console_Log`, `Console_Live` |

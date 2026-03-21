@@ -130,7 +130,7 @@ namespace Em68030.Properties
         // About Dialog
         public static string About_Title => ResourceManager.GetString("About_Title", resourceCulture) ?? "";
         public static string About_Subtitle => ResourceManager.GetString("About_Subtitle", resourceCulture) ?? "";
-        public static string About_Version => ResourceManager.GetString("About_Version", resourceCulture) ?? "";
+        public static string About_VersionFormat => ResourceManager.GetString("About_VersionFormat", resourceCulture) ?? "";
         public static string About_BuildFormat => ResourceManager.GetString("About_BuildFormat", resourceCulture) ?? "";
         public static string About_Copyright => ResourceManager.GetString("About_Copyright", resourceCulture) ?? "";
         public static string About_License => ResourceManager.GetString("About_License", resourceCulture) ?? "";

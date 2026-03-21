@@ -137,7 +137,7 @@ Visual Studio の `launchSettings.json` で設定する場合:
 | `MemDump_` | メモリダンプ ペイン | `MemDump_Title`, `MemDump_Go` |
 | `Context_` | コンテキスト メニュー | `Context_Copy`, `Context_Paste` |
 | `Status_` | ステータスバー テキスト | `Status_Running`, `Status_MhzFormat` |
-| `About_` | バージョン情報ダイアログ | `About_Title`, `About_Version` |
+| `About_` | バージョン情報ダイアログ | `About_Title`, `About_VersionFormat` |
 | `Window_` | ウィンドウ タイトル | `Window_Console`, `Window_Breakpoints` |
 | `Breakpoints_` | ブレークポイント ウィンドウ | `Breakpoints_ClearAll` |
 | `Console_` | コンソール ウィンドウ | `Console_Log`, `Console_Live` |

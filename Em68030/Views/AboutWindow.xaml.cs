@@ -23,6 +23,7 @@ public partial class AboutWindow : Window
     public AboutWindow()
     {
         InitializeComponent();
+        VersionText.Text = string.Format(Strings.About_VersionFormat, GitVersion.VersionString);
         BuildHashText.Text = string.Format(Strings.About_BuildFormat, GitVersion.CommitHash);
     }
 
