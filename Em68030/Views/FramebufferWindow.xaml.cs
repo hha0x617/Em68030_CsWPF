@@ -232,6 +232,7 @@ public partial class FramebufferWindow : Window
     }
 
     private double _lastMouseX, _lastMouseY;
+    private double _accumDx, _accumDy;
     private bool _lastMouseValid;
 
     private void OnMouseMove(object sender, MouseEventArgs e)
@@ -250,16 +251,26 @@ public partial class FramebufferWindow : Window
         _inputDevice.SetMouseAbsPosition(absX, absY);
 
         // Also push relative deltas to FIFO for the relative mouse device (gpm).
+        // Use display-pixel coordinates (not framebuffer coordinates) to avoid
+        // amplification when the window is smaller than the framebuffer resolution.
         // MouseMove only fires inside the window, so no window re-entry jumps.
+        // Accumulate sub-pixel deltas and send integer part.
+        // Divide by 2 to compensate for gpm's internal scaling.
         if (_lastMouseValid)
         {
-            var dx = (short)(absX - _lastMouseX);
-            var dy = (short)(absY - _lastMouseY);
+            _accumDx += (pos.X - _lastMouseX) / 1.6;
+            _accumDy += (pos.Y - _lastMouseY) / 2.0;
+            var dx = (short)_accumDx;
+            var dy = (short)_accumDy;
             if (dx != 0 || dy != 0)
+            {
                 _inputDevice.PushMouseMoveEvent(dx, dy);
+                _accumDx -= dx;
+                _accumDy -= dy;
+            }
         }
-        _lastMouseX = absX;
-        _lastMouseY = absY;
+        _lastMouseX = pos.X;
+        _lastMouseY = pos.Y;
         _lastMouseValid = true;
     }
 
