@@ -319,6 +319,7 @@ public partial class ConsoleWindow : Window
             : _terminal.RenderFull();
 
         OutputBox.CaretIndex = OutputBox.Text.Length;
+        OutputBox.ScrollToEnd();
 
         // Clear at Input priority (5) — after Render (7) and Loaded (6) process
         // all deferred scroll events from the text/caret update.
