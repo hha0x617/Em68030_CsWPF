@@ -458,6 +458,7 @@ public class MainViewModel : INotifyPropertyChanged
             onboardRamEnd: kernelRamEnd,
             ethernetAddr: new byte[] { 0x21, 0x00, 0x00 } // 08:00:3E:21:00:00
         );
+        _rtcDevice.LoadFromFile(GetNvramPath());
         _scsiDevice = new Wd33c93Device();
         _scsiDevice.AttachMemory(_memory);
         _lanceDevice = new LanceDevice();
@@ -1446,6 +1447,22 @@ public class MainViewModel : INotifyPropertyChanged
     public void Stop()
     {
         StopEmulation();
+    }
+
+    public void Cleanup()
+    {
+        StopEmulation();
+        SaveNvram();
+    }
+
+    private void SaveNvram()
+    {
+        _rtcDevice?.SaveToFile(GetNvramPath());
+    }
+
+    private static string GetNvramPath()
+    {
+        return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "nvram.bin");
     }
 
     public void DoReset()

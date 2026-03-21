@@ -242,4 +242,63 @@ public class Mk48t02DeviceTests
         _rtc.SetMvme147Config(0x01000000, new byte[] { 0x01, 0x02 });
         Assert.Equal(0xFF, _rtc.ReadByte(Base + 0x0778)); // unchanged
     }
+
+    // ============================================================================
+    // File persistence
+    // ============================================================================
+
+    [Fact]
+    public void SaveAndLoad_RoundTrip()
+    {
+        _rtc.WriteByte(Base + 0x0000, 0xAB);
+        _rtc.WriteByte(Base + 0x0001, 0xCD);
+        _rtc.WriteByte(Base + 0x07F7, 0xEF);
+
+        string path = System.IO.Path.GetTempFileName();
+        try
+        {
+            Assert.True(_rtc.SaveToFile(path));
+
+            var rtc2 = new Mk48t02Device();
+            Assert.True(rtc2.LoadFromFile(path));
+
+            Assert.Equal(0xAB, rtc2.ReadByte(Base + 0x0000));
+            Assert.Equal(0xCD, rtc2.ReadByte(Base + 0x0001));
+            Assert.Equal(0xEF, rtc2.ReadByte(Base + 0x07F7));
+        }
+        finally
+        {
+            System.IO.File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void LoadFromFile_NonExistent_ReturnsFalse()
+    {
+        Assert.False(_rtc.LoadFromFile("nonexistent_nvram.bin"));
+    }
+
+    [Fact]
+    public void SaveAndLoad_PreservesConfig()
+    {
+        _rtc.SetMvme147Config(0x03000000, new byte[] { 0x21, 0x00, 0x00 });
+        _rtc.WriteByte(Base + 0x0100, 0x42);
+
+        string path = System.IO.Path.GetTempFileName();
+        try
+        {
+            Assert.True(_rtc.SaveToFile(path));
+
+            var rtc2 = new Mk48t02Device();
+            Assert.True(rtc2.LoadFromFile(path));
+
+            Assert.Equal(0x03000000u, rtc2.ReadLong(Base + 0x0774));
+            Assert.Equal(0x21, rtc2.ReadByte(Base + 0x0778));
+            Assert.Equal(0x42, rtc2.ReadByte(Base + 0x0100));
+        }
+        finally
+        {
+            System.IO.File.Delete(path);
+        }
+    }
 }

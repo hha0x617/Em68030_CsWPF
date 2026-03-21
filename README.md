@@ -166,10 +166,10 @@ Em68030_CsWPF/
 
 ## Roadmap
 
-- Performance: Expand JIT to cover more instruction patterns
+- Performance: Expand JIT to cover more instruction patterns (Phase 1 register-only complete)
 - FPU: Accurate 80-bit extended precision emulation
-- NVRAM file persistence
-- Graphics output (framebuffer)
+- ~~NVRAM file persistence~~ (Done)
+- ~~Graphics output (framebuffer)~~ (Done)
 
 ## Related Projects
 

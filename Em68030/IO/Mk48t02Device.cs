@@ -103,6 +103,29 @@ public class Mk48t02Device : IMemoryMappedDevice
 
     private static byte ToBcd(int val) => (byte)(((val / 10) << 4) | (val % 10));
 
+    /// <summary>Load NVRAM contents from a binary file. Returns true on success.</summary>
+    public bool LoadFromFile(string path)
+    {
+        if (!System.IO.File.Exists(path)) return false;
+        var data = System.IO.File.ReadAllBytes(path);
+        Array.Copy(data, _nvram, Math.Min(data.Length, _nvram.Length));
+        return true;
+    }
+
+    /// <summary>Save NVRAM contents to a binary file. Returns true on success.</summary>
+    public bool SaveToFile(string path)
+    {
+        try
+        {
+            System.IO.File.WriteAllBytes(path, _nvram);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     /// <summary>
     /// Pre-populate NVRAM with MVME147 hardware configuration values.
     /// These are normally set by 147Bug firmware during POST.

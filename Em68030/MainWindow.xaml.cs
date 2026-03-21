@@ -161,6 +161,12 @@ public partial class MainWindow : Window
         }
     }
 
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        _vm.Cleanup();
+        base.OnClosing(e);
+    }
+
     private void Exit_Click(object sender, RoutedEventArgs e)
     {
         Close();
