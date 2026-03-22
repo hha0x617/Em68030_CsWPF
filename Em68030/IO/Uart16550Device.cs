@@ -220,6 +220,7 @@ public class Uart16550Device : IMemoryMappedDevice
     {
         lock (_rxLock)
         {
+            if (_rxFifo.Count >= 64) return; // FIFO full — drop
             _rxFifo.Enqueue(ch);
         }
         UpdateInterrupt();
