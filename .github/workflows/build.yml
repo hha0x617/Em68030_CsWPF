@@ -56,7 +56,7 @@ jobs:
 
       - name: Build installer
         if: startsWith(github.ref, 'refs/tags/v')
-        run: iscc installer/setup.iss /DAppVersion=${{ github.ref_name }}
+        run: iscc installer/setup.iss /DAppVersion=${{ github.ref_name }} /DArch=x64
 
       - name: Upload artifact
         id: upload
@@ -64,7 +64,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Em68030-CsWpf
-          path: installer/Output/Em68030-WPF-Setup-*.exe
+          path: installer/Output/Em68030-WPF-Setup-*-*.exe
 
   sign:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -93,4 +93,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           draft: true
-          files: signed/Em68030-WPF-Setup-*.exe
+          files: signed/Em68030-WPF-Setup-*-*.exe

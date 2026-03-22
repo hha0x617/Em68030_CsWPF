@@ -10,6 +10,10 @@
   #define SourceDir "..\publish"
 #endif
 
+#ifndef Arch
+  #define Arch "x64"
+#endif
+
 [Setup]
 AppId={{B8F3A1E2-7C4D-4E5A-9F6B-1A2B3C4D5E6F}
 AppName={#MyAppName}
@@ -18,7 +22,7 @@ AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\{#MyAppName}-WPF
 DefaultGroupName={#MyAppName}-WPF
 DisableProgramGroupPage=yes
-OutputBaseFilename=Em68030-WPF-Setup-{#AppVersion}
+OutputBaseFilename=Em68030-WPF-Setup-{#Arch}-{#AppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
