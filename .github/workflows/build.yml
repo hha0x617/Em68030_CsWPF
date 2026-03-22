@@ -6,6 +6,7 @@ on:
     tags: ['v*']
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,6 +16,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -28,7 +31,7 @@ jobs:
           if ("${{ github.ref }}" -match "^refs/tags/v(.+)$") {
             $ver = $Matches[1]
           } else {
-            $desc = git describe --tags --abbrev=0 2>$null
+            $desc = (git describe --tags --abbrev=0 2>$null) ; $null = $LASTEXITCODE
             if ($desc -match "^v(.+)$") {
               $ver = $Matches[1]
             } else {
