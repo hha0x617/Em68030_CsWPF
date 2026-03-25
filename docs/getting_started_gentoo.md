@@ -245,6 +245,12 @@ The `gentoo.img` file is now ready. Copy it to the Em68030 directory on Windows.
 
 ## Phase 2: Build a Linux Kernel
 
+> **Shortcut**: Pre-built kernel image and modules are available on the
+> [Em68030-Guest-Linux Releases](https://github.com/hha0x617/Em68030-Guest-Linux/releases) page.
+> Download `vmlinux-*`, `em68030fb-*.ko`, and `em68030input-*.ko`, then skip to
+> [Phase 3](#phase-3-prepare-disk-image). Rename `.ko` files to their original names
+> (`em68030fb.ko`, `em68030input.ko`) before installing on the guest.
+
 ### 2.1 Install Cross-Compiler
 
 On Debian/Ubuntu, the m68k cross-compiler is available as a package:

@@ -245,6 +245,13 @@ sudo losetup -d ${LOOPDEV}
 
 ## フェーズ 2: Linux カーネルのビルド
 
+> **ショートカット**: ビルド済みカーネルイメージとモジュールは
+> [Em68030-Guest-Linux Releases](https://github.com/hha0x617/Em68030-Guest-Linux/releases)
+> ページからダウンロードできます。`vmlinux-*`、`em68030fb-*.ko`、`em68030input-*.ko` を
+> ダウンロードし、[フェーズ 3](#フェーズ-3-ディスクイメージの作成) に進んでください。
+> `.ko` ファイルはゲストにインストールする前に元の名前（`em68030fb.ko`、`em68030input.ko`）に
+> リネームしてください。
+
 ### 2.1 クロスコンパイラのインストール
 
 Debian/Ubuntu では m68k クロスコンパイラがパッケージとして利用可能です:
