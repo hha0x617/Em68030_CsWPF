@@ -69,7 +69,15 @@ An optional JIT compiler is available that compiles basic blocks of register-onl
 - Windows 10 or later
 - .NET 8.0 SDK
 
-## Build
+## Installation
+
+Pre-built installers are available on the [Releases](https://github.com/hha0x617/Em68030_CsWPF/releases) page.
+Download the latest `Em68030-WPF-Setup-x64-*.exe` and run the installer.
+Requires [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
+
+> **Note**: Since the installer is not code-signed, Windows Defender SmartScreen may show a warning. Click "More info" and then "Run anyway" to proceed.
+
+## Build from Source
 
 ```bash
 dotnet build Em68030/Em68030.csproj -c Release
