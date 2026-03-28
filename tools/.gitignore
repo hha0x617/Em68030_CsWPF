@@ -1,0 +1,6 @@
+# Build artifacts
+mkdisklabel
+mkdisklabel.exe
+output/
+docker-disktools/
+*.img
