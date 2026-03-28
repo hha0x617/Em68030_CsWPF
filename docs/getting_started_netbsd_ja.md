@@ -39,6 +39,8 @@ gzip -d netbsd-GENERIC.gz
 
 ## 仮想 SCSI ディスクイメージの作成
 
+### 方法 A: エミュレータ GUI を使用
+
 1. Em68030 を起動します
 2. メニューバーから **Settings** を開きます
 3. **Board Type** を `MVME147` に設定します
@@ -49,6 +51,16 @@ gzip -d netbsd-GENERIC.gz
 8. **OK** をクリックして保存します
 
 エミュレータは有効な NetBSD `cpu_disklabel` が書き込まれた空のディスクイメージを作成します。パーティション `a` (ルートファイルシステム) と `b` (スワップ、インストール時のミニルート用にも使用) が定義されています。
+
+### 方法 B: コマンドラインスクリプトを使用
+
+`tools/create-netbsd-disk.sh` スクリプトでコマンドラインからディスクイメージを作成できます。miniroot イメージを指定すると sd0b に配置されます:
+
+```bash
+./tools/create-netbsd-disk.sh -s 2G -m miniroot.fs -o netbsd.img
+```
+
+全オプションと Windows (PowerShell) での使用方法は [Disk Image and Utility Tools](tools.md#create-netbsd-disk-image) を参照してください。
 
 ---
 
@@ -253,6 +265,123 @@ rc_configured=YES
 ### 設定ファイル
 
 設定はアプリケーションディレクトリの `appsettings.json` に保存されます。設定項目の詳細は [README](../README_ja.md) を参照してください。
+
+---
+
+## ディスクイメージの拡張
+
+ディスクイメージの容量が不足した場合（例: X Window System パッケージのインストール用）、
+拡張スクリプトでサイズを変更できます:
+
+```bash
+./tools/expand-netbsd-disk.sh -s 2G netbsd.img
+```
+
+拡張後、NetBSD を起動してファイルシステムをリサイズしてください: `resize_ffs /dev/sd0a`
+
+全オプション、Windows での使用方法、トラブルシューティングは [Disk Image and Utility Tools](tools_ja.md#netbsd-ディスクイメージの拡張) を参照してください。
+
+---
+
+## X Window System（オプション）
+
+Em68030 エミュレータは `wsfb` フレームバッファドライバを使用して NetBSD 上で X Window System をサポートしています。
+MVME147_FB カーネル（genfb, wskbd, wsmouse ドライバ付き）とカスタムビルドの Xorg サーバーが必要です。
+公式の NetBSD/mvme68k リリースには Xorg が含まれていないためです。
+
+### 前提条件
+
+- **カーネル**: MVME147_FB（本プロジェクトのリリースまたはソースからビルド）
+- **ディスク容量**: 2 GB 以上（必要に応じて `expand-netbsd-disk` で拡張）
+- **X11 ベースセット**: NetBSD リリースの xbase, xcomp, xetc, xfont, xserver
+- **Xorg サーバー**: [Em68030-Guest-NetBSD リリース](https://github.com/hha0x617/Em68030-Guest-NetBSD/releases)の `xserver-wsfb-mvme68k.tgz`
+
+### 手順 1: X11 ベースセットのインストール
+
+CD-ROM 経由でセットをダウンロード（[create-iso](tools_ja.md#iso-イメージの作成ファイル転送) 参照）:
+
+```sh
+mount -t cd9660 /dev/cd0a /mnt
+cd /
+for set in xbase xcomp xetc xfont xserver; do
+    tar xpzf /mnt/${set}.tgz
+    echo "${set} done"
+done
+umount /mnt
+```
+
+### 手順 2: wsfb ドライバ付き Xorg サーバーのインストール
+
+`xserver-wsfb-mvme68k.tgz` を CD-ROM 経由で転送して展開:
+
+```sh
+mount -t cd9660 /dev/cd0a /mnt
+cd /
+tar xpzf /mnt/xserver-wsfb-mvme68k.tgz
+umount /mnt
+ln -s /usr/X11R7/bin/Xorg /usr/X11R7/bin/X
+```
+
+### 手順 3: xorg.conf の作成
+
+```sh
+cat > /etc/X11/xorg.conf << 'EOF'
+Section "ServerFlags"
+    Option "AutoAddDevices" "false"
+EndSection
+
+Section "ServerLayout"
+    Identifier   "Layout0"
+    Screen       "Screen0"
+    InputDevice  "Keyboard0" "CoreKeyboard"
+    InputDevice  "Mouse0"    "CorePointer"
+EndSection
+
+Section "InputDevice"
+    Identifier  "Keyboard0"
+    Driver      "kbd"
+    Option      "Protocol" "wskbd"
+    Option      "Device"   "/dev/wskbd0"
+EndSection
+
+Section "InputDevice"
+    Identifier  "Mouse0"
+    Driver      "mouse"
+    Option      "Protocol" "wsmouse"
+    Option      "Device"   "/dev/wsmouse0"
+EndSection
+
+Section "Device"
+    Identifier  "Card0"
+    Driver      "wsfb"
+    Option      "device"   "/dev/ttyE0"
+    Option      "HWCursor" "false"
+EndSection
+
+Section "Screen"
+    Identifier  "Screen0"
+    Device      "Card0"
+    DefaultDepth 16
+    SubSection "Display"
+        Depth   16
+        Modes   "1024x768"
+    EndSubSection
+EndSection
+EOF
+```
+
+主要な設定:
+- **`AutoAddDevices false`** — ホットプラグによる kbd/mouse ドライバの無効化を防止
+- **`HWCursor false`** — Em68030 の仮想フレームバッファに必要
+- **`/dev/ttyE0`** — wsdisplay デバイスパスを明示指定
+
+### 手順 4: X の起動
+
+```sh
+startx
+```
+
+フレームバッファウィンドウに X カーソルが表示されれば成功です。
 
 ---
 

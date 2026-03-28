@@ -39,6 +39,8 @@ gzip -d netbsd-GENERIC.gz
 
 ## Create a Virtual SCSI Disk Image
 
+### Option A: Using the Emulator GUI
+
 1. Launch Em68030
 2. Open **Settings** from the menu bar
 3. Set **Board Type** to `MVME147`
@@ -49,6 +51,17 @@ gzip -d netbsd-GENERIC.gz
 8. Click **OK** to save
 
 The emulator creates an empty disk image with a valid NetBSD `cpu_disklabel` pre-written, including partition `a` (root filesystem) and partition `b` (swap, also used for the miniroot during installation).
+
+### Option B: Using the Command-Line Script
+
+The `tools/create-netbsd-disk.sh` script creates a disk image with a BSD disklabel
+from the command line. If a miniroot image is provided, it is placed on sd0b:
+
+```bash
+./tools/create-netbsd-disk.sh -s 2G -m miniroot.fs -o netbsd.img
+```
+
+See [Disk Image and Utility Tools](tools.md#create-netbsd-disk-image) for full options and Windows (PowerShell) usage.
 
 ---
 
@@ -253,6 +266,123 @@ Login with `root` (using the password you set during installation).
 ### Configuration File
 
 Settings are saved to `appsettings.json` in the application directory. See [README](../README.md) for the full configuration reference.
+
+---
+
+## Expanding the Disk Image
+
+If the disk image becomes too small (e.g., for installing X Window System packages),
+use the expand script to resize it:
+
+```bash
+./tools/expand-netbsd-disk.sh -s 2G netbsd.img
+```
+
+After expanding, boot NetBSD and resize the filesystem: `resize_ffs /dev/sd0a`
+
+See [Disk Image and Utility Tools](tools.md#expand-netbsd-disk-image) for full options, Windows usage, and troubleshooting.
+
+---
+
+## X Window System (Optional)
+
+The Em68030 emulator supports X Window System on NetBSD via the `wsfb` framebuffer driver.
+This requires the MVME147_FB kernel (with genfb, wskbd, wsmouse drivers) and a custom-built
+Xorg server, since the official NetBSD/mvme68k release does not include Xorg.
+
+### Prerequisites
+
+- **Kernel**: MVME147_FB (from this project's releases or built from source)
+- **Disk space**: At least 2 GB (use `expand-netbsd-disk` if needed)
+- **X11 base sets**: xbase, xcomp, xetc, xfont, xserver from NetBSD release
+- **Xorg server**: `xserver-wsfb-mvme68k.tgz` from [Em68030-Guest-NetBSD releases](https://github.com/hha0x617/Em68030-Guest-NetBSD/releases)
+
+### Step 1: Install X11 base sets
+
+Download the sets via CD-ROM (see [create-iso](tools.md#create-iso-image-file-transfer)):
+
+```sh
+mount -t cd9660 /dev/cd0a /mnt
+cd /
+for set in xbase xcomp xetc xfont xserver; do
+    tar xpzf /mnt/${set}.tgz
+    echo "${set} done"
+done
+umount /mnt
+```
+
+### Step 2: Install Xorg server with wsfb driver
+
+Transfer `xserver-wsfb-mvme68k.tgz` via CD-ROM and extract:
+
+```sh
+mount -t cd9660 /dev/cd0a /mnt
+cd /
+tar xpzf /mnt/xserver-wsfb-mvme68k.tgz
+umount /mnt
+ln -s /usr/X11R7/bin/Xorg /usr/X11R7/bin/X
+```
+
+### Step 3: Create xorg.conf
+
+```sh
+cat > /etc/X11/xorg.conf << 'EOF'
+Section "ServerFlags"
+    Option "AutoAddDevices" "false"
+EndSection
+
+Section "ServerLayout"
+    Identifier   "Layout0"
+    Screen       "Screen0"
+    InputDevice  "Keyboard0" "CoreKeyboard"
+    InputDevice  "Mouse0"    "CorePointer"
+EndSection
+
+Section "InputDevice"
+    Identifier  "Keyboard0"
+    Driver      "kbd"
+    Option      "Protocol" "wskbd"
+    Option      "Device"   "/dev/wskbd0"
+EndSection
+
+Section "InputDevice"
+    Identifier  "Mouse0"
+    Driver      "mouse"
+    Option      "Protocol" "wsmouse"
+    Option      "Device"   "/dev/wsmouse0"
+EndSection
+
+Section "Device"
+    Identifier  "Card0"
+    Driver      "wsfb"
+    Option      "device"   "/dev/ttyE0"
+    Option      "HWCursor" "false"
+EndSection
+
+Section "Screen"
+    Identifier  "Screen0"
+    Device      "Card0"
+    DefaultDepth 16
+    SubSection "Display"
+        Depth   16
+        Modes   "1024x768"
+    EndSubSection
+EndSection
+EOF
+```
+
+Key settings:
+- **`AutoAddDevices false`** — Prevents hotplug from disabling kbd/mouse drivers
+- **`HWCursor false`** — Required for Em68030's virtual framebuffer
+- **`/dev/ttyE0`** — Explicit wsdisplay device path
+
+### Step 4: Start X
+
+```sh
+startx
+```
+
+X should start on the framebuffer window with a basic X cursor.
 
 ---
 

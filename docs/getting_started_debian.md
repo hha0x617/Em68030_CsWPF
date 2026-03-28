@@ -96,7 +96,20 @@ If it still does not appear, register it manually:
 echo ':qemu-m68k:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x04:\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xfe\xff\xff:/usr/bin/qemu-m68k-static:F' | sudo tee /proc/sys/fs/binfmt_misc/register
 ```
 
-### 1.2 Create and Partition the Disk Image
+### 1.2 Quick Setup with Script (Recommended)
+
+The `tools/create-debian-disk.sh` script automates steps 1.2 through 1.6
+(disk creation, partitioning, debootstrap, and configuration) in a single command:
+
+```bash
+sudo ./tools/create-debian-disk.sh -s 1G -p root -o debian.img
+```
+
+See [Disk Image and Utility Tools](tools.md#create-debian-disk-image) for full options and requirements.
+
+If you prefer to set up the image manually, follow the steps below.
+
+### 1.3 Create and Partition the Disk Image (Manual)
 
 Create a 512 MB disk image and partition it with `fdisk`:
 
@@ -572,6 +585,19 @@ Debian is generally recommended for m68k emulation because binary packages elimi
 
 - Ensure **Target OS** is set to `Linux` in Em68030 settings
 - The RTC year encoding differs between NetBSD and Linux; the wrong setting causes year miscalculation
+
+---
+
+## Expanding the Disk Image
+
+If the disk image becomes too small (e.g., for installing X Window System packages),
+use the `tools/expand-linux-disk.sh` script to expand it:
+
+```bash
+sudo ./tools/expand-linux-disk.sh -s 2G debian.img
+```
+
+No guest-side action is needed. See [Disk Image and Utility Tools](tools.md#expand-linux-disk-image) for full options.
 
 ---
 

@@ -61,7 +61,24 @@ The emulator automatically selects the correct encoding based on the **Target OS
 
 All filesystem preparation is done on a Linux host or WSL2, since Windows cannot natively handle ext2/ext4 filesystems.
 
-### 1.1 Download the Stage3 Tarball
+### 1.1 Quick Setup with Script (Recommended)
+
+The `tools/create-gentoo-disk.sh` script automates steps 1.2 through 1.6
+(disk creation, partitioning, stage3 extraction, and configuration) in a single command:
+
+```bash
+# Download stage3 first
+wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-openrc/stage3-m68k-openrc-<DATE>.tar.xz
+
+# Create disk image
+sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-openrc-*.tar.xz -s 2G -o gentoo.img
+```
+
+See [Disk Image and Utility Tools](tools.md#create-gentoo-disk-image) for full options and requirements.
+
+If you prefer to set up the image manually, follow the steps below.
+
+### 1.2 Download the Stage3 Tarball
 
 Download the Gentoo m68k stage3 tarball. We recommend the **OpenRC** variant, which is lightweight and well-suited for emulated environments:
 
@@ -507,6 +524,21 @@ see [Framebuffer Display Setup Guide](setup_framebuffer.md).
 
 - Ensure **Target OS** is set to `Linux` in Em68030 settings
 - The RTC year encoding differs between NetBSD and Linux; the wrong setting causes year miscalculation
+
+---
+
+## Expanding the Disk Image
+
+If the disk image becomes too small (e.g., for emerging additional packages),
+use the `tools/expand-linux-disk.sh` script to expand it:
+
+```bash
+sudo ./tools/expand-linux-disk.sh -s 4G gentoo.img
+```
+
+No guest-side action is needed. See [Disk Image and Utility Tools](tools.md#expand-linux-disk-image) for full options.
+
+Requirements: `sfdisk`, `e2fsck`, `resize2fs`, `mkswap`. Must run as root.
 
 ---
 

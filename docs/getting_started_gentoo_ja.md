@@ -61,7 +61,23 @@ M48T02 RTC の年エンコーディングは NetBSD と Linux で異なります
 
 ファイルシステムの準備はすべて Linux ホストまたは WSL2 上で行います。Windows では ext2/ext4 ファイルシステムをネイティブに扱えないためです。
 
-### 1.1 Stage3 Tarball のダウンロード
+### 1.1 スクリプトによる簡易セットアップ（推奨）
+
+`tools/create-gentoo-disk.sh` スクリプトで手順 1.2〜1.6 を自動化できます:
+
+```bash
+# Stage3 をダウンロード
+wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-openrc/stage3-m68k-openrc-<DATE>.tar.xz
+
+# ディスクイメージを作成
+sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-openrc-*.tar.xz -s 2G -o gentoo.img
+```
+
+全オプションと必要なパッケージは [Disk Image and Utility Tools](tools_ja.md#gentoo-ディスクイメージの作成) を参照してください。
+
+手動で設定する場合は、以下の手順に従ってください。
+
+### 1.2 Stage3 Tarball のダウンロード
 
 Gentoo m68k の stage3 tarball をダウンロードします。エミュレータ環境では軽量な **OpenRC** 版を推奨します:
 
@@ -509,6 +525,19 @@ make ARCH=m68k CROSS_COMPILE=m68k-linux-gnu- vmlinux -j$(nproc)
 
 - Em68030 の設定で **Target OS** が `Linux` になっていることを確認してください
 - RTC の年エンコーディングは NetBSD と Linux で異なります。設定が間違っていると年の計算が狂います
+
+---
+
+## ディスクイメージの拡張
+
+ディスクイメージの容量が不足した場合（例: 追加パッケージのインストール用）、
+拡張スクリプトでサイズを変更できます:
+
+```bash
+sudo ./tools/expand-linux-disk.sh -s 4G gentoo.img
+```
+
+ゲスト側での追加作業は不要です。詳細は [Disk Image and Utility Tools](tools_ja.md#linux-ディスクイメージの拡張) を参照してください。
 
 ---
 
