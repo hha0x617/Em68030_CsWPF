@@ -295,7 +295,7 @@ Xorg server, since the official NetBSD/mvme68k release does not include Xorg.
 - **Kernel**: MVME147_FB (from this project's releases or built from source)
 - **Disk space**: At least 2 GB (use `expand-netbsd-disk` if needed)
 - **X11 base sets**: xbase, xcomp, xetc, xfont, xserver from NetBSD release
-- **Xorg server**: `xserver-wsfb-mvme68k.tgz` from [Em68030-Guest-NetBSD releases](https://github.com/hha0x617/Em68030-Guest-NetBSD/releases)
+- **Xorg server**: `xserver-wsfb-mvme68k-<hash>.tgz` from [Em68030-Guest-NetBSD releases](https://github.com/hha0x617/Em68030-Guest-NetBSD/releases), or `xserver-wsfb-mvme68k.tgz` from a local build
 
 ### Step 1: Install X11 base sets
 
@@ -313,15 +313,17 @@ umount /mnt
 
 ### Step 2: Install Xorg server with wsfb driver
 
-Transfer `xserver-wsfb-mvme68k.tgz` via CD-ROM and extract:
+Transfer the Xorg server package via CD-ROM and extract:
 
 ```sh
 mount -t cd9660 /dev/cd0a /mnt
 cd /
-tar xpzf /mnt/xserver-wsfb-mvme68k.tgz
+tar xpzf /mnt/xserver-wsfb-mvme68k*.tgz
 umount /mnt
 ln -s /usr/X11R7/bin/Xorg /usr/X11R7/bin/X
 ```
+
+> **Note**: The filename is `xserver-wsfb-mvme68k.tgz` for local builds, or `xserver-wsfb-mvme68k-<hash>.tgz` for release downloads. The wildcard `*` matches both.
 
 ### Step 3: Create xorg.conf
 
