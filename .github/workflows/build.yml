@@ -61,3 +61,9 @@ jobs:
         with:
           name: Em68030-CsWpf
           path: installer/Output/Em68030-WPF-Setup-*-*.exe
+
+      - name: Upload to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: gh release upload ${{ github.ref_name }} installer/Output/Em68030-WPF-Setup-*-*.exe --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
