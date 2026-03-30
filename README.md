@@ -162,7 +162,7 @@ Em68030_CsWPF/
 
 ### Devices
 - **SCSI**: Only standard commands used by NetBSD are implemented; not the full SCSI-2 command set
-- **Ethernet**: Virtual mode supports only ARP reply, ICMP Echo (ping), and TCP/UDP echo server. NAT mode connects to host network but does not support TAP/bridge
+- **Ethernet**: Virtual mode supports only ARP reply, ICMP Echo (ping), and TCP/UDP echo server. NAT mode connects to host network via TCP proxy. TAP/bridge mode connects to host network via TAP-Windows adapter. NAT mode TCP proxy does not implement retransmission; packet pacing (1ms per segment) is used to prevent LANCE receive ring overflow, but packet loss under high load may still cause connection stalls
 - **Serial (SCC)**: No baud rate simulation or modem control signals (RTS/CTS)
 - **RTC**: Read-only implementation returning host system time. Time set by the guest OS is not persisted
 - **NVRAM**: In-memory only; not persisted to file

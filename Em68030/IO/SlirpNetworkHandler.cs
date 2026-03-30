@@ -693,6 +693,11 @@ public class SlirpNetworkHandler : INetworkHandler
                         session.OurSeq, session.TheirSeq, PSH | 0x10, buffer, 0, bytesRead);
                     session.OurSeq += (uint)bytesRead;
                     _rxQueue.Enqueue(dataPkt);
+
+                    // Pace sending to avoid overwhelming the guest's LANCE receive ring.
+                    // Without this, burst sends cause packet drops and duplicate ACKs,
+                    // leading to a stall (no retransmission in this proxy).
+                    Thread.Sleep(1);
                 }
             }
             finally
