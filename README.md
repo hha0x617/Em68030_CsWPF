@@ -8,7 +8,7 @@ Developed through vibe coding with [Claude Code](https://docs.anthropic.com/en/d
 
 <a href="docs/screenshot_jit_off.png"><img src="docs/screenshot_jit_off.png" alt="NetBSD booting on Em68030" width="50%"></a>
 
-**Documentation**: [User Guide](docs/user_guide.md) | [Getting Started](docs/getting_started.md) | [Instruction Set](docs/instruction_set.md) | [Hardware Platform](docs/hardware_platform.md)
+**Documentation**: [User Guide](docs/user_guide.md) | [Getting Started](docs/getting_started.md) | [Instruction Set](docs/instruction_set.md) | [Hardware Platform](docs/hardware_platform.md) | [Benchmark](docs/benchmark.md)
 
 ## Features
 

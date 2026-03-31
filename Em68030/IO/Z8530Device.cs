@@ -258,13 +258,11 @@ public class Z8530Channel
             _txIdleTicks = 0;
         }
 
-        // Promote pending user-input to the hardware RX FIFO only when the
-        // CPU is stopped (idle/sleeping). This ensures:
-        //  - Boot polled mode (cngetc): CPU is running, no promotion.
-        //    Characters stay in _pendingInput, read via RR0 + ReadData.
-        //  - Post-boot interrupt mode (read()): CPU is in STOP, promotion
-        //    fires RX interrupt, ISR delivers chars, kernel wakes up.
-        if (cpuStopped && RxInterruptEnabled && !_pendingInput.IsEmpty)
+        // Promote pending user-input to the hardware RX FIFO when RX interrupts
+        // are enabled (post-boot interrupt mode). During boot polled mode,
+        // RxInterruptEnabled is false, so characters stay in _pendingInput
+        // and are consumed on-demand by ReadData via RR0 RxAvail polling.
+        if (RxInterruptEnabled && !_pendingInput.IsEmpty)
         {
             while (_pendingInput.TryDequeue(out byte b))
                 _rxFifo.Enqueue(b);

@@ -351,6 +351,7 @@ public partial class ConsoleWindow : Window
         // Resolve the actual key — IME may wrap arrow/function keys as ImeProcessed
         var key = e.Key == Key.ImeProcessed ? e.ImeProcessedKey : e.Key;
 
+
         // Ctrl+Shift+F: open search bar (works in all modes)
         if (key == Key.F && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
         {
