@@ -247,19 +247,19 @@ public class Z8530ChannelTests
     }
 
     [Fact]
-    public void QueueInput_NotPromotedWhenCpuRunning()
+    public void QueueInput_PromotedWhenRxInterruptEnabled_CpuRunning()
     {
         WriteReg(1, 0x10); // RX interrupt enabled
         _channel.QueueInput(0x42);
 
-        _channel.Tick(false); // CPU running
-        Assert.False(_channel.RxIntPending);
+        _channel.Tick(false); // CPU running — still promoted (cpuStopped not required)
+        Assert.True(_channel.RxIntPending);
 
         Assert.Equal(0x42, _channel.ReadData());
     }
 
     [Fact]
-    public void QueueInput_PromotedWhenCpuStopped()
+    public void QueueInput_PromotedWhenRxInterruptEnabled_CpuStopped()
     {
         WriteReg(1, 0x10); // RX interrupt enabled
         _channel.QueueInput(0x42);
@@ -267,6 +267,19 @@ public class Z8530ChannelTests
         _channel.Tick(true); // CPU stopped
         Assert.True(_channel.RxIntPending);
 
+        Assert.Equal(0x42, _channel.ReadData());
+    }
+
+    [Fact]
+    public void QueueInput_NotPromotedWhenRxInterruptDisabled()
+    {
+        // RX interrupt NOT enabled (WR1 = 0)
+        _channel.QueueInput(0x42);
+
+        _channel.Tick(false); // CPU running
+        Assert.False(_channel.RxIntPending);
+
+        // Still readable via polled-mode ReadData
         Assert.Equal(0x42, _channel.ReadData());
     }
 
