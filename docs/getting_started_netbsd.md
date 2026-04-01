@@ -54,14 +54,14 @@ The emulator creates an empty disk image with a valid NetBSD `cpu_disklabel` pre
 
 ### Option B: Using the Command-Line Script
 
-The `tools/create-netbsd-disk.sh` script creates a disk image with a BSD disklabel
+The `tools/create-netbsd-disk.ps1` script creates a disk image with a BSD disklabel
 from the command line. If a miniroot image is provided, it is placed on sd0b:
 
-```bash
-./tools/create-netbsd-disk.sh -s 2G -m miniroot.fs -o netbsd.img
+```powershell
+.\tools\create-netbsd-disk.ps1 -Size 2G -Miniroot miniroot.fs -Output netbsd.img
 ```
 
-See [Disk Image and Utility Tools](tools.md#create-netbsd-disk-image) for full options and Windows (PowerShell) usage.
+See [Disk Image and Utility Tools](tools.md#create-netbsd-disk-image) for full options and Linux/WSL usage.
 
 ---
 
@@ -216,7 +216,10 @@ Press **Enter** to get a shell. Run the following two commands to make the root 
 
 ### 3.5 Recommended Initial Configuration
 
-Add `TERM=vt100` to `/etc/profile` so it is set automatically on every login:
+Add the following to `/etc/profile` so they are set automatically on every login:
+
+- `TERM=vt100` — required for terminal control (vi, curses apps)
+- `PKG_PATH` — enables `pkg_add` to download pre-built packages
 
 ```
 # cat /etc/profile
@@ -224,6 +227,10 @@ Add `TERM=vt100` to `/etc/profile` so it is set automatically on every login:
 #
 # System-wide .profile file for sh(1).
 export TERM=vt100
+export PKG_PATH=https://cdn.netbsd.org/pub/pkgsrc/packages/NetBSD/m68k/10.0_2025Q4/All
+# Not recommended, but if certificate verification fails, uncomment:
+#export FTP_SSL_INSECURE=1
+#export SSL_NO_VERIFY_PEER=1
 #
 ```
 
@@ -274,13 +281,13 @@ Settings are saved to `appsettings.json` in the application directory. See [READ
 If the disk image becomes too small (e.g., for installing X Window System packages),
 use the expand script to resize it:
 
-```bash
-./tools/expand-netbsd-disk.sh -s 2G netbsd.img
+```powershell
+.\tools\expand-netbsd-disk.ps1 -Size 2G netbsd.img
 ```
 
 After expanding, boot NetBSD and resize the filesystem: `resize_ffs /dev/sd0a`
 
-See [Disk Image and Utility Tools](tools.md#expand-netbsd-disk-image) for full options, Windows usage, and troubleshooting.
+See [Disk Image and Utility Tools](tools.md#expand-netbsd-disk-image) for full options, Linux/WSL usage, and troubleshooting.
 
 ---
 

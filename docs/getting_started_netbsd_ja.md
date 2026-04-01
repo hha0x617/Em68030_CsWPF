@@ -54,13 +54,13 @@ gzip -d netbsd-GENERIC.gz
 
 ### 方法 B: コマンドラインスクリプトを使用
 
-`tools/create-netbsd-disk.sh` スクリプトでコマンドラインからディスクイメージを作成できます。miniroot イメージを指定すると sd0b に配置されます:
+`tools/create-netbsd-disk.ps1` スクリプトでコマンドラインからディスクイメージを作成できます。miniroot イメージを指定すると sd0b に配置されます:
 
-```bash
-./tools/create-netbsd-disk.sh -s 2G -m miniroot.fs -o netbsd.img
+```powershell
+.\tools\create-netbsd-disk.ps1 -Size 2G -Miniroot miniroot.fs -Output netbsd.img
 ```
 
-全オプションと Windows (PowerShell) での使用方法は [Disk Image and Utility Tools](tools.md#create-netbsd-disk-image) を参照してください。
+全オプションと Linux/WSL での使用方法は [Disk Image and Utility Tools](tools_ja.md#netbsd-ディスクイメージの作成) を参照してください。
 
 ---
 
@@ -215,7 +215,10 @@ Enter pathname of shell or RETURN for /bin/sh:
 
 ### 3.5 おすすめの初期設定
 
-`/etc/profile` に `TERM=vt100` を設定しておくと、ログイン時に自動で適用されます:
+`/etc/profile` に以下を追加しておくと、ログイン時に自動で適用されます:
+
+- `TERM=vt100` — ターミナル制御に必要（vi、curses アプリ等）
+- `PKG_PATH` — `pkg_add` でビルド済みパッケージをダウンロードするために必要
 
 ```
 # cat /etc/profile
@@ -223,6 +226,10 @@ Enter pathname of shell or RETURN for /bin/sh:
 #
 # System-wide .profile file for sh(1).
 export TERM=vt100
+export PKG_PATH=https://cdn.netbsd.org/pub/pkgsrc/packages/NetBSD/m68k/10.0_2025Q4/All
+# 非推奨ですが、証明書検証に失敗する場合はコメントを外してください:
+#export FTP_SSL_INSECURE=1
+#export SSL_NO_VERIFY_PEER=1
 #
 ```
 
@@ -273,13 +280,13 @@ rc_configured=YES
 ディスクイメージの容量が不足した場合（例: X Window System パッケージのインストール用）、
 拡張スクリプトでサイズを変更できます:
 
-```bash
-./tools/expand-netbsd-disk.sh -s 2G netbsd.img
+```powershell
+.\tools\expand-netbsd-disk.ps1 -Size 2G netbsd.img
 ```
 
 拡張後、NetBSD を起動してファイルシステムをリサイズしてください: `resize_ffs /dev/sd0a`
 
-全オプション、Windows での使用方法、トラブルシューティングは [Disk Image and Utility Tools](tools_ja.md#netbsd-ディスクイメージの拡張) を参照してください。
+全オプション、Linux/WSL での使用方法、トラブルシューティングは [Disk Image and Utility Tools](tools_ja.md#netbsd-ディスクイメージの拡張) を参照してください。
 
 ---
 

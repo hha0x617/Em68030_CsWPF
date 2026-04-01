@@ -7,12 +7,12 @@ and transferring files to guest operating systems.
 
 | Script | Platform | Description |
 |--------|----------|-------------|
-| `create-netbsd-disk.sh` / `.ps1` | Linux/WSL, Windows | Create NetBSD disk image with BSD disklabel |
+| `create-netbsd-disk.ps1` / `.sh` | Windows, Linux/WSL | Create NetBSD disk image with BSD disklabel |
 | `create-debian-disk.sh` | Linux/WSL | Create Debian/m68k disk image via debootstrap |
 | `create-gentoo-disk.sh` | Linux/WSL | Create Gentoo/m68k disk image from stage3 tarball |
-| `expand-netbsd-disk.sh` / `.ps1` | Linux/WSL, Windows | Expand existing NetBSD disk image |
+| `expand-netbsd-disk.ps1` / `.sh` | Windows, Linux/WSL | Expand existing NetBSD disk image |
 | `expand-linux-disk.sh` | Linux/WSL | Expand existing Linux (Debian/Gentoo) disk image |
-| `create-iso.sh` / `.ps1` | Linux/WSL, Windows | Create ISO image for file transfer to guest |
+| `create-iso.ps1` / `.sh` | Windows, Linux/WSL | Create ISO image for file transfer to guest |
 | `mkdisklabel.c` | (helper) | NetBSD VID disklabel writer (compiled automatically) |
 
 ---
@@ -22,15 +22,18 @@ and transferring files to guest operating systems.
 Creates a raw SCSI disk image with a NetBSD VID disklabel.
 Optionally places a miniroot image on sd0b for installation.
 
+**Windows (PowerShell, requires Docker):**
+```powershell
+.\tools\create-netbsd-disk.ps1 -Size 2G -Miniroot miniroot.fs -Output netbsd.img
+```
+
 **Linux / WSL:**
 ```bash
 ./tools/create-netbsd-disk.sh -s 2G -m miniroot.fs -o netbsd.img
 ```
 
-**Windows (PowerShell, requires Docker):**
-```powershell
-.\tools\create-netbsd-disk.ps1 -Size 2G -Miniroot miniroot.fs -Output netbsd.img
-```
+> **Note:** The shell script compiles `mkdisklabel.c` automatically and requires `gcc` (or a C compiler set via `$CC`).
+> On Ubuntu/WSL: `sudo apt install build-essential`
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -91,17 +94,20 @@ Stage3 download: `https://distfiles.gentoo.org/releases/m68k/autobuilds/`
 Expands an existing NetBSD disk image and updates the VID disklabel.
 Preserves the existing filesystem and partition offsets (read-modify-write).
 
+**Windows (PowerShell, requires Docker):**
+```powershell
+.\tools\expand-netbsd-disk.ps1 -Size 2G netbsd.img
+.\tools\expand-netbsd-disk.ps1 netbsd.img            # relabel only
+```
+
 **Linux / WSL:**
 ```bash
 ./tools/expand-netbsd-disk.sh -s 2G netbsd.img
 ./tools/expand-netbsd-disk.sh netbsd.img            # relabel only (no size change)
 ```
 
-**Windows (PowerShell, requires Docker):**
-```powershell
-.\tools\expand-netbsd-disk.ps1 -Size 2G netbsd.img
-.\tools\expand-netbsd-disk.ps1 netbsd.img            # relabel only
-```
+> **Note:** The shell script compiles `mkdisklabel.c` automatically and requires `gcc` (or a C compiler set via `$CC`).
+> On Ubuntu/WSL: `sudo apt install build-essential`
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -138,16 +144,16 @@ sudo ./tools/expand-linux-disk.sh -s 4G gentoo.img
 Creates an ISO image from a directory for transferring files to the guest OS
 via the emulator's SCSI CD-ROM.
 
-**Linux / WSL:**
-```bash
-./tools/create-iso.sh /path/to/files
-./tools/create-iso.sh -o transfer.iso /path/to/files
-```
-
 **Windows (PowerShell, requires Docker):**
 ```powershell
 .\tools\create-iso.ps1 C:\path\to\files
 .\tools\create-iso.ps1 -Output transfer.iso C:\path\to\files
+```
+
+**Linux / WSL:**
+```bash
+./tools/create-iso.sh /path/to/files
+./tools/create-iso.sh -o transfer.iso /path/to/files
 ```
 
 | Option | Default | Description |
@@ -173,12 +179,12 @@ via the emulator's SCSI CD-ROM.
 
 | Script | Root | Docker | Other |
 |--------|------|--------|-------|
-| `create-netbsd-disk.sh` | No | No | `gcc` |
 | `create-netbsd-disk.ps1` | — | Yes | — |
+| `create-netbsd-disk.sh` | No | No | `gcc` |
 | `create-debian-disk.sh` | Yes | No | `debootstrap`, `qemu-user-static`, `sfdisk` |
 | `create-gentoo-disk.sh` | Yes | No | `sfdisk`, `mkfs.ext2`, `tar` |
-| `expand-netbsd-disk.sh` | No | No | `gcc` |
 | `expand-netbsd-disk.ps1` | — | Yes | — |
+| `expand-netbsd-disk.sh` | No | No | `gcc` |
 | `expand-linux-disk.sh` | Yes | No | `sfdisk`, `resize2fs`, `e2fsck` |
-| `create-iso.sh` | No | No | `genisoimage` or `mkisofs` |
 | `create-iso.ps1` | — | Yes | — |
+| `create-iso.sh` | No | No | `genisoimage` or `mkisofs` |

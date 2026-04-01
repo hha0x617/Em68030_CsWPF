@@ -20,7 +20,7 @@
 6. **File → Open ELF** (Ctrl+E) で NetBSD カーネル (`netbsd-GENERIC`) を読み込みます
 7. **Run** (F5) を押して実行を開始します
 
-OS インストールの詳細な手順については [Getting Started](getting_started.md) を参照してください。
+OS インストールの詳細な手順については [Getting Started](getting_started_ja.md) を参照してください。
 
 ### 初回起動 (Linux)
 
@@ -228,7 +228,7 @@ CPU レジスタの表示と編集ができます。
 | Gateway MAC | MAC アドレス | 52:54:00:12:34:56 | NAT ゲートウェイ MAC (NAT モードのみ) |
 
 > **注意**: ネットワークモードの変更はカーネルイメージを再読み込みした後に有効になります。
-> TAP (Bridge) モードには TAP-Windows ドライバが必要です。[TAP Bridge Setup](setup_tap_bridge.md) を参照してください。
+> TAP (Bridge) モードには TAP-Windows ドライバが必要です。[TAP Bridge Setup](setup_tap_bridge_ja.md) を参照してください。
 
 ### フレームバッファ
 

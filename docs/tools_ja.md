@@ -6,12 +6,12 @@
 
 | スクリプト | 動作環境 | 説明 |
 |-----------|---------|------|
-| `create-netbsd-disk.sh` / `.ps1` | Linux/WSL, Windows | NetBSD ディスクイメージ作成（BSD ディスクラベル付き） |
+| `create-netbsd-disk.ps1` / `.sh` | Windows, Linux/WSL | NetBSD ディスクイメージ作成（BSD ディスクラベル付き） |
 | `create-debian-disk.sh` | Linux/WSL | Debian/m68k ディスクイメージ作成（debootstrap 使用） |
 | `create-gentoo-disk.sh` | Linux/WSL | Gentoo/m68k ディスクイメージ作成（stage3 tarball から） |
-| `expand-netbsd-disk.sh` / `.ps1` | Linux/WSL, Windows | 既存 NetBSD ディスクイメージの拡張 |
+| `expand-netbsd-disk.ps1` / `.sh` | Windows, Linux/WSL | 既存 NetBSD ディスクイメージの拡張 |
 | `expand-linux-disk.sh` | Linux/WSL | 既存 Linux (Debian/Gentoo) ディスクイメージの拡張 |
-| `create-iso.sh` / `.ps1` | Linux/WSL, Windows | ファイル転送用 ISO イメージ作成 |
+| `create-iso.ps1` / `.sh` | Windows, Linux/WSL | ファイル転送用 ISO イメージ作成 |
 | `mkdisklabel.c` | (ヘルパー) | NetBSD VID ディスクラベルライター（自動コンパイル） |
 
 ---
@@ -21,15 +21,18 @@
 NetBSD VID ディスクラベル付きの raw SCSI ディスクイメージを作成します。
 miniroot イメージを指定すると sd0b に配置されます（インストール用）。
 
+**Windows (PowerShell、Docker が必要):**
+```powershell
+.\tools\create-netbsd-disk.ps1 -Size 2G -Miniroot miniroot.fs -Output netbsd.img
+```
+
 **Linux / WSL:**
 ```bash
 ./tools/create-netbsd-disk.sh -s 2G -m miniroot.fs -o netbsd.img
 ```
 
-**Windows (PowerShell、Docker が必要):**
-```powershell
-.\tools\create-netbsd-disk.ps1 -Size 2G -Miniroot miniroot.fs -Output netbsd.img
-```
+> **注意:** シェルスクリプトは `mkdisklabel.c` を自動コンパイルするため、`gcc`（または `$CC` で指定した C コンパイラ）が必要です。
+> Ubuntu/WSL の場合: `sudo apt install build-essential`
 
 | オプション | デフォルト | 説明 |
 |-----------|----------|------|
@@ -90,17 +93,20 @@ Stage3 ダウンロード先: `https://distfiles.gentoo.org/releases/m68k/autobu
 既存の NetBSD ディスクイメージを拡張し、VID ディスクラベルを更新します。
 既存のファイルシステムとパーティションオフセットは保持されます（read-modify-write 方式）。
 
+**Windows (PowerShell、Docker が必要):**
+```powershell
+.\tools\expand-netbsd-disk.ps1 -Size 2G netbsd.img
+.\tools\expand-netbsd-disk.ps1 netbsd.img            # ラベルのみ
+```
+
 **Linux / WSL:**
 ```bash
 ./tools/expand-netbsd-disk.sh -s 2G netbsd.img
 ./tools/expand-netbsd-disk.sh netbsd.img            # ラベルのみ書き換え（サイズ変更なし）
 ```
 
-**Windows (PowerShell、Docker が必要):**
-```powershell
-.\tools\expand-netbsd-disk.ps1 -Size 2G netbsd.img
-.\tools\expand-netbsd-disk.ps1 netbsd.img            # ラベルのみ
-```
+> **注意:** シェルスクリプトは `mkdisklabel.c` を自動コンパイルするため、`gcc`（または `$CC` で指定した C コンパイラ）が必要です。
+> Ubuntu/WSL の場合: `sudo apt install build-essential`
 
 | オプション | デフォルト | 説明 |
 |-----------|----------|------|
@@ -137,16 +143,16 @@ sudo ./tools/expand-linux-disk.sh -s 4G gentoo.img
 ディレクトリから ISO イメージを作成し、エミュレータの SCSI CD-ROM 経由で
 ゲスト OS にファイルを転送します。
 
-**Linux / WSL:**
-```bash
-./tools/create-iso.sh /path/to/files
-./tools/create-iso.sh -o transfer.iso /path/to/files
-```
-
 **Windows (PowerShell、Docker が必要):**
 ```powershell
 .\tools\create-iso.ps1 C:\path\to\files
 .\tools\create-iso.ps1 -Output transfer.iso C:\path\to\files
+```
+
+**Linux / WSL:**
+```bash
+./tools/create-iso.sh /path/to/files
+./tools/create-iso.sh -o transfer.iso /path/to/files
 ```
 
 | オプション | デフォルト | 説明 |
@@ -172,12 +178,12 @@ sudo ./tools/expand-linux-disk.sh -s 4G gentoo.img
 
 | スクリプト | root | Docker | その他 |
 |-----------|------|--------|--------|
-| `create-netbsd-disk.sh` | 不要 | 不要 | `gcc` |
 | `create-netbsd-disk.ps1` | — | 必要 | — |
+| `create-netbsd-disk.sh` | 不要 | 不要 | `gcc` |
 | `create-debian-disk.sh` | 必要 | 不要 | `debootstrap`, `qemu-user-static`, `sfdisk` |
 | `create-gentoo-disk.sh` | 必要 | 不要 | `sfdisk`, `mkfs.ext2`, `tar` |
-| `expand-netbsd-disk.sh` | 不要 | 不要 | `gcc` |
 | `expand-netbsd-disk.ps1` | — | 必要 | — |
+| `expand-netbsd-disk.sh` | 不要 | 不要 | `gcc` |
 | `expand-linux-disk.sh` | 必要 | 不要 | `sfdisk`, `resize2fs`, `e2fsck` |
-| `create-iso.sh` | 不要 | 不要 | `genisoimage` or `mkisofs` |
 | `create-iso.ps1` | — | 必要 | — |
+| `create-iso.sh` | 不要 | 不要 | `genisoimage` or `mkisofs` |
