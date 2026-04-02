@@ -52,9 +52,9 @@ to .NET IL and executed as DynamicMethod instances.
 - Files: `Core/Jit/CompiledBlock.cs`, `Core/Jit/JitCache.cs`, `Core/Jit/JitCompiler.cs`
 - ExecuteNextFast() and ExecuteNextFastJit() are completely separate methods (same separation
   design as C++).
-- Method selection uses a bool branch. Func<bool> delegate dispatch caused a 36 to 30 MHz
-  regression and was rejected.
-- JIT ON is currently slower than JIT OFF (31.0 vs 32.1 MIPS): NoInlining method call
+- Method selection uses a bool branch. Func<bool> delegate dispatch caused a ~17%
+  performance regression and was rejected.
+- JIT ON is currently slower than JIT OFF (~190 vs ~217 MHz): NoInlining method call
   overhead for ExecuteNextJit + DynamicMethod delegate dispatch cost for block.Execute()
   outweigh the benefit given the rarity of compilable blocks.
 
@@ -65,23 +65,23 @@ instruction tracing is output to diagnostics (not available in C++ version).
 
 ### Performance (JIT OFF)
 
-~32.14 MIPS / ~216.75 MHz-cycles (measured via Avg mode), ~6.7 cycles/instruction
+~217 MHz (measured via Avg mode), ~6.7 cycles/instruction
 
 > **Note**: These figures are approximate estimates, not cycle-accurate measurements.
 > - **MHz** = total emulated cycles / wall-clock seconds / 1,000,000. Cycle counts come from
 >   a 65,536-entry static lookup table (`s_cycleTable`) with EA cost adjustments, which
 >   approximates MC68030 timing but does not model pipeline, cache, or bus wait states.
-> - **MIPS** = total emulated instructions / wall-clock seconds / 1,000,000.
 > - **Avg** values are cumulative from the start of a Run session. Instantaneous values
 >   are sampled every ~500ms.
 > - Results vary depending on workload, host CPU, and system load.
+> - For application-level performance, see [Benchmark](benchmark.md) (Dhrystone DMIPS).
 
 > **STOP instruction idle time exclusion**: Linux uses the M68K `STOP` instruction
 > (0x4E72) to halt the CPU while waiting for interrupts (interrupt-driven idle).
 > The emulator tracks wall-clock time spent in the STOP state and excludes it from
-> the MHz/MIPS calculation denominator. This ensures that the displayed values reflect
+> the MHz calculation denominator. This ensures that the displayed values reflect
 > actual CPU execution speed rather than idle time. For example, at an idle Linux shell
-> prompt where the CPU spends nearly all time in STOP, the MHz/MIPS values remain
+> prompt where the CPU spends nearly all time in STOP, the MHz values remain
 > broadly consistent with active execution speed without showing obviously
 > anomalous values. NetBSD, by contrast, tends to use busy-wait loops that
 > continuously execute instructions, so STOP time exclusion has minimal effect.
@@ -419,7 +419,7 @@ The following parameters are configurable via Settings → Performance → JIT:
   every TickInterval (256) instructions; when the same block address accumulates this many hits,
   compilation is triggered. A lower value compiles more aggressively (more blocks compiled sooner,
   but more compilation overhead). A higher value is more conservative (only the hottest loops
-  are compiled). Since JIT currently has net negative performance impact (~3.5% MIPS slower),
+  are compiled). Since JIT currently has net negative performance impact (~12.3% MHz slower),
   adjusting this value has limited practical effect.
 
 - **Min Block Length** (default: 3): The minimum number of JIT-compilable instructions a basic
@@ -431,8 +431,8 @@ The following parameters are configurable via Settings → Performance → JIT:
   dispatch overhead for trivial blocks.
 - ExecuteNextFast() and ExecuteNextFastJit() are completely separate methods (same separation
   design as C++)
-- Method selection uses a bool branch. Func<bool> delegate dispatch caused a 36 to 30 MIPS
-  regression (a constant-direction branch is essentially free thanks to branch prediction)
+- Method selection uses a bool branch. Func<bool> delegate dispatch caused a ~17%
+  performance regression (a constant-direction branch is essentially free thanks to branch prediction)
 - Bailout mechanism: memory access instructions call `TryReadLongCached()` and communicate
   partial execution via `_jitExecutedCount`/`_jitExecutedCycles` side-channel fields.
   Blocks exceeding 64 bailouts are blacklisted.
@@ -440,11 +440,11 @@ The following parameters are configurable via Settings → Performance → JIT:
 
 ### Performance
 
-| Mode | MHz (cycles) | MIPS | Notes |
-|------|-------------|------|-------|
-| JIT OFF | ~217 | ~32.1 | Baseline |
-| JIT ON | ~190 | ~31.0 | -3.5% MIPS / -12.3% MHz overhead |
+| Mode | MHz (cycles) | Notes |
+|------|-------------|-------|
+| JIT OFF | ~217 | Baseline |
+| JIT ON | ~190 | -12.3% overhead |
 
-JIT ON is currently slower than JIT OFF (-3.5% MIPS, -12.3% MHz). NoInlining method call
+JIT ON is currently slower than JIT OFF (-12.3% MHz). NoInlining method call
 overhead for ExecuteNextJit + DynamicMethod delegate dispatch cost for block.Execute()
 outweigh the benefit given the rarity of compilable blocks. JIT is disabled by default.

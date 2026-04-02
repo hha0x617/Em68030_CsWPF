@@ -129,7 +129,7 @@ Other lightweight options: `fvwm`, `icewm`, `openbox` (if available for m68k).
 
 > **Limitation:** The emulator does not provide a virtual GPU — the framebuffer
 > (`simplefb`) is a plain memory-mapped pixel buffer with no acceleration.
-> Additionally, the emulated MC68030 (~44 MIPS) lacks the processing power for
+> Additionally, the emulated MC68030 (~270 MHz) lacks the processing power for
 > software-based compositing or rendering. As a result, window managers that require
 > a compositor or OpenGL will not work. This includes Enlightenment, Compiz, KWin,
 > Mutter (GNOME), and xfwm4. Use lightweight, non-compositing window managers such
@@ -158,7 +158,7 @@ are supported (US keyboard layout). Special shortcuts:
 
 ### Performance Notes
 
-X Window System on the emulated MC68030 (~44 MIPS) is functional but slow.
+X Window System on the emulated MC68030 (~270 MHz) is functional but slow.
 Expect significant latency when rendering complex UI elements. Lightweight
 window managers and simple applications work best.
 

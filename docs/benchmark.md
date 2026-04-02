@@ -47,6 +47,6 @@ Emulation speed depends on the host PC performance. Results will vary on differe
 
 ### Notes
 
-- The emulator's status bar shows ~32 MIPS (instruction throughput) and ~217 MHz (estimated cycle-based clock). These are internal metrics and not directly comparable to DMIPS, which measures application-level performance including memory access, function calls, and string operations.
+- The emulator's status bar shows ~217 MHz (estimated cycle-based clock). This is an internal metric based on approximate cycle counting and is not directly comparable to DMIPS, which measures application-level performance including memory access, function calls, and string operations.
 - Compiled without `register` attribute as reported by the benchmark output.
-- The C# version achieves approximately 70% of the C++ version's DMIPS score (55.3 vs 79.1), consistent with the internal MIPS ratio (~32 vs ~44 MIPS).
+- The C# version achieves approximately 70% of the C++ version's DMIPS score (55.3 vs 79.1), consistent with the MHz ratio (~217 vs ~270 MHz).
