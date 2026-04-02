@@ -104,13 +104,49 @@ public class EmulatorConfig
     public int JitMinBlockLength { get; set; } = 3;
     public int JitCompileThreshold { get; set; } = 32;
 
-    private static readonly string ConfigPath = Path.Combine(
-        AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+    private static readonly string ConfigPath;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true
     };
+
+    /// <summary>
+    /// User-writable data directory (%LOCALAPPDATA%\Em68030\).
+    /// Falls back to exe directory if LOCALAPPDATA is unavailable.
+    /// </summary>
+    public static string DataDirectory { get; }
+
+    static EmulatorConfig()
+    {
+        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (!string.IsNullOrEmpty(localAppData))
+        {
+            DataDirectory = Path.Combine(localAppData, "Em68030_CsWPF");
+            Directory.CreateDirectory(DataDirectory);
+        }
+        else
+        {
+            DataDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        }
+
+        // Migrate legacy files from exe directory
+        string exeDir = AppDomain.CurrentDomain.BaseDirectory;
+        if (!string.Equals(Path.GetFullPath(exeDir), Path.GetFullPath(DataDirectory), StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (string name in new[] { "appsettings.json", "nvram.bin" })
+            {
+                string src = Path.Combine(exeDir, name);
+                string dst = Path.Combine(DataDirectory, name);
+                if (File.Exists(src) && !File.Exists(dst))
+                {
+                    try { File.Copy(src, dst); } catch { }
+                }
+            }
+        }
+
+        ConfigPath = Path.Combine(DataDirectory, "appsettings.json");
+    }
 
     public static EmulatorConfig Load()
     {

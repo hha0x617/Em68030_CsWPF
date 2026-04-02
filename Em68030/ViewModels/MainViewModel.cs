@@ -1462,7 +1462,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private static string GetNvramPath()
     {
-        return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "nvram.bin");
+        return Path.Combine(Em68030.Config.EmulatorConfig.DataDirectory, "nvram.bin");
     }
 
     public void DoReset()
@@ -1515,8 +1515,8 @@ public class MainViewModel : INotifyPropertyChanged
         _cpu.FpuTraceEnabled = _cpu.VerboseTrace;
         if (_cpu.VerboseTrace)
         {
-            // Open trace log file in the application directory
-            string traceDir = AppDomain.CurrentDomain.BaseDirectory;
+            // Open trace log file in data directory
+            string traceDir = Em68030.Config.EmulatorConfig.DataDirectory;
             string tracePath = Path.Combine(traceDir, "tracelog.txt");
             try
             {
