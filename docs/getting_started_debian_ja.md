@@ -517,7 +517,7 @@ mvme147 login:
 ### フレームバッファと X Window System（オプション）
 
 フレームバッファコンソール (fbcon) や X Window System などのグラフィカルディスプレイの
-設定については、[フレームバッファディスプレイ セットアップガイド](setup_framebuffer_ja.md)
+設定については、[フレームバッファディスプレイ セットアップガイド](https://github.com/hha0x617/Em68030-Guest-Linux/blob/main/docs/setup_framebuffer_ja.md) (Em68030-Guest-Linux)
 を参照してください。
 
 ---

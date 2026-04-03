@@ -517,7 +517,7 @@ For normal operation, `root=/dev/sda1 console=ttyS0,9600` is sufficient.
 ### Framebuffer and X Window System (Optional)
 
 For graphical display support including framebuffer console (fbcon) and X Window System,
-see [Framebuffer Display Setup Guide](setup_framebuffer.md).
+see [Framebuffer Display Setup Guide](https://github.com/hha0x617/Em68030-Guest-Linux/blob/main/docs/setup_framebuffer.md) (Em68030-Guest-Linux).
 
 ---
 

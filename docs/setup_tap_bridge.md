@@ -59,7 +59,9 @@ can communicate with the host LAN.
 
 ## Step 4: Configure the Guest OS
 
-### Option A: DHCP (Recommended)
+### Linux
+
+#### Option A: DHCP (Recommended)
 
 Edit `/etc/systemd/network/10-eth0.network` on the guest:
 
@@ -83,7 +85,7 @@ Or use `dhcpcd` directly:
 dhcpcd eth0
 ```
 
-### Option B: Static IP Address
+#### Option B: Static IP Address
 
 Edit `/etc/systemd/network/10-eth0.network` on the guest:
 
@@ -105,11 +107,54 @@ Apply the configuration:
 systemctl restart systemd-networkd
 ```
 
+### NetBSD
+
+#### Option A: DHCP (Recommended)
+
+Edit `/etc/rc.conf` on the guest:
+
+```
+ifconfig_le0=dhcp
+```
+
+Apply the configuration:
+
+```
+# /etc/rc.d/dhcpcd restart
+```
+
+#### Option B: Static IP Address
+
+Edit `/etc/rc.conf` on the guest:
+
+```
+ifconfig_le0="inet 192.168.1.100 netmask 255.255.255.0"
+defaultroute="192.168.1.1"
+```
+
+Edit `/etc/resolv.conf`:
+
+```
+nameserver 192.168.1.1
+```
+
+Replace the addresses with values appropriate for your network.
+
+Apply the configuration:
+
+```
+# /etc/rc.d/network restart
+```
+
 ## Step 5: Verify Connectivity
 
 1. **Check IP address:**
    ```bash
+   # Linux
    ip addr show eth0
+
+   # NetBSD
+   ifconfig le0
    ```
 
 2. **Test connectivity:**
