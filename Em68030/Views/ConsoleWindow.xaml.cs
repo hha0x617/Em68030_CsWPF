@@ -44,6 +44,7 @@ public partial class ConsoleWindow : Window
     private readonly DispatcherTimer _renderTimer;
     private bool _autoScroll = true;
     private bool _suppressScrollEvent;
+    private bool _rendering;
 
     // Thread-safe output queue: emulation thread enqueues, UI thread drains
     private readonly ConcurrentQueue<char> _outputQueue = new();
@@ -287,7 +288,9 @@ public partial class ConsoleWindow : Window
 
     private void RenderScreen()
     {
-        // Drain output queue into terminal (produced by emulation thread)
+        // Drain output queue into terminal (produced by emulation thread).
+        // Always drain, even if we skip the UI update, so the terminal
+        // state stays current.
         while (_outputQueue.TryDequeue(out char ch))
             _terminal.Write(ch);
 
@@ -303,15 +306,23 @@ public partial class ConsoleWindow : Window
         // so mouse-drag selections aren't reset every 100ms render tick.
         if (OutputBox.SelectionLength > 0) return;
 
-        _terminal.ClearDirty();
-
         // While the user is browsing scrollback history, do NOT update the
         // TextBox text — replacing text resets the scroll position, and all
         // attempts to restore it fight with the TextBox's internal caret-scroll.
         // The terminal still processes output (above), so when the user scrolls
         // back to the bottom, the latest content will be shown.
-        if (!_autoScroll) return;
+        if (!_autoScroll)
+        {
+            _terminal.ClearDirty();
+            return;
+        }
 
+        // Skip if the previous render's UI update hasn't completed yet.
+        // The terminal stays dirty so the next timer tick will retry.
+        if (_rendering) return;
+
+        _terminal.ClearDirty();
+        _rendering = true;
         _suppressScrollEvent = true;
 
         OutputBox.Text = _cursorVisible
@@ -321,9 +332,13 @@ public partial class ConsoleWindow : Window
         OutputBox.CaretIndex = OutputBox.Text.Length;
         OutputBox.ScrollToEnd();
 
-        // Clear at Input priority (5) — after Render (7) and Loaded (6) process
-        // all deferred scroll events from the text/caret update.
-        Dispatcher.BeginInvoke(DispatcherPriority.Input, () => _suppressScrollEvent = false);
+        // Clear flags at Input priority (5) — after Render (7) and Loaded (6)
+        // process all deferred scroll events from the text/caret update.
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+        {
+            _suppressScrollEvent = false;
+            _rendering = false;
+        });
     }
 
     public char ReadChar()
