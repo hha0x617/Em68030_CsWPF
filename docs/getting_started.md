@@ -15,4 +15,5 @@ Setup guides for installing and booting guest operating systems on the Em68030 e
 | Guide | Description |
 |-------|-------------|
 | [Framebuffer Display](https://github.com/hha0x617/Em68030-Guest-Linux/blob/main/docs/setup_framebuffer.md) | Framebuffer console (fbcon) and X Window System setup (Em68030-Guest-Linux) |
+| [NAT Network](setup_nat_network.md) | NAT mode guest network configuration (Linux/NetBSD) |
 | [TAP Bridge Network](setup_tap_bridge.md) | Bridge networking via TAP-Windows adapter |

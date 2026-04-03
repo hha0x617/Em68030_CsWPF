@@ -228,7 +228,9 @@ CPU レジスタの表示と編集ができます。
 | Gateway MAC | MAC アドレス | 52:54:00:12:34:56 | NAT ゲートウェイ MAC (NAT モードのみ) |
 
 > **注意**: ネットワークモードの変更はカーネルイメージを再読み込みした後に有効になります。
-> TAP (Bridge) モードには TAP-Windows ドライバが必要です。[TAP Bridge Setup](setup_tap_bridge_ja.md) を参照してください。
+> ゲスト OS の設定については以下を参照してください:
+> - [NAT ネットワーク セットアップガイド](setup_nat_network_ja.md) — NAT モードのゲスト設定 (Linux/NetBSD)
+> - [TAP ブリッジ セットアップガイド](setup_tap_bridge_ja.md) — TAP ブリッジモード（TAP-Windows ドライバが必要）
 
 ### フレームバッファ
 

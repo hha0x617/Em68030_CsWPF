@@ -228,7 +228,9 @@ Manages CPU breakpoints for debugging.
 | Gateway MAC | MAC address | 52:54:00:12:34:56 | NAT gateway MAC (NAT mode only) |
 
 > **Note**: Network mode changes take effect after reloading the kernel image.
-> TAP (Bridge) mode requires the TAP-Windows driver. See [TAP Bridge Setup](setup_tap_bridge.md).
+> For guest OS configuration, see:
+> - [NAT Network Setup Guide](setup_nat_network.md) — NAT mode guest configuration (Linux/NetBSD)
+> - [TAP Bridge Setup Guide](setup_tap_bridge.md) — TAP bridge mode (requires TAP-Windows driver)
 
 ### Framebuffer
 
