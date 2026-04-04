@@ -319,5 +319,12 @@ rc_configured=YES
 - **Settings > SCSI CD-ROM** に ISO のパスが正しく設定されているか確認してください
 - ISO は NetBSD/mvme68k の標準リリース ISO である必要があります
 
+### HTTPS 経由のダウンロードで証明書エラーが発生する
+
+`pkg_add`、`ftp`、`git clone` 等で HTTPS 接続時に「certificate verification failed」
+や「unable to get local issuer certificate」のようなエラーが発生する場合があります。
+NetBSD にはデフォルトでルート証明書が含まれていません。
+解決方法は [ルート証明書 セットアップガイド](setup_root_certificates_ja.md) を参照してください。
+
 ### Windows Defender SmartScreen にブロックされる
 実行ファイルにコード署名がないため、初回実行時に SmartScreen によりブロックされることがあります。「詳細情報」をクリックし「実行」を選択するか、exe ファイルを右クリックしてプロパティの「全般」タブで「許可する」にチェックを入れてください。

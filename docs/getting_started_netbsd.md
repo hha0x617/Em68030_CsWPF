@@ -320,5 +320,12 @@ The boot stub could not identify the SCSI controller. Ensure **Board Type** is s
 - Verify the ISO path is correctly set in **Settings > SCSI CD-ROM**
 - The ISO should be a standard NetBSD/mvme68k release ISO
 
+### HTTPS downloads fail with certificate errors
+
+When using `pkg_add`, `ftp`, or `git clone` over HTTPS, you may see errors like
+"certificate verification failed" or "unable to get local issuer certificate".
+NetBSD does not include root certificates by default.
+See [Root Certificate Setup Guide](setup_root_certificates.md) for the solution.
+
 ### Windows Defender SmartScreen blocks the emulator
 Since the executable is not code-signed, SmartScreen may block it on first run. Click "More info" and then "Run anyway", or right-click the exe, open Properties, and check "Unblock" on the General tab.
