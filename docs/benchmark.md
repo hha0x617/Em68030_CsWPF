@@ -50,3 +50,16 @@ Emulation speed depends on the host PC performance. Results will vary on differe
 - The emulator's status bar shows ~217 MHz (estimated cycle-based clock). This is an internal metric based on approximate cycle counting and is not directly comparable to DMIPS, which measures application-level performance including memory access, function calls, and string operations.
 - Compiled without `register` attribute as reported by the benchmark output.
 - The C# version achieves approximately 70% of the C++ version's DMIPS score (55.3 vs 79.1), consistent with the MHz ratio (~217 vs ~270 MHz).
+
+---
+
+## CoreMark 1.0
+
+Measured using [eembc/coremark](https://github.com/eembc/coremark) on the C++ version of the emulator.
+See [Em68030_WinUI3Cpp benchmark](https://github.com/hha0x617/Em68030_WinUI3Cpp/blob/main/docs/benchmark.md#coremark-10) for full build instructions and results.
+
+| System | CoreMark | Notes |
+|--------|----------|-------|
+| MC68030 25 MHz (real hardware) | ~10-20 | Approximate, varies by implementation |
+| **Em68030 C++ on i7-13700** | **155.55** | ~8-15x faster than real MC68030 25 MHz |
+| Raspberry Pi 1 (ARM1176, 700 MHz) | ~1,073 | For reference |
