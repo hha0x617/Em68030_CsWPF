@@ -35,7 +35,7 @@ as-is via the host OS network stack. The guest communicates through a virtual ga
 
 ## Step 2: Configure the Guest OS
 
-### Linux (Debian — systemd-networkd)
+### Linux (systemd — Debian, Gentoo with systemd)
 
 ```ini
 # /etc/systemd/network/10-eth0.network
@@ -55,10 +55,11 @@ nameserver 8.8.8.8
 Apply:
 
 ```bash
+systemctl enable systemd-networkd
 systemctl restart systemd-networkd
 ```
 
-### Linux (Gentoo — OpenRC)
+### Linux (OpenRC — Gentoo with OpenRC)
 
 ```bash
 # /etc/conf.d/net

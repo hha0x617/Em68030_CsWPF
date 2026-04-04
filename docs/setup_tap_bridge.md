@@ -59,7 +59,7 @@ can communicate with the host LAN.
 
 ## Step 4: Configure the Guest OS
 
-### Linux
+### Linux (systemd — Debian, Gentoo with systemd)
 
 #### Option A: DHCP (Recommended)
 
@@ -76,6 +76,7 @@ DHCP=yes
 Apply the configuration:
 
 ```bash
+systemctl enable systemd-networkd
 systemctl restart systemd-networkd
 ```
 
@@ -105,6 +106,47 @@ Apply the configuration:
 
 ```bash
 systemctl restart systemd-networkd
+```
+
+### Linux (OpenRC — Gentoo with OpenRC)
+
+#### Option A: DHCP (Recommended)
+
+Edit `/etc/conf.d/net` on the guest:
+
+```bash
+config_eth0="dhcp"
+```
+
+Create the service link and start:
+
+```bash
+cd /etc/init.d && ln -s net.lo net.eth0
+rc-service net.eth0 start
+```
+
+#### Option B: Static IP Address
+
+Edit `/etc/conf.d/net` on the guest:
+
+```bash
+config_eth0="192.168.1.100/24"
+routes_eth0="default via 192.168.1.1"
+```
+
+Edit `/etc/resolv.conf`:
+
+```
+nameserver 192.168.1.1
+```
+
+Replace the addresses with values appropriate for your network.
+
+Create the service link and start:
+
+```bash
+cd /etc/init.d && ln -s net.lo net.eth0
+rc-service net.eth0 start
 ```
 
 ### NetBSD
