@@ -55,11 +55,57 @@ Emulation speed depends on the host PC performance. Results will vary on differe
 
 ## CoreMark 1.0
 
-Measured using [eembc/coremark](https://github.com/eembc/coremark) on the C++ version of the emulator.
-See [Em68030_WinUI3Cpp benchmark](https://github.com/hha0x617/Em68030_WinUI3Cpp/blob/main/docs/benchmark.md#coremark-10) for full build instructions and results.
+Measured using [eembc/coremark](https://github.com/eembc/coremark) on NetBSD/mvme68k 10.1 running on the Em68030 emulator.
+
+### Prerequisites
+
+Install `git` and `gmake` on the guest (NetBSD's default `make` is not compatible with CoreMark's Makefile):
+
+```sh
+pkg_add git gmake
+```
+
+### Build
+
+```sh
+git clone https://github.com/eembc/coremark.git
+cd coremark
+gmake PORT_DIR=posix CC=gcc XCFLAGS="-O2 -m68030" RECURSE_OUT=1
+```
+
+### Run
+
+```sh
+./coremark.exe 0 0 0 5000
+```
+
+### Result
+
+| Item | Value |
+|------|-------|
+| Iterations | 5,000 |
+| Total time (secs) | 44.301 |
+| **CoreMark score** | **112.86** |
+| Compiler | GCC 10.5.0 |
+| Compiler flags | `-O2 -m68030 -DPERFORMANCE_RUN=1 -lrt` |
+| Memory location | Heap |
+
+CoreMark score = Iterations / Total time.
+
+### Host Environment
+
+| Item | Value |
+|------|-------|
+| Emulator | Em68030 (C# / WPF) |
+| JIT | OFF |
+| Host CPU | Intel Core i7-13700 |
+| Host OS | Windows 11 Pro 25H2 |
+
+### Comparison
 
 | System | CoreMark | Notes |
 |--------|----------|-------|
 | MC68030 25 MHz (real hardware) | ~10-20 | Approximate, varies by implementation |
-| **Em68030 C++ on i7-13700** | **155.55** | ~8-15x faster than real MC68030 25 MHz |
+| Em68030 C++ on i7-13700 | 155.55 | ~8-15x faster than real MC68030 25 MHz |
+| **Em68030 C# on i7-13700** | **112.86** | ~73% of C++ version |
 | Raspberry Pi 1 (ARM1176, 700 MHz) | ~1,073 | For reference |
