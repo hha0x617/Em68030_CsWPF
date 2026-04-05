@@ -380,12 +380,16 @@ public class MainViewModel : INotifyPropertyChanged
         _disasmAddress = _cpu.PC;
 
         // Auto-load kernel image if configured (MVME147 only)
-        if (_config.BoardType == "MVME147" &&
-            !string.IsNullOrEmpty(_config.Mvme147KernelImagePath) &&
-            System.IO.File.Exists(_config.Mvme147KernelImagePath))
+        if (_config.BoardType == "MVME147")
         {
-            try { LoadElfFile(_config.Mvme147KernelImagePath); }
-            catch { }
+            string kernelPath = _config.TargetOS == "Linux"
+                ? _config.LinuxKernelImagePath
+                : _config.NetBsdKernelImagePath;
+            if (!string.IsNullOrEmpty(kernelPath) && System.IO.File.Exists(kernelPath))
+            {
+                try { LoadElfFile(kernelPath); }
+                catch { }
+            }
         }
 
         StepCommand = new RelayCommand(_ => Step(), _ => !IsRunning);

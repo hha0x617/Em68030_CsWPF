@@ -52,8 +52,9 @@ public class EmulatorConfig
     public string Mvme147ScsiCdromPath { get; set; } = "";
     public int Mvme147ScsiCdromId { get; set; } = 3;
 
-    // Kernel image path for auto-load on startup
-    public string Mvme147KernelImagePath { get; set; } = "";
+    // Kernel image paths for auto-load on startup (per target OS)
+    public string NetBsdKernelImagePath { get; set; } = "";
+    public string LinuxKernelImagePath { get; set; } = "";
 
     // Boot partition: 0='a', 1='b', etc. Used by boot stub to tell kernel which partition is root.
     public int Mvme147BootPartition { get; set; } = 0;
@@ -193,6 +194,19 @@ public class EmulatorConfig
                             id2 = di2.GetInt32();
                         if (!string.IsNullOrEmpty(path2))
                             config.Mvme147ScsiDisks.Add(new ScsiDiskConfig { Path = path2, ScsiId = id2 });
+                    }
+                }
+
+                // Migration: old single kernel image path
+                if (doc.RootElement.TryGetProperty("Mvme147KernelImagePath", out var kernelProp) &&
+                    string.IsNullOrEmpty(config.NetBsdKernelImagePath) &&
+                    string.IsNullOrEmpty(config.LinuxKernelImagePath))
+                {
+                    string old = kernelProp.GetString() ?? "";
+                    if (!string.IsNullOrEmpty(old))
+                    {
+                        if (config.TargetOS == "Linux") config.LinuxKernelImagePath = old;
+                        else config.NetBsdKernelImagePath = old;
                     }
                 }
 

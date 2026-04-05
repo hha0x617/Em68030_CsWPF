@@ -74,7 +74,8 @@ public partial class SettingsWindow : Window
         // Board type
         SelectItemByText(BoardTypeBox, Config.BoardType);
         Mvme147RomBox.Text = Config.Mvme147RomPath;
-        KernelImagePathBox.Text = Config.Mvme147KernelImagePath;
+        NetBsdKernelImagePathBox.Text = Config.NetBsdKernelImagePath;
+        LinuxKernelImagePathBox.Text = Config.LinuxKernelImagePath;
 
         // SCSI Disks
         foreach (var disk in Config.Mvme147ScsiDisks)
@@ -432,7 +433,8 @@ public partial class SettingsWindow : Window
         // Board type
         Config.BoardType = GetSelectedItemText(BoardTypeBox);
         Config.Mvme147RomPath = Mvme147RomBox.Text;
-        Config.Mvme147KernelImagePath = KernelImagePathBox.Text;
+        Config.NetBsdKernelImagePath = NetBsdKernelImagePathBox.Text;
+        Config.LinuxKernelImagePath = LinuxKernelImagePathBox.Text;
 
         // SCSI Disks
         Config.Mvme147ScsiDisks.Clear();
@@ -588,7 +590,7 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void BrowseKernel_Click(object sender, RoutedEventArgs e)
+    private void BrowseNetBsdKernel_Click(object sender, RoutedEventArgs e)
     {
         var dlg = new OpenFileDialog
         {
@@ -596,9 +598,18 @@ public partial class SettingsWindow : Window
             Title = Strings.Settings_SelectKernelImage
         };
         if (dlg.ShowDialog() == true)
+            NetBsdKernelImagePathBox.Text = dlg.FileName;
+    }
+
+    private void BrowseLinuxKernel_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFileDialog
         {
-            KernelImagePathBox.Text = dlg.FileName;
-        }
+            Filter = Strings.Settings_SelectKernelImage + "|*.*",
+            Title = Strings.Settings_SelectKernelImage
+        };
+        if (dlg.ShowDialog() == true)
+            LinuxKernelImagePathBox.Text = dlg.FileName;
     }
 
     private void BrowseHdd_Click(object sender, RoutedEventArgs e)
