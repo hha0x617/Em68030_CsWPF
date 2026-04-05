@@ -92,6 +92,11 @@ gmake PORT_DIR=posix CC=gcc XCFLAGS="-O2 -m68030" RECURSE_OUT=1
 
 CoreMark スコア = 反復回数 / 合計時間。
 
+**公式レポートフォーマット:**
+```
+CoreMark 1.0 : 112.864269 / GCC10.5.0 -O2 -O2 -m68030 -DPERFORMANCE_RUN=1 -lrt / Heap
+```
+
 ### ホスト環境
 
 | 項目 | 値 |

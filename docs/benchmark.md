@@ -92,6 +92,11 @@ gmake PORT_DIR=posix CC=gcc XCFLAGS="-O2 -m68030" RECURSE_OUT=1
 
 CoreMark score = Iterations / Total time.
 
+**Official reporting format:**
+```
+CoreMark 1.0 : 112.864269 / GCC10.5.0 -O2 -O2 -m68030 -DPERFORMANCE_RUN=1 -lrt / Heap
+```
+
 ### Host Environment
 
 | Item | Value |
