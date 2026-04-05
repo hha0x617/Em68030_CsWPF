@@ -329,6 +329,21 @@
                                     Background="#FF3E3E42" Foreground="#FFD4D4D4" />
                         </Grid>
 
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{x:Static p:Strings.Settings_KernelImage}" Style="{StaticResource SettingLabel}" />
+                            <TextBox x:Name="KernelImagePathBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
+                            <Button Content="{x:Static p:Strings.Settings_Browse}" Grid.Column="2" Click="BrowseKernel_Click"
+                                    Width="30" Margin="4,0,0,0"
+                                    Background="#FF3E3E42" Foreground="#FFD4D4D4" />
+                        </Grid>
+                        <TextBlock Text="{x:Static p:Strings.Settings_KernelImageDescription}"
+                                   Foreground="#FF808080" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
+
                         <!-- Target OS -->
                         <TextBlock Text="{x:Static p:Strings.Settings_TargetOS}" Style="{StaticResource SectionHeader}" />
                         <Grid>

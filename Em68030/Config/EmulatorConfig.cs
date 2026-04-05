@@ -52,6 +52,9 @@ public class EmulatorConfig
     public string Mvme147ScsiCdromPath { get; set; } = "";
     public int Mvme147ScsiCdromId { get; set; } = 3;
 
+    // Kernel image path for auto-load on startup
+    public string Mvme147KernelImagePath { get; set; } = "";
+
     // Boot partition: 0='a', 1='b', etc. Used by boot stub to tell kernel which partition is root.
     public int Mvme147BootPartition { get; set; } = 0;
 

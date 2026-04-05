@@ -242,6 +242,9 @@ namespace Em68030.Properties
         public static string Status_BreakpointFormat => ResourceManager.GetString("Status_BreakpointFormat", resourceCulture) ?? "";
         public static string Status_InfiniteLoopFormat => ResourceManager.GetString("Status_InfiniteLoopFormat", resourceCulture) ?? "";
         public static string Status_147BugReturn => ResourceManager.GetString("Status_147BugReturn", resourceCulture) ?? "";
+        public static string Settings_KernelImage => ResourceManager.GetString("Settings_KernelImage", resourceCulture) ?? "";
+        public static string Settings_KernelImageDescription => ResourceManager.GetString("Settings_KernelImageDescription", resourceCulture) ?? "";
+        public static string Settings_SelectKernelImage => ResourceManager.GetString("Settings_SelectKernelImage", resourceCulture) ?? "";
         public static string Settings_Debug => ResourceManager.GetString("Settings_Debug", resourceCulture) ?? "";
         public static string Settings_EnableTraceButton => ResourceManager.GetString("Settings_EnableTraceButton", resourceCulture) ?? "";
         public static string Settings_TraceDescription => ResourceManager.GetString("Settings_TraceDescription", resourceCulture) ?? "";

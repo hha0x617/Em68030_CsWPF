@@ -74,6 +74,7 @@ public partial class SettingsWindow : Window
         // Board type
         SelectItemByText(BoardTypeBox, Config.BoardType);
         Mvme147RomBox.Text = Config.Mvme147RomPath;
+        KernelImagePathBox.Text = Config.Mvme147KernelImagePath;
 
         // SCSI Disks
         foreach (var disk in Config.Mvme147ScsiDisks)
@@ -431,6 +432,7 @@ public partial class SettingsWindow : Window
         // Board type
         Config.BoardType = GetSelectedItemText(BoardTypeBox);
         Config.Mvme147RomPath = Mvme147RomBox.Text;
+        Config.Mvme147KernelImagePath = KernelImagePathBox.Text;
 
         // SCSI Disks
         Config.Mvme147ScsiDisks.Clear();
@@ -583,6 +585,19 @@ public partial class SettingsWindow : Window
         if (dlg.ShowDialog() == true)
         {
             Mvme147RomBox.Text = dlg.FileName;
+        }
+    }
+
+    private void BrowseKernel_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFileDialog
+        {
+            Filter = Strings.Settings_SelectKernelImage + "|*.*",
+            Title = Strings.Settings_SelectKernelImage
+        };
+        if (dlg.ShowDialog() == true)
+        {
+            KernelImagePathBox.Text = dlg.FileName;
         }
     }
 

@@ -597,4 +597,13 @@ NetBSD ディスク イメージに対してのみ使用してください。</v
   <data name="Settings_TraceDescription" xml:space="preserve">
     <value>有効にすると、ツールバーに Trace ボタンが表示されます。クリックすると命令トレースのログファイル出力が切り替わります。</value>
   </data>
+  <data name="Settings_KernelImage" xml:space="preserve">
+    <value>カーネルイメージ:</value>
+  </data>
+  <data name="Settings_KernelImageDescription" xml:space="preserve">
+    <value>指定した場合、エミュレータ起動時に自動的にカーネルイメージを読み込みます。</value>
+  </data>
+  <data name="Settings_SelectKernelImage" xml:space="preserve">
+    <value>カーネルイメージを選択</value>
+  </data>
 </root>
