@@ -212,13 +212,16 @@ The settings dialog is organized into three tabs: **General**, **MVME147**, and 
 
 #### I/O Devices
 
+These are emulator-specific virtual devices for the Generic board mode.
+They do not correspond to real hardware.
+
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Console Device Enabled | On | Enable serial console |
+| Console Device Enabled | On | Virtual serial console (MMIO) |
 | Console Base Addr | 0x00FF0000 | Console MMIO address |
 | Scrollback Lines | 2000 | Console scrollback buffer size |
 | Terminal Size | 80 x 24 | Console columns and rows |
-| HDD Device Enabled | On | Enable HDD controller |
+| HDD Device Enabled | On | Virtual HDD controller (MMIO) |
 | HDD Base Addr | 0x00FF1000 | HDD MMIO address |
 
 #### Display
@@ -263,6 +266,8 @@ This tab is only enabled when Board Type is set to MVME147.
 
 #### SCSI Disks
 
+SCSI disk emulation via the WD33C93 SCSI controller (real MVME147 hardware).
+
 | Setting | Description |
 |---------|-------------|
 | Disk Image Path | Path to a raw SCSI disk image file |
@@ -274,6 +279,9 @@ This tab is only enabled when Board Type is set to MVME147.
 > CD-ROM ISO images can be swapped at any time.
 
 #### Network
+
+Network emulation via the AMD LANCE Ethernet controller (real MVME147 hardware).
+The network backend determines how the emulated NIC connects to the host.
 
 | Setting | Values | Default | Description |
 |---------|--------|---------|-------------|
@@ -288,6 +296,8 @@ This tab is only enabled when Board Type is set to MVME147.
 > - [TAP Bridge Setup Guide](setup_tap_bridge.md) — TAP bridge mode (requires TAP-Windows driver)
 
 #### Framebuffer
+
+Emulator-specific virtual framebuffer device. The real MVME147 does not have a built-in display.
 
 | Setting | Values | Default | Description |
 |---------|--------|---------|-------------|
