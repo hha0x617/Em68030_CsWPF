@@ -371,7 +371,7 @@ public partial class SettingsWindow : Window
     private void UpdateMvme147Visibility()
     {
         bool isMvme = GetSelectedItemText(BoardTypeBox) == "MVME147";
-        Mvme147Panel.Visibility = isMvme ? Visibility.Visible : Visibility.Collapsed;
+        TabMvme147.IsEnabled = isMvme;
     }
 
     private void UpdateTargetOSVisibility()
