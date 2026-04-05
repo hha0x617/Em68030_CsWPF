@@ -56,6 +56,21 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         run: iscc installer/setup.iss /DAppVersion=${{ github.ref_name }} /DArch=x64
 
+      - name: Virus scan installer
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "installer/Output/Em68030-WPF-Setup-*-*.exe" | Select-Object -First 1
+          Write-Host "Scanning $($installer.FullName)..."
+          Update-MpSignature
+          Start-MpScan -ScanType CustomScan -ScanPath $installer.FullName
+          $threats = Get-MpThreatDetection 2>$null
+          if ($threats) {
+            Write-Error "Threat detected: $($threats | Format-List | Out-String)"
+            exit 1
+          }
+          Write-Host "Scan passed: no threats detected."
+
       - name: Upload artifact
         if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
