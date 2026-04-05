@@ -99,6 +99,9 @@ jobs:
           Run the installer. Requires [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0).
           Settings are saved to \`%LOCALAPPDATA%\\Em68030_CsWPF\\\`.
 
+          ### Security
+          - Virus scan: **Passed** (Windows Defender, signatures updated at build time)
+
           ### Source Code (Apache-2.0)
           - **Repository**: [Em68030_CsWPF](https://github.com/${{ github.repository }})
           - **Build workflow**: [.github/workflows/build.yml](https://github.com/${{ github.repository }}/blob/${TAG}/.github/workflows/build.yml)
