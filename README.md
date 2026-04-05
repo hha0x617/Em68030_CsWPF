@@ -106,6 +106,8 @@ Settings are saved to `%LOCALAPPDATA%\Em68030_CsWPF\`.
 {
     "BoardType": "MVME147",
     "MemorySize": 67108864,
+    "TargetOS": "NetBSD",
+    "NetBsdKernelImagePath": "path/to/netbsd-GENERIC",
     "Mvme147ScsiDisks": [
         { "Path": "path/to/scsi0.img", "ScsiId": 0 }
     ],
@@ -120,10 +122,15 @@ Settings are saved to `%LOCALAPPDATA%\Em68030_CsWPF\`.
 |---|---|---|
 | `BoardType` | `"Generic"` or `"MVME147"` | `"Generic"` |
 | `MemorySize` | RAM size in bytes | 48 MB |
+| `TargetOS` | `"NetBSD"` or `"Linux"` | `"NetBSD"` |
+| `NetBsdKernelImagePath` | NetBSD kernel for auto-load on startup | `""` |
+| `LinuxKernelImagePath` | Linux kernel for auto-load on startup | `""` |
 | `Mvme147ScsiDisks` | List of SCSI disk images (Path + ScsiId) | `[]` |
 | `Mvme147ScsiCdromPath` | SCSI CD-ROM ISO image path | `""` |
-| `NetworkMode` | `"Virtual"` (echo server) or `"NAT"` (host network) | `"Virtual"` |
+| `NetworkMode` | `"Virtual"` (echo server), `"NAT"`, or `"TAP"` | `"Virtual"` |
 | `ConsoleScrollbackLines` | Console scrollback lines (0-100000) | 2000 |
+
+See [User Guide](docs/user_guide.md) for the full settings reference.
 | `JitEnabled` | Enable experimental JIT compiler | `false` |
 | `JitMinBlockLength` | Minimum instruction count for JIT compilation | 3 |
 | `JitCompileThreshold` | Execution count before a block is compiled | 32 |

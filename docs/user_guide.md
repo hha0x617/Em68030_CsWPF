@@ -192,23 +192,76 @@ Manages CPU breakpoints for debugging.
 ## Settings Reference
 
 Settings are saved to `%LOCALAPPDATA%\Em68030_CsWPF\appsettings.json`.
+The settings dialog is organized into three tabs: **General**, **MVME147**, and **Advanced**.
 
-### Board Type
+### General Tab
+
+#### Board Type
 
 | Setting | Values | Default | Description |
 |---------|--------|---------|-------------|
 | Board Type | Generic, MVME147 | Generic | Selects the emulated board |
 
-### MVME147 Settings
+#### Memory
+
+| Setting | Range | Default | Description |
+|---------|-------|---------|-------------|
+| Memory Size (MB) | 4–4096 | 48 | Guest RAM size |
+
+> **Note**: Memory size changes take effect after reloading the kernel image.
+
+#### I/O Devices
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Console Device Enabled | On | Enable serial console |
+| Console Base Addr | 0x00FF0000 | Console MMIO address |
+| Scrollback Lines | 2000 | Console scrollback buffer size |
+| Terminal Size | 80 x 24 | Console columns and rows |
+| HDD Device Enabled | On | Enable HDD controller |
+| HDD Base Addr | 0x00FF1000 | HDD MMIO address |
+
+#### Display
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Font Family | Consolas | Console and disassembly font |
+| Font Size | 14.0 | Font size in points |
+
+### MVME147 Tab
+
+This tab is only enabled when Board Type is set to MVME147.
+
+#### MVME147 Settings
 
 | Setting | Description |
 |---------|-------------|
 | ROM Image | Path to MVME147 ROM image (optional) |
-| Target OS | NetBSD or Linux |
-| Boot Partition | a or b (NetBSD only) |
-| Command Line | Kernel command line (Linux only) |
 
-### SCSI Disks
+#### Target OS
+
+| Setting | Values | Default | Description |
+|---------|--------|---------|-------------|
+| Operating System | NetBSD, Linux | NetBSD | Guest OS type |
+
+**NetBSD settings:**
+
+| Setting | Description |
+|---------|-------------|
+| Kernel Image | Path to NetBSD kernel (auto-loaded on startup if specified) |
+| Boot Partition | a or b |
+
+**Linux settings:**
+
+| Setting | Description |
+|---------|-------------|
+| Kernel Image | Path to Linux kernel (auto-loaded on startup if specified) |
+| Command Line | Kernel command line |
+
+> **Note**: Kernel images for NetBSD and Linux are stored separately, so switching
+> between operating systems does not require re-specifying the kernel path.
+
+#### SCSI Disks
 
 | Setting | Description |
 |---------|-------------|
@@ -220,7 +273,7 @@ Settings are saved to `%LOCALAPPDATA%\Em68030_CsWPF\appsettings.json`.
 > **Note**: SCSI disk path changes take effect after rebooting the guest OS.
 > CD-ROM ISO images can be swapped at any time.
 
-### Network
+#### Network
 
 | Setting | Values | Default | Description |
 |---------|--------|---------|-------------|
@@ -234,7 +287,7 @@ Settings are saved to `%LOCALAPPDATA%\Em68030_CsWPF\appsettings.json`.
 > - [NAT Network Setup Guide](setup_nat_network.md) — NAT mode guest configuration (Linux/NetBSD)
 > - [TAP Bridge Setup Guide](setup_tap_bridge.md) — TAP bridge mode (requires TAP-Windows driver)
 
-### Framebuffer
+#### Framebuffer
 
 | Setting | Values | Default | Description |
 |---------|--------|---------|-------------|
@@ -244,26 +297,9 @@ Settings are saved to `%LOCALAPPDATA%\Em68030_CsWPF\appsettings.json`.
 
 > **Note**: VRAM is placed at the top of RAM automatically.
 
-### Memory
+### Advanced Tab
 
-| Setting | Range | Default | Description |
-|---------|-------|---------|-------------|
-| Memory Size (MB) | 4–4096 | 48 | Guest RAM size |
-
-> **Note**: Memory size changes take effect after reloading the kernel image.
-
-### I/O Devices
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| Console Device Enabled | On | Enable serial console |
-| Console Base Addr | 0x00FF0000 | Console MMIO address |
-| Scrollback Lines | 2000 | Console scrollback buffer size |
-| Terminal Size | 80 x 24 | Console columns and rows |
-| HDD Device Enabled | On | Enable HDD controller |
-| HDD Base Addr | 0x00FF1000 | HDD MMIO address |
-
-### Performance
+#### Performance
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -271,14 +307,7 @@ Settings are saved to `%LOCALAPPDATA%\Em68030_CsWPF\appsettings.json`.
 | Min Block Length | 3 | Minimum instructions for JIT compilation |
 | Compile Threshold | 32 | Executions before a block is compiled |
 
-### Display
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| Font Family | Consolas | Console and disassembly font |
-| Font Size | 14.0 | Font size in points |
-
-### Debug
+#### Debug
 
 | Setting | Default | Description |
 |---------|---------|-------------|
