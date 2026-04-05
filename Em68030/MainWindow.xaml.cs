@@ -43,6 +43,7 @@ public partial class MainWindow : Window
         DataContext = _vm;
         DisasmAddrBox.Text = _vm.PC.ToString("X8");
         MemAddrBox.Text = _vm.PC.ToString("X8");
+        BtnTrace.Visibility = _vm.Config.EnableTraceButton ? Visibility.Visible : Visibility.Collapsed;
 
         // Console output events may fire from the emulation background thread.
         // AppendChar/AppendString are thread-safe (use ConcurrentQueue internally).
@@ -277,6 +278,7 @@ public partial class MainWindow : Window
         {
             _vm.ApplyConfig(settings.Config);
             MenuShowFramebuffer.IsEnabled = settings.Config.FramebufferEnabled;
+            BtnTrace.Visibility = settings.Config.EnableTraceButton ? Visibility.Visible : Visibility.Collapsed;
             _consoleWindow?.SetScrollbackLines(settings.Config.ConsoleScrollbackLines);
             _consoleWindow?.SetTerminalSize(settings.Config.ConsoleColumns, settings.Config.ConsoleRows);
         }

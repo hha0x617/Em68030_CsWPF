@@ -586,4 +586,15 @@ partition table. Only use this for NetBSD disk images.</value>
   <data name="Disasm_LST" xml:space="preserve">
     <value>LST</value>
   </data>
+
+  <!-- Debug Settings -->
+  <data name="Settings_Debug" xml:space="preserve">
+    <value>Debug</value>
+  </data>
+  <data name="Settings_EnableTraceButton" xml:space="preserve">
+    <value>Show Trace Button</value>
+  </data>
+  <data name="Settings_TraceDescription" xml:space="preserve">
+    <value>When enabled, a Trace button appears on the toolbar. Clicking it toggles verbose instruction tracing to a log file.</value>
+  </data>
 </root>

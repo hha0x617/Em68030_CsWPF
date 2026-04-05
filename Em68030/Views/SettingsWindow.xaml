@@ -446,6 +446,14 @@
                     <TextBox x:Name="JitCompileThresholdBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                 </Grid>
 
+                <!-- Debug -->
+                <TextBlock Text="{x:Static p:Strings.Settings_Debug}" Style="{StaticResource SectionHeader}" />
+                <CheckBox x:Name="EnableTraceButtonBox" Content="{x:Static p:Strings.Settings_EnableTraceButton}"
+                          Foreground="#FFD4D4D4" Margin="0,4" />
+                <TextBlock Text="{x:Static p:Strings.Settings_TraceDescription}"
+                           Foreground="#FF9E9E9E" FontSize="11" TextWrapping="Wrap" Margin="20,0,0,4" />
+                <TextBlock x:Name="TraceFilePathText" Foreground="#FF9E9E9E" FontSize="11" Margin="20,0,0,4" />
+
                 <!-- Display Settings -->
                 <TextBlock Text="{x:Static p:Strings.Settings_Display}" Style="{StaticResource SectionHeader}" />
                 <Grid>

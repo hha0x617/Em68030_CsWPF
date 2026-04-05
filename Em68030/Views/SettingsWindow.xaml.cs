@@ -12,6 +12,7 @@
 // limitations under the License.
 
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -138,6 +139,10 @@ public partial class SettingsWindow : Window
         JitEnabledBox.IsChecked = Config.JitEnabled;
         JitMinBlockLengthBox.Text = Config.JitMinBlockLength.ToString();
         JitCompileThresholdBox.Text = Config.JitCompileThreshold.ToString();
+
+        // Debug
+        EnableTraceButtonBox.IsChecked = Config.EnableTraceButton;
+        TraceFilePathText.Text = $"Trace file: {Path.Combine(Em68030.Config.EmulatorConfig.DataDirectory, "tracelog.txt")}";
 
         // Framebuffer
         FramebufferEnabledBox.IsChecked = Config.FramebufferEnabled;
@@ -480,6 +485,9 @@ public partial class SettingsWindow : Window
             Config.JitMinBlockLength = Math.Clamp(minBlock, 1, 64);
         if (int.TryParse(JitCompileThresholdBox.Text, out int threshold))
             Config.JitCompileThreshold = Math.Clamp(threshold, 1, 255);
+
+        // Debug
+        Config.EnableTraceButton = EnableTraceButtonBox.IsChecked == true;
 
         // Framebuffer
         Config.FramebufferEnabled = FramebufferEnabledBox.IsChecked == true;

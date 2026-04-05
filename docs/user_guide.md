@@ -278,6 +278,19 @@ Settings are saved to `%LOCALAPPDATA%\Em68030_CsWPF\appsettings.json`.
 | Font Family | Consolas | Console and disassembly font |
 | Font Size | 14.0 | Font size in points |
 
+### Debug
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Show Trace Button | Off | Shows the Trace button on the toolbar |
+
+When the Trace button is visible and clicked, verbose instruction tracing is toggled.
+Trace output is written to `%LOCALAPPDATA%\Em68030_CsWPF\tracelog.txt`.
+The trace includes instruction execution, exception vectors, and syscall entries.
+
+> **Note:** Tracing significantly reduces emulation speed and produces large log files.
+> Use only for debugging specific issues.
+
 ## Command Line Arguments
 
 | Argument | Example | Description |

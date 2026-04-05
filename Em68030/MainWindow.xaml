@@ -393,7 +393,7 @@
                 <Button Content="{x:Static p:Strings.Toolbar_Step}" Command="{Binding StepCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button Content="{x:Static p:Strings.Toolbar_Reset}" Command="{Binding ResetCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button Content="{x:Static p:Strings.Toolbar_FullReset}" Command="{Binding FullResetCommand}" Style="{StaticResource ToolBarButton}" />
-                <Button Content="{x:Static p:Strings.Toolbar_Trace}" Command="{Binding ToggleTraceCommand}" Style="{StaticResource ToolBarButton}" />
+                <Button x:Name="BtnTrace" Content="{x:Static p:Strings.Toolbar_Trace}" Command="{Binding ToggleTraceCommand}" Style="{StaticResource ToolBarButton}" />
                 <Separator />
                 <TextBlock Text="{Binding CyclesText}" VerticalAlignment="Center"
                            Style="{StaticResource MonoText}" Margin="8,0" />

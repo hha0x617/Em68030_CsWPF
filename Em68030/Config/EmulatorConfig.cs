@@ -104,6 +104,9 @@ public class EmulatorConfig
     public int JitMinBlockLength { get; set; } = 3;
     public int JitCompileThreshold { get; set; } = 32;
 
+    // Debug
+    public bool EnableTraceButton { get; set; } = false;
+
     private static readonly string ConfigPath;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
