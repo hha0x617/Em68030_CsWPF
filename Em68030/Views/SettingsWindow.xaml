@@ -133,6 +133,49 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- Dark TabControl / TabItem styles -->
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="#FF1E1E1E" />
+            <Setter Property="BorderBrush" Value="#FF3F3F46" />
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Foreground" Value="#FFD4D4D4" />
+            <Setter Property="Background" Value="#FF2D2D30" />
+            <Setter Property="BorderBrush" Value="#FF3F3F46" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="TabBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1,1,1,0"
+                                Padding="{TemplateBinding Padding}"
+                                Margin="0,0,2,0">
+                            <ContentPresenter ContentSource="Header"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="#FF1E1E1E" />
+                                <Setter Property="Foreground" Value="#FF569CD6" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TabBorder" Property="Background" Value="#FF3E3E42" />
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsSelected" Value="True" />
+                                    <Condition Property="IsMouseOver" Value="True" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="TabBorder" Property="Background" Value="#FF1E1E1E" />
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <DockPanel Margin="16">
@@ -144,9 +187,9 @@
                     Background="#FF3E3E42" Foreground="#FFD4D4D4" Padding="4" />
         </StackPanel>
 
-        <TabControl x:Name="SettingsTabs" Background="#FF1E1E1E" BorderBrush="#FF3F3F46">
+        <TabControl x:Name="SettingsTabs">
             <!-- ==================== General Tab ==================== -->
-            <TabItem Header="General" Foreground="#FFD4D4D4">
+            <TabItem Header="General">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="8">
                         <!-- Board Type -->
@@ -268,7 +311,7 @@
             </TabItem>
 
             <!-- ==================== MVME147 Tab ==================== -->
-            <TabItem x:Name="TabMvme147" Header="MVME147" Foreground="#FFD4D4D4">
+            <TabItem x:Name="TabMvme147" Header="MVME147">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel x:Name="Mvme147Panel" Margin="8">
                         <!-- MVME147 Settings -->
@@ -454,7 +497,7 @@
             </TabItem>
 
             <!-- ==================== Advanced Tab ==================== -->
-            <TabItem Header="Advanced" Foreground="#FFD4D4D4">
+            <TabItem Header="Advanced">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="8">
                         <!-- Performance -->
