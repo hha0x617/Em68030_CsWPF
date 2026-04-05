@@ -236,11 +236,20 @@ They do not correspond to real hardware.
 This tab is only enabled when Board Type is set to MVME147.
 
 The MVME147 board emulates the following devices:
-- **Z8530 SCC** — Serial console (real hardware). Always active; provides the serial console window.
-- **WD33C93 SCSI** — Disk controller (real hardware). Configured via SCSI Disks below.
-- **AMD LANCE** — Ethernet controller (real hardware). Configured via Network below.
-- **16550A UART** — Virtual serial port at `$FFFE2000` (emulator-specific, Linux only). Provides `/dev/ttyS0` for Linux userspace console. Automatically enabled when Target OS is Linux.
-- **Framebuffer** — Virtual display (emulator-specific). Configured via Framebuffer below.
+
+| Device | Address | Type | Description |
+|--------|---------|------|-------------|
+| PCC | `$FFFE1000` | Real hardware | Peripheral Channel Controller (timers, interrupt control) |
+| AMD LANCE | `$FFFE1800` | Real hardware | Ethernet controller. Configured via Network below |
+| 16550A UART | `$FFFE2000` | Virtual (Linux only) | Serial port for `/dev/ttyS0`. Auto-enabled when Target OS is Linux |
+| Z8530 SCC | `$FFFE3000` | Real hardware | Serial console. Always active |
+| WD33C93 SCSI | `$FFFE4000` | Real hardware | Disk controller. Configured via SCSI Disks below |
+| Mk48T02 RTC | `$FFFE0000` | Real hardware | Real-time clock and NVRAM |
+| Framebuffer | `$FFFE8000` | Virtual | Display device. Configured via Framebuffer below |
+| Input | `$FFFE9000` | Virtual | Keyboard/mouse (framebuffer only) |
+
+> Virtual devices are emulator-specific extensions not present on real MVME147 hardware.
+> For detailed register maps and implementation notes, see [Hardware Platform](hardware_platform.md).
 
 #### MVME147 Settings
 
