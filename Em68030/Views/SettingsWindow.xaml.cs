@@ -372,6 +372,7 @@ public partial class SettingsWindow : Window
     {
         bool isMvme = GetSelectedItemText(BoardTypeBox) == "MVME147";
         TabMvme147.IsEnabled = isMvme;
+        TabMvme147.Opacity = isMvme ? 1.0 : 0.35;
     }
 
     private void UpdateTargetOSVisibility()
