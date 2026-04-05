@@ -96,6 +96,7 @@ dotnet run --project Em68030/Em68030.csproj -c Release
 ```
 
 On first launch, an `appsettings.json` file is generated from the Settings menu.
+Settings are saved to `%LOCALAPPDATA%\Em68030_CsWPF\`.
 
 > **Note**: Since the executable is not code-signed, Windows Defender SmartScreen may block it on first run. Click "More info" and then "Run anyway" to proceed. Alternatively, right-click the exe, open Properties, and check "Unblock" on the General tab.
 

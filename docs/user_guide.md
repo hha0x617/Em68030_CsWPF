@@ -191,6 +191,8 @@ Manages CPU breakpoints for debugging.
 
 ## Settings Reference
 
+Settings are saved to `%LOCALAPPDATA%\Em68030_CsWPF\appsettings.json`.
+
 ### Board Type
 
 | Setting | Values | Default | Description |
