@@ -181,13 +181,80 @@ The mouse position in the framebuffer window maps directly to guest screen coord
 (absolute positioning). No pointer grab is required. Left, right, and middle mouse
 buttons are forwarded to the guest.
 
-## Breakpoints Window
+## Breakpoints & Watchpoints Window
 
-Manages CPU breakpoints for debugging.
+Manages breakpoints and memory watchpoints for debugging. Open via **View → Breakpoints Window**.
+
+### Breakpoints
+
+A breakpoint pauses execution when the CPU reaches a specific address.
 
 - **Setting a breakpoint**: Double-click an address in the disassembly view
-- **Clearing all**: Click the **Clear All** button
+- **Enable/Disable**: Toggle the checkbox next to each breakpoint
+- **Delete**: Click the **Del** button on a specific breakpoint
+- **Clear All**: Click the **Clear All** button to remove all breakpoints and watchpoints
 - **Run to breakpoint**: Press F5; execution stops when a breakpoint address is reached
+- **Jump to address**: Double-click a breakpoint in the list to navigate the disassembly view
+
+### Conditional Breakpoints
+
+A breakpoint can have an optional condition expression. Execution only pauses when
+the condition evaluates to true.
+
+To set or edit a condition:
+
+1. Open the **Breakpoints Window** (View → Breakpoints Window)
+2. Click the **Cond** button next to the target breakpoint
+3. Enter a condition expression in the dialog (e.g., `D0==0x1234`)
+4. Click **OK** to apply, or **Clear** to remove the condition
+
+Breakpoints with conditions display the expression below the address as `if D0==0x1234`.
+
+Conditions support:
+
+| Element | Examples | Description |
+|---------|----------|-------------|
+| Data registers | `D0`, `D7` | 32-bit value of the data register |
+| Address registers | `A0`, `A7`, `SP` | 32-bit value of the address register (`SP` = `A7`) |
+| Special registers | `PC`, `SR` | Program counter or status register |
+| Comparison | `==`, `!=`, `<`, `>`, `<=`, `>=` | Unsigned 32-bit comparison |
+| Bitwise AND | `SR&0x2000!=0` | Test specific bits: `(SR & 0x2000) != 0` |
+| Memory read | `[0x1000].b`, `[A0].w`, `[$2000].l` | Read byte/word/long from address |
+| Number formats | `255`, `0xFF`, `$FF` | Decimal, C-style hex, or Motorola-style hex |
+
+**Condition examples:**
+
+| Condition | Meaning |
+|-----------|---------|
+| `D0==0x1234` | Break when D0 equals 0x1234 |
+| `A7<0x10000` | Break when stack pointer is below 64KB |
+| `SR&0x2000!=0` | Break when in supervisor mode |
+| `[0x1000].w==0xBEEF` | Break when word at address $1000 equals $BEEF |
+| `D0==D1` | Break when D0 and D1 have the same value |
+| `D0` | Break when D0 is non-zero (bare expression) |
+
+If a condition is empty or cannot be parsed, the breakpoint is unconditional (always triggers).
+
+### Memory Watchpoints
+
+A watchpoint pauses execution when a specific memory address is read or written.
+
+- **Add Watchpoint**: Click the **Add Watchpoint** button to open the dialog
+  - **Address**: Memory address to watch (hex: `0x1000`, `$1000`, or plain `1000`)
+  - **Size**: Byte (.B), Word (.W), or Long (.L)
+  - **Type**: Write only, Read only, or Read/Write
+  - **Condition** (optional): Same expression syntax as conditional breakpoints
+- **Enable/Disable**: Toggle the checkbox
+- **Delete**: Click the **Del** button
+
+When a watchpoint triggers, the status bar shows the access details:
+```
+Write watchpoint at $00001000.W: $0000 -> $BEEF
+```
+
+> **Performance note**: Watchpoints add overhead to every memory access while active.
+> Emulation speed will be reduced when watchpoints are enabled. Disable or remove
+> watchpoints when they are no longer needed.
 
 ## Settings Reference
 
