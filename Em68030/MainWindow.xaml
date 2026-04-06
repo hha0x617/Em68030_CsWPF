@@ -23,6 +23,8 @@
         <KeyBinding Key="F5" Command="{Binding RunCommand}" />
         <KeyBinding Key="F5" Modifiers="Shift" Command="{Binding StopCommand}" />
         <KeyBinding Key="F10" Command="{Binding StepCommand}" />
+        <KeyBinding Key="F11" Command="{Binding StepOverCommand}" />
+        <KeyBinding Key="F11" Modifiers="Shift" Command="{Binding StepOutCommand}" />
         <KeyBinding Key="F4" Command="{Binding RunToCursorCommand}" />
     </Window.InputBindings>
     <Window.Resources>
@@ -365,6 +367,8 @@
                 <MenuItem Header="{x:Static p:Strings.Menu_RunF5}" Command="{Binding RunCommand}" />
                 <MenuItem Header="{x:Static p:Strings.Menu_StopShiftF5}" Command="{Binding StopCommand}" />
                 <MenuItem Header="{x:Static p:Strings.Menu_StepF10}" Command="{Binding StepCommand}" />
+                <MenuItem Header="Step Over (F11)" Command="{Binding StepOverCommand}" />
+                <MenuItem Header="Step Out (Shift+F11)" Command="{Binding StepOutCommand}" />
                 <MenuItem Header="{x:Static p:Strings.Menu_RunToCursor}" Click="RunToCursor_Click" />
                 <Separator />
                 <MenuItem Header="{x:Static p:Strings.Menu_SetPCToCursor}" Click="SetPCToCursor_Click" />
@@ -391,6 +395,8 @@
                 <Button Content="{x:Static p:Strings.Toolbar_Run}" Command="{Binding RunCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button Content="{x:Static p:Strings.Toolbar_Stop}" Command="{Binding StopCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button Content="{x:Static p:Strings.Toolbar_Step}" Command="{Binding StepCommand}" Style="{StaticResource ToolBarButton}" />
+                <Button Content="Step Over" Command="{Binding StepOverCommand}" Style="{StaticResource ToolBarButton}" />
+                <Button Content="Step Out" Command="{Binding StepOutCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button Content="{x:Static p:Strings.Toolbar_Reset}" Command="{Binding ResetCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button Content="{x:Static p:Strings.Toolbar_FullReset}" Command="{Binding FullResetCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button x:Name="BtnTrace" Content="{x:Static p:Strings.Toolbar_Trace}" Command="{Binding ToggleTraceCommand}" Style="{StaticResource ToolBarButton}" />

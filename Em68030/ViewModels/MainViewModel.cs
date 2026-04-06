@@ -348,6 +348,8 @@ public class MainViewModel : INotifyPropertyChanged
 
     // Commands
     public RelayCommand StepCommand { get; }
+    public RelayCommand StepOverCommand { get; }
+    public RelayCommand StepOutCommand { get; }
     public RelayCommand RunCommand { get; }
     public RelayCommand StopCommand { get; }
     public RelayCommand ResetCommand { get; }
@@ -393,6 +395,8 @@ public class MainViewModel : INotifyPropertyChanged
         }
 
         StepCommand = new RelayCommand(_ => Step(), _ => !IsRunning);
+        StepOverCommand = new RelayCommand(_ => StepOver(), _ => !IsRunning);
+        StepOutCommand = new RelayCommand(_ => StepOut(), _ => !IsRunning);
         RunCommand = new RelayCommand(_ => Run(), _ => !IsRunning);
         StopCommand = new RelayCommand(_ => Stop(), _ => IsRunning);
         ResetCommand = new RelayCommand(_ => DoReset(), _ => !IsRunning);
@@ -1181,6 +1185,40 @@ public class MainViewModel : INotifyPropertyChanged
         if (_cpu.Stopped && !_cpu.HasExternalDevices) return;
         _cpu.ExecuteStep();
         RefreshAll();
+    }
+
+    public void StepOver()
+    {
+        if (_cpu.Halted) return;
+        if (_cpu.Stopped && !_cpu.HasExternalDevices) return;
+
+        ushort opcode = _memory.ReadWord(_cpu.PC);
+        bool isSubroutineCall = false;
+
+        // JSR: 0100 1110 10xx xxxx (0x4E80-0x4EBF)
+        if ((opcode & 0xFFC0) == 0x4E80) isSubroutineCall = true;
+        // BSR: 0110 0001 xxxx xxxx (0x6100-0x61FF)
+        if ((opcode & 0xFF00) == 0x6100) isSubroutineCall = true;
+
+        if (isSubroutineCall)
+        {
+            var line = _disassembler.DisassembleOne(_cpu.PC);
+            uint returnAddr = _cpu.PC + (uint)line.Length;
+            RunToCursor(returnAddr);
+        }
+        else
+        {
+            Step();
+        }
+    }
+
+    public void StepOut()
+    {
+        if (_cpu.Halted) return;
+        if (_cpu.Stopped && !_cpu.HasExternalDevices) return;
+
+        uint returnAddr = _memory.ReadLong(_cpu.A[7]);
+        RunToCursor(returnAddr);
     }
 
     public void Run()
