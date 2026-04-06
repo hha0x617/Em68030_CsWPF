@@ -50,7 +50,8 @@ For detailed OS installation guides, see [Getting Started](getting_started.md).
 | Run | Full Reset | | Complete system reset |
 | View | Serial Console Window | | Open the serial console |
 | View | Framebuffer Window | | Open the framebuffer display |
-| View | Breakpoints Window | | Open the breakpoints list |
+| View | Breakpoints Window | | Open the breakpoints and watchpoints list |
+| View | Call Stack Window | | Open the call stack viewer |
 | Settings | Emulator Settings... | | Open the settings dialog |
 | Help | About... | | Version and license information |
 
@@ -270,6 +271,29 @@ Write watchpoint at $00001000.W: $0000 -> $BEEF
 > **Performance note**: Watchpoints add overhead to every memory access while active.
 > Emulation speed will be reduced when watchpoints are enabled. Disable or remove
 > watchpoints when they are no longer needed.
+
+## Call Stack Window
+
+Displays the call stack by walking the A6 frame pointer chain. Open via **View → Call Stack Window**.
+
+The window shows:
+
+- **Frame #0**: Current PC and A6 value (highlighted)
+- **Subsequent frames**: Return address and saved frame pointer, traced via the
+  `LINK A6` / `UNLK A6` convention (`[A6]` = saved FP, `[A6+4]` = return address)
+- **Heuristic frames** (gray, marked `(heuristic)`): When the A6 chain is unavailable
+  (e.g., code compiled with `-fomit-frame-pointer`), the window scans the stack for
+  addresses that fall within the program code range
+
+**Operations:**
+
+- **Double-click** a frame to navigate the disassembly view to that address
+- The window **auto-refreshes** on every Step, Stop, or breakpoint hit
+- While running, the window shows "Running..."
+
+> **Note**: The A6 chain requires that functions use `LINK A6` / `UNLK A6` instructions.
+> Hand-written assembly or code compiled without frame pointers may show incomplete
+> or no stack frames. In such cases, the heuristic fallback provides best-effort results.
 
 ## Settings Reference
 
