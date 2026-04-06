@@ -374,6 +374,12 @@
   <data name="Watchpoint_Cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
+  <data name="Watchpoint_EditTitle" xml:space="preserve">
+    <value>Edit Watchpoint</value>
+  </data>
+  <data name="Breakpoints_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
 
   <!-- Dialog Buttons -->
   <data name="Dialog_OK" xml:space="preserve">

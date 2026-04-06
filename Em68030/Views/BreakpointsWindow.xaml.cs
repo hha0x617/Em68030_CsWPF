@@ -193,11 +193,13 @@ public partial class BreakpointsWindow : Window
             }
             Grid.SetColumn(textStack, 1);
 
-            // Edit condition button
+            // Edit watchpoint button
+            var capturedSize = wp.Size;
+            var capturedType = wp.Type;
             string capturedCond = wp.Condition;
             var wpEditBtn = new Button
             {
-                Content = Strings.Breakpoints_EditCondition,
+                Content = Strings.Breakpoints_Edit,
                 Background = btnBg, Foreground = editFg, BorderBrush = btnBorder,
                 Padding = new Thickness(6, 2, 6, 2), FontSize = 11,
                 VerticalAlignment = VerticalAlignment.Center,
@@ -205,10 +207,10 @@ public partial class BreakpointsWindow : Window
             };
             wpEditBtn.Click += (s, e) =>
             {
-                var dialog = new EditConditionDialog(capturedAddr, capturedCond) { Owner = this };
+                var dialog = new AddWatchpointDialog(capturedAddr, capturedSize, capturedType, capturedCond) { Owner = this };
                 if (dialog.ShowDialog() == true)
                 {
-                    _vm.SetWatchpointCondition(capturedAddr, dialog.Condition);
+                    _vm.EditWatchpoint(capturedAddr, dialog.WatchAddress, dialog.WatchSize, dialog.WatchType, dialog.WatchCondition);
                     RefreshList();
                 }
             };

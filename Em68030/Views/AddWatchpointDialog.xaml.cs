@@ -13,6 +13,7 @@
 
 using System.Globalization;
 using System.Windows;
+using Em68030.Properties;
 using Em68030.ViewModels;
 
 namespace Em68030.Views;
@@ -27,6 +28,18 @@ public partial class AddWatchpointDialog : Window
     public AddWatchpointDialog()
     {
         InitializeComponent();
+        AddressBox.Focus();
+    }
+
+    /// Edit mode: pre-fill all fields with existing watchpoint values.
+    public AddWatchpointDialog(uint address, WatchpointSize size, WatchpointType type, string condition)
+    {
+        InitializeComponent();
+        Title = Strings.Watchpoint_EditTitle;
+        AddressBox.Text = $"0x{address:X}";
+        SizeCombo.SelectedIndex = size == WatchpointSize.Byte ? 0 : size == WatchpointSize.Long ? 2 : 1;
+        TypeCombo.SelectedIndex = type == WatchpointType.Read ? 1 : type == WatchpointType.ReadWrite ? 2 : 0;
+        ConditionBox.Text = condition;
         AddressBox.Focus();
     }
 

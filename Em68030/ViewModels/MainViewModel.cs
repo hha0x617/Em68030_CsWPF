@@ -1708,10 +1708,15 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public void SetWatchpointCondition(uint addr, string condition)
+    public void EditWatchpoint(uint oldAddr, uint newAddr, WatchpointSize size,
+                               WatchpointType type, string condition)
     {
-        if (Watchpoints.TryGetValue(addr, out var wp))
-            wp.Condition = condition;
+        Watchpoints.Remove(oldAddr);
+        Watchpoints[newAddr] = new WatchpointData
+        {
+            Address = newAddr, Size = size, Type = type, Enabled = true, Condition = condition
+        };
+        RebuildWatchpointState();
     }
 
     public void RemoveWatchpoint(uint addr)

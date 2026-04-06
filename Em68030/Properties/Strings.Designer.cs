@@ -167,6 +167,8 @@ namespace Em68030.Properties
         public static string Watchpoint_ConditionLabel => ResourceManager.GetString("Watchpoint_ConditionLabel", resourceCulture) ?? "";
         public static string Watchpoint_Add => ResourceManager.GetString("Watchpoint_Add", resourceCulture) ?? "";
         public static string Watchpoint_Cancel => ResourceManager.GetString("Watchpoint_Cancel", resourceCulture) ?? "";
+        public static string Watchpoint_EditTitle => ResourceManager.GetString("Watchpoint_EditTitle", resourceCulture) ?? "";
+        public static string Breakpoints_Edit => ResourceManager.GetString("Breakpoints_Edit", resourceCulture) ?? "";
 
         // Console Window
         public static string Console_Log => ResourceManager.GetString("Console_Log", resourceCulture) ?? "";
