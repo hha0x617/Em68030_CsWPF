@@ -1708,6 +1708,12 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    public void SetWatchpointCondition(uint addr, string condition)
+    {
+        if (Watchpoints.TryGetValue(addr, out var wp))
+            wp.Condition = condition;
+    }
+
     public void RemoveWatchpoint(uint addr)
     {
         Watchpoints.Remove(addr);

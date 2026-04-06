@@ -157,6 +157,7 @@ public partial class BreakpointsWindow : Window
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.Margin = new Thickness(2, 1, 2, 1);
             grid.Tag = addr;
 
@@ -192,22 +193,42 @@ public partial class BreakpointsWindow : Window
             }
             Grid.SetColumn(textStack, 1);
 
+            // Edit condition button
+            string capturedCond = wp.Condition;
+            var wpEditBtn = new Button
+            {
+                Content = Strings.Breakpoints_EditCondition,
+                Background = btnBg, Foreground = editFg, BorderBrush = btnBorder,
+                Padding = new Thickness(6, 2, 6, 2), FontSize = 11,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(4, 0, 0, 0)
+            };
+            wpEditBtn.Click += (s, e) =>
+            {
+                var dialog = new EditConditionDialog(capturedAddr, capturedCond) { Owner = this };
+                if (dialog.ShowDialog() == true)
+                {
+                    _vm.SetWatchpointCondition(capturedAddr, dialog.Condition);
+                    RefreshList();
+                }
+            };
+            Grid.SetColumn(wpEditBtn, 2);
+
             var delBtn = new Button
             {
                 Content = Strings.Breakpoints_Delete,
-                Background = new SolidColorBrush(Color.FromRgb(0x3E, 0x3E, 0x42)),
-                Foreground = deleteFg,
-                BorderBrush = new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55)),
+                Background = btnBg, Foreground = deleteFg, BorderBrush = btnBorder,
                 Padding = new Thickness(6, 2, 6, 2), FontSize = 11,
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Right,
-                Margin = new Thickness(8, 0, 4, 0)
+                Margin = new Thickness(4, 0, 4, 0)
             };
             delBtn.Click += (s, e) => { _vm.RemoveWatchpoint(capturedAddr); RefreshList(); };
-            Grid.SetColumn(delBtn, 2);
+            Grid.SetColumn(delBtn, 3);
 
             grid.Children.Add(cb);
             grid.Children.Add(textStack);
+            grid.Children.Add(wpEditBtn);
             grid.Children.Add(delBtn);
             BreakpointList.Items.Add(grid);
         }
