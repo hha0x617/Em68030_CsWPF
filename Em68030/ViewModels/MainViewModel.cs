@@ -324,6 +324,11 @@ public class MainViewModel : INotifyPropertyChanged
     public ObservableCollection<MemoryDumpRow> MemoryDumpRows { get; } = new();
     public Dictionary<uint, BreakpointData> Breakpoints { get; } = new();
     public HashSet<uint> EnabledBreakpoints { get; } = new();
+    private bool _hasConditionalBreakpoints;
+
+    public Dictionary<uint, WatchpointData> Watchpoints { get; } = new();
+    private bool _hasEnabledWatchpoints;
+    private WatchpointHitInfo? _watchpointHit;
 
     public MC68030 Cpu => _cpu;
     public Memory Memory => _memory;
@@ -585,6 +590,13 @@ public class MainViewModel : INotifyPropertyChanged
         _cpu.OnResetInstruction = () =>
         {
             _pccDevice.HardwareReset();
+        };
+
+        // Memory watchpoint hook
+        _cpu.OnMemoryAccess = (addr, size, isWrite, oldValue, newValue) =>
+        {
+            if (_watchpointHit == null)
+                CheckWatchpoint(addr, size, isWrite, oldValue, newValue);
         };
 
         // PCC watchdog timer: Linux MVME147 uses this for hardware reboot
@@ -1268,6 +1280,10 @@ public class MainViewModel : INotifyPropertyChanged
         bool hasBreakpoints = EnabledBreakpoints.Count > 0;
         bool hasRunToCursor = _runToCursorAddress.HasValue;
         uint runToCursorAddr = _runToCursorAddress.GetValueOrDefault();
+        bool hasWatchpoints = _hasEnabledWatchpoints;
+        bool hasConditionalBP = _hasConditionalBreakpoints;
+        _cpu.WatchpointsEnabled = hasWatchpoints;
+        _watchpointHit = null;
         long lastMhzUpdate = Stopwatch.GetTimestamp();
 
         // Boolean branch instead of Func<bool> delegate — delegate invocation prevents
@@ -1282,9 +1298,9 @@ public class MainViewModel : INotifyPropertyChanged
                 if (_cpu.Halted) { RequestStopOnUI(); return; }
                 if (_cpu.Stopped && !_cpu.HasExternalDevices) { RequestStopOnUI(); return; }
 
-                if (!hasBreakpoints && !hasRunToCursor)
+                if (!hasBreakpoints && !hasRunToCursor && !hasWatchpoints)
                 {
-                    // Fast path: no breakpoints or run-to-cursor — skip BP check entirely
+                    // Fast path: no breakpoints, run-to-cursor, or watchpoints
                     uint loopDetectPC = uint.MaxValue;
                     int loopDetectCount = 0;
                     for (int i = 0; i < 100000; i++)
@@ -1325,7 +1341,7 @@ public class MainViewModel : INotifyPropertyChanged
                 }
                 else
                 {
-                    // Slow path: check breakpoints after each instruction
+                    // Slow path: check breakpoints/watchpoints after each instruction
                     uint loopDetectPC = uint.MaxValue;
                     int loopDetectCount = 0;
                     for (int i = 0; i < 100000; i++)
@@ -1336,8 +1352,6 @@ public class MainViewModel : INotifyPropertyChanged
                             {
                                 if (_cpu.Halted || (!_cpu.HasExternalDevices && _cpu.Stopped))
                                 { RequestStopOnUI(); return; }
-                                // Stopped with devices — keep iterating so tick handlers
-                                // fire and can generate interrupts to wake the CPU from STOP.
                                 continue;
                             }
                         }
@@ -1347,10 +1361,33 @@ public class MainViewModel : INotifyPropertyChanged
                         }
 
                         if (_cpu.Halted) { RequestStopOnUI(); return; }
+
+                        // Watchpoint hit (set by OnMemoryAccess callback during instruction)
+                        if (hasWatchpoints && _watchpointHit != null)
+                        {
+                            var hit = _watchpointHit;
+                            string sizeStr = hit.Size == WatchpointSize.Byte ? ".B" :
+                                             hit.Size == WatchpointSize.Long ? ".L" : ".W";
+                            string typeStr = hit.IsWrite ? "Write" : "Read";
+                            _cpu.StopReason = $"{typeStr} watchpoint at ${hit.Address:X8}{sizeStr}: ${hit.OldValue:X} -> ${hit.NewValue:X}";
+                            _watchpointHit = null;
+                            RequestStopOnUI(); return;
+                        }
+
+                        // Breakpoint check (with optional condition)
                         if (hasBreakpoints && EnabledBreakpoints.Contains(_cpu.PC))
                         {
-                            _cpu.StopReason = string.Format(Strings.Status_BreakpointFormat, _cpu.PC);
-                            RequestStopOnUI(); return;
+                            bool shouldBreak = true;
+                            if (hasConditionalBP && Breakpoints.TryGetValue(_cpu.PC, out var bp)
+                                && !string.IsNullOrEmpty(bp.Condition))
+                            {
+                                shouldBreak = EvaluateCondition(bp.Condition);
+                            }
+                            if (shouldBreak)
+                            {
+                                _cpu.StopReason = string.Format(Strings.Status_BreakpointFormat, _cpu.PC);
+                                RequestStopOnUI(); return;
+                            }
                         }
                         if (hasRunToCursor && _cpu.PC == runToCursorAddr)
                         { RequestStopOnUI(); return; }
@@ -1470,6 +1507,8 @@ public class MainViewModel : INotifyPropertyChanged
         _emulationThread?.Join(2000); // Wait up to 2 seconds
         _emulationThread = null;
         _runToCursorAddress = null;
+        _cpu.WatchpointsEnabled = false;
+        _watchpointHit = null;
         IsRunning = false;
         // Final MHz/MIPS calculation
         long now = Stopwatch.GetTimestamp();
@@ -1626,15 +1665,98 @@ public class MainViewModel : INotifyPropertyChanged
         UpdateDisassembly();
     }
 
+    public void SetBreakpointCondition(uint address, string condition)
+    {
+        if (Breakpoints.TryGetValue(address, out var bp))
+        {
+            bp.Condition = condition;
+            RebuildEnabledSet();
+        }
+    }
+
     private void RebuildEnabledSet()
     {
         EnabledBreakpoints.Clear();
+        _hasConditionalBreakpoints = false;
         foreach (var (addr, bp) in Breakpoints)
         {
             if (bp.Enabled)
+            {
                 EnabledBreakpoints.Add(addr);
+                if (!string.IsNullOrEmpty(bp.Condition))
+                    _hasConditionalBreakpoints = true;
+            }
         }
     }
+
+    // ======================================================================
+    // Watchpoints
+    // ======================================================================
+
+    public void AddWatchpoint(uint addr, WatchpointSize size, WatchpointType type, string condition = "")
+    {
+        Watchpoints[addr] = new WatchpointData { Address = addr, Size = size, Type = type, Enabled = true, Condition = condition };
+        RebuildWatchpointState();
+    }
+
+    public void EnableWatchpoint(uint addr, bool enabled)
+    {
+        if (Watchpoints.TryGetValue(addr, out var wp))
+        {
+            wp.Enabled = enabled;
+            RebuildWatchpointState();
+        }
+    }
+
+    public void RemoveWatchpoint(uint addr)
+    {
+        Watchpoints.Remove(addr);
+        RebuildWatchpointState();
+    }
+
+    public void ClearAllWatchpoints()
+    {
+        Watchpoints.Clear();
+        _hasEnabledWatchpoints = false;
+    }
+
+    private void RebuildWatchpointState()
+    {
+        _hasEnabledWatchpoints = false;
+        foreach (var (_, wp) in Watchpoints)
+        {
+            if (wp.Enabled) { _hasEnabledWatchpoints = true; break; }
+        }
+    }
+
+    private void CheckWatchpoint(uint addr, uint size, bool isWrite, uint oldValue, uint newValue)
+    {
+        foreach (var (wpAddr, wp) in Watchpoints)
+        {
+            if (!wp.Enabled) continue;
+            if (isWrite && wp.Type == WatchpointType.Read) continue;
+            if (!isWrite && wp.Type == WatchpointType.Write) continue;
+
+            uint wpSize = (uint)wp.Size;
+            if (addr + size <= wpAddr || wpAddr + wpSize <= addr) continue;
+
+            if (!string.IsNullOrEmpty(wp.Condition) && !EvaluateCondition(wp.Condition)) continue;
+
+            _watchpointHit = new WatchpointHitInfo
+            {
+                Address = addr, OldValue = oldValue, NewValue = newValue,
+                Size = (WatchpointSize)size, IsWrite = isWrite
+            };
+            return;
+        }
+    }
+
+    // ======================================================================
+    // Condition expression evaluator (delegates to Core.ConditionEvaluator)
+    // ======================================================================
+
+    public bool EvaluateCondition(string cond)
+        => ConditionEvaluator.Evaluate(cond, _cpu, _memory);
 
     public void UnmountAllScsiDisks()
     {
@@ -2111,7 +2233,28 @@ public class BreakpointData
 {
     public uint Address { get; set; }
     public bool Enabled { get; set; } = true;
-    // Future extension: string? Condition; uint HitCount; uint HitTarget;
+    public string Condition { get; set; } = "";  // e.g. "D0==0x1234", "A7<0x10000"
+}
+
+public enum WatchpointType { Read, Write, ReadWrite }
+public enum WatchpointSize { Byte = 1, Word = 2, Long = 4 }
+
+public class WatchpointData
+{
+    public uint Address { get; set; }
+    public WatchpointSize Size { get; set; } = WatchpointSize.Word;
+    public WatchpointType Type { get; set; } = WatchpointType.Write;
+    public bool Enabled { get; set; } = true;
+    public string Condition { get; set; } = "";
+}
+
+public class WatchpointHitInfo
+{
+    public uint Address { get; set; }
+    public uint OldValue { get; set; }
+    public uint NewValue { get; set; }
+    public WatchpointSize Size { get; set; } = WatchpointSize.Word;
+    public bool IsWrite { get; set; } = true;
 }
 
 public class DisasmLineViewModel : INotifyPropertyChanged

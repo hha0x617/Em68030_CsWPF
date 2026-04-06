@@ -128,6 +128,10 @@ public class MC68030
     /// </summary>
     public Action? OnResetInstruction;
 
+    /// Memory watchpoint callback: (address, accessSize, isWrite, oldValue, newValue)
+    public Action<uint, uint, bool, uint, uint>? OnMemoryAccess;
+    public bool WatchpointsEnabled;
+
     // Enable verbose tracing (bus errors, syscalls) — toggled from UI
     public bool VerboseTrace;
 
@@ -394,7 +398,11 @@ public class MC68030
     {
         // Data cache fast path
         if (_dataCacheValid && (addr & ~_dataPageMask) == _dataPageVA && FunctionCodeOverride < 0)
-            return Memory.ReadByte(_dataPagePA + (addr & _dataPageMask));
+        {
+            byte v = Memory.ReadByte(_dataPagePA + (addr & _dataPageMask));
+            if (WatchpointsEnabled) OnMemoryAccess?.Invoke(addr, 1, false, v, v);
+            return v;
+        }
         uint pa = TranslateReadFast(addr);
         if (Mmu.Enabled)
         {
@@ -403,7 +411,9 @@ public class MC68030
             _dataPagePA = pa & ~_dataPageMask;
             _dataCacheValid = true;
         }
-        return Memory.ReadByte(pa);
+        byte val = Memory.ReadByte(pa);
+        if (WatchpointsEnabled) OnMemoryAccess?.Invoke(addr, 1, false, val, val);
+        return val;
     }
 
     public ushort ReadWord(uint addr)
@@ -413,12 +423,18 @@ public class MC68030
         {
             byte hi = Memory.ReadByte(TranslateRead(addr));
             byte lo = Memory.ReadByte(TranslateRead(addr + 1));
-            return (ushort)((hi << 8) | lo);
+            ushort v = (ushort)((hi << 8) | lo);
+            if (WatchpointsEnabled) OnMemoryAccess?.Invoke(addr, 2, false, v, v);
+            return v;
         }
         // Data cache fast path
         if (_dataCacheValid && (addr & ~_dataPageMask) == _dataPageVA
             && (addr & _dataPageMask) + 1 < _dataPageMask && FunctionCodeOverride < 0)
-            return Memory.ReadWord(_dataPagePA + (addr & _dataPageMask));
+        {
+            ushort v = Memory.ReadWord(_dataPagePA + (addr & _dataPageMask));
+            if (WatchpointsEnabled) OnMemoryAccess?.Invoke(addr, 2, false, v, v);
+            return v;
+        }
         uint pa = TranslateReadFast(addr);
         if (Mmu.Enabled)
         {
@@ -427,7 +443,9 @@ public class MC68030
             _dataPagePA = pa & ~_dataPageMask;
             _dataCacheValid = true;
         }
-        return Memory.ReadWord(pa);
+        ushort val = Memory.ReadWord(pa);
+        if (WatchpointsEnabled) OnMemoryAccess?.Invoke(addr, 2, false, val, val);
+        return val;
     }
 
     public uint ReadLong(uint addr)
@@ -446,7 +464,11 @@ public class MC68030
         // Data cache fast path
         if (_dataCacheValid && (addr & ~_dataPageMask) == _dataPageVA
             && (addr & _dataPageMask) + 3 < _dataPageMask && FunctionCodeOverride < 0)
-            return Memory.ReadLong(_dataPagePA + (addr & _dataPageMask));
+        {
+            uint v = Memory.ReadLong(_dataPagePA + (addr & _dataPageMask));
+            if (WatchpointsEnabled) OnMemoryAccess?.Invoke(addr, 4, false, v, v);
+            return v;
+        }
         uint pa = TranslateReadFast(addr);
         if (Mmu.Enabled)
         {
@@ -455,18 +477,42 @@ public class MC68030
             _dataPagePA = pa & ~_dataPageMask;
             _dataCacheValid = true;
         }
-        return Memory.ReadLong(pa);
+        uint val = Memory.ReadLong(pa);
+        if (WatchpointsEnabled) OnMemoryAccess?.Invoke(addr, 4, false, val, val);
+        return val;
     }
 
     public void WriteByte(uint addr, byte val)
     {
         _dataCacheValid = false;
+        if (WatchpointsEnabled && OnMemoryAccess != null)
+        {
+            uint pa = TranslateWrite(addr);
+            uint oldVal = Memory.ReadByte(pa);
+            Memory.WriteByte(pa, val);
+            OnMemoryAccess(addr, 1, true, oldVal, val);
+            return;
+        }
         Memory.WriteByte(TranslateWrite(addr), val);
     }
 
     public void WriteWord(uint addr, ushort val)
     {
         _dataCacheValid = false;
+        if (WatchpointsEnabled && OnMemoryAccess != null)
+        {
+            if (Mmu.Enabled && (addr & Mmu.CachedPageMask) == Mmu.CachedPageMask)
+            {
+                WriteByte(addr, (byte)(val >> 8));
+                WriteByte(addr + 1, (byte)val);
+                return;
+            }
+            uint pa = TranslateWrite(addr);
+            uint oldVal = Memory.ReadWord(pa);
+            Memory.WriteWord(pa, val);
+            OnMemoryAccess(addr, 2, true, oldVal, val);
+            return;
+        }
         if (Mmu.Enabled && (addr & Mmu.CachedPageMask) == Mmu.CachedPageMask)
         {
             Memory.WriteByte(TranslateWrite(addr), (byte)(val >> 8));
@@ -479,6 +525,24 @@ public class MC68030
     public void WriteLong(uint addr, uint val)
     {
         _dataCacheValid = false;
+        if (WatchpointsEnabled && OnMemoryAccess != null)
+        {
+            if (Mmu.Enabled)
+            {
+                uint offset = addr & Mmu.CachedPageMask;
+                if (offset + 3 > Mmu.CachedPageMask)
+                {
+                    WriteWord(addr, (ushort)(val >> 16));
+                    WriteWord(addr + 2, (ushort)val);
+                    return;
+                }
+            }
+            uint pa = TranslateWrite(addr);
+            uint oldVal = Memory.ReadLong(pa);
+            Memory.WriteLong(pa, val);
+            OnMemoryAccess(addr, 4, true, oldVal, val);
+            return;
+        }
         if (Mmu.Enabled)
         {
             uint offset = addr & Mmu.CachedPageMask;
