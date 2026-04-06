@@ -45,6 +45,10 @@
 
         <!-- Bottom toolbar -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Background="#FF2D2D30" Height="36">
+            <Button x:Name="AddWatchpointButton" Content="{x:Static p:Strings.Breakpoints_AddWatchpoint}" Click="AddWatchpoint_Click"
+                    Background="#FF3E3E42" Foreground="#FFD4D4D4"
+                    BorderBrush="#FF555555" Padding="8,3" Margin="4"
+                    FontSize="12" />
             <Button x:Name="ClearAllButton" Content="{x:Static p:Strings.Breakpoints_ClearAll}" Click="ClearAll_Click"
                     Background="#FF3E3E42" Foreground="#FFD4D4D4"
                     BorderBrush="#FF555555" Padding="8,3" Margin="4"
