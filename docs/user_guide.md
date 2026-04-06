@@ -221,11 +221,14 @@ Conditions support:
 | Bitwise AND | `SR&0x2000!=0` | Test specific bits: `(SR & 0x2000) != 0` |
 | Memory read | `[0x1000].b`, `[A0].w`, `[$2000].l` | Read byte/word/long from address |
 | Address arithmetic | `[A7+12].l`, `[A0+0xC].w`, `[A7-4].b` | `+` or `-` offset inside `[...]` |
+| IN set | `D0 IN {1, 3, 7, 20}` | True if value matches any element in `{...}` |
 | Logical OR | `expr1 \|\| expr2` | True if either expression is true |
 | Logical AND | `expr1 && expr2` | True if both expressions are true |
+| Grouping | `(expr1 \|\| expr2) && expr3` | `()` overrides default precedence |
 | Number formats | `255`, `0xFF`, `$FF` | Decimal, C-style hex, or Motorola-style hex |
 
 `&&` has higher precedence than `||`: `A || B && C` is evaluated as `A || (B && C)`.
+Use `()` to override: `(A || B) && C`.
 
 **Condition examples:**
 
@@ -237,8 +240,11 @@ Conditions support:
 | `[0x1000].w==0xBEEF` | Break when word at address $1000 equals $BEEF |
 | `[A7+12].l==0` | Break when longword at (A7+12) equals 0 (stack-relative) |
 | `[A0+D1].w!=0` | Break when word at (A0+D1) is non-zero |
+| `D0 IN {1, 3, 7, 20}` | Break when D0 is 1, 3, 7, or 20 |
+| `[A7+12].l IN {1, 3}` | Break when longword at (A7+12) is 1 or 3 |
 | `D0==1 \|\| D0==3` | Break when D0 is 1 or 3 |
 | `D0>0 && D0<100` | Break when D0 is between 1 and 99 |
+| `(D0==1 \|\| D0==3) && SR&0x2000!=0` | D0 is 1 or 3, AND in supervisor mode |
 | `D0==D1` | Break when D0 and D1 have the same value |
 | `D0` | Break when D0 is non-zero (bare expression) |
 

@@ -483,6 +483,106 @@ public class ConditionEvaluatorTests : IClassFixture<CpuTestFixture>
     }
 
     // ========================================================================
+    // IN {set} operator
+    // ========================================================================
+
+    [Fact]
+    public void InSet_Match()
+    {
+        Cpu.D[0] = 3;
+        Assert.True(Eval("D0 IN {1, 3, 7, 20}"));
+    }
+
+    [Fact]
+    public void InSet_NoMatch()
+    {
+        Cpu.D[0] = 5;
+        Assert.False(Eval("D0 IN {1, 3, 7, 20}"));
+    }
+
+    [Fact]
+    public void InSet_HexValues()
+    {
+        Cpu.D[0] = 0xFF;
+        Assert.True(Eval("D0 IN {0xFE, 0xFF, 0x100}"));
+        Cpu.D[0] = 0xFD;
+        Assert.False(Eval("D0 IN {0xFE, 0xFF, 0x100}"));
+    }
+
+    [Fact]
+    public void InSet_MemoryDeref()
+    {
+        Cpu.A[7] = 0x10000;
+        Mem.WriteLong(0x1000C, 7);
+        Assert.True(Eval("[A7+12].l IN {1, 3, 7, 20}"));
+        Mem.WriteLong(0x1000C, 99);
+        Assert.False(Eval("[A7+12].l IN {1, 3, 7, 20}"));
+    }
+
+    [Fact]
+    public void InSet_WithRegisterValues()
+    {
+        Cpu.D[0] = 42;
+        Cpu.D[1] = 42;
+        Assert.True(Eval("D0 IN {10, D1, 99}"));
+    }
+
+    [Fact]
+    public void InSet_CaseInsensitive()
+    {
+        Cpu.D[0] = 5;
+        Assert.True(Eval("D0 in {3, 5, 7}"));
+        Assert.True(Eval("D0 In {3, 5, 7}"));
+    }
+
+    [Fact]
+    public void InSet_WithAndOr()
+    {
+        Cpu.D[0] = 3;
+        Cpu.D[1] = 100;
+        Assert.True(Eval("D0 IN {1, 3, 7} && D1==100"));
+        Cpu.D[1] = 99;
+        Assert.False(Eval("D0 IN {1, 3, 7} && D1==100"));
+    }
+
+    // ========================================================================
+    // Parentheses grouping
+    // ========================================================================
+
+    [Fact]
+    public void Parens_GroupingOrThenAnd()
+    {
+        Cpu.D[0] = 1; Cpu.D[1] = 0;
+        Assert.True(Eval("D0==1 || D0==3 && D1==10"));
+        Assert.False(Eval("(D0==1 || D0==3) && D1==10"));
+    }
+
+    [Fact]
+    public void Parens_GroupingAndThenOr()
+    {
+        Cpu.D[0] = 3; Cpu.D[1] = 10; Cpu.D[2] = 99;
+        Assert.True(Eval("(D0==3 && D1==10) || D2==0"));
+        Assert.True(Eval("D0==3 && (D1==10 || D2==0)"));
+        Assert.False(Eval("D0==3 && (D1==99 || D2==0)"));
+    }
+
+    [Fact]
+    public void Parens_NestedParens()
+    {
+        Cpu.D[0] = 1; Cpu.D[1] = 2; Cpu.D[2] = 3;
+        Assert.True(Eval("((D0==1 && D1==2) || D2==0)"));
+    }
+
+    [Fact]
+    public void Parens_InSetInsideCompound()
+    {
+        Cpu.D[0] = 3; Cpu.D[1] = 100;
+        Assert.True(Eval("(D0 IN {1, 3, 7}) && D1==100"));
+        Cpu.D[1] = 99;
+        Assert.False(Eval("(D0 IN {1, 3, 7}) && D1==100"));
+    }
+
+    // ========================================================================
     // All data/address registers
     // ========================================================================
 

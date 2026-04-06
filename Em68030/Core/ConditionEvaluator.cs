@@ -32,37 +32,22 @@ public static class ConditionEvaluator
     /// Examples: "D0==0x1234", "A7&lt;0x10000", "SR&amp;0x2000!=0", "[0x1000].w==0xFF"
     /// </remarks>
     /// <summary>
-    /// Evaluate a condition with support for || (OR) and &amp;&amp; (AND).
-    /// || has lower precedence than &amp;&amp;.
-    /// Examples: "D0==1 || D0==3", "[A7+12].l==1 &amp;&amp; D0!=0"
+    /// Evaluate a condition with support for ||, &amp;&amp;, () grouping, and IN {}.
     /// </summary>
     public static bool Evaluate(string cond, MC68030 cpu, Memory memory)
     {
         if (string.IsNullOrEmpty(cond)) return true;
 
-        // Check if || or && are present (outside brackets)
-        bool hasLogical = false;
-        int depth = 0;
-        for (int k = 0; k < cond.Length - 1; k++)
-        {
-            if (cond[k] == '[') depth++;
-            else if (cond[k] == ']') depth--;
-            else if (depth == 0 && ((cond[k] == '|' && cond[k + 1] == '|') ||
-                                     (cond[k] == '&' && cond[k + 1] == '&')))
-            { hasLogical = true; break; }
-        }
-        if (!hasLogical) return EvaluateSingle(cond, cpu, memory);
-
         // Split by || (OR)
-        var orClauses = SplitOutsideBrackets(cond, "||");
+        var orClauses = SplitOutsideNesting(cond, "||");
+
         foreach (var orClause in orClauses)
         {
-            // Split by && (AND)
-            var andClauses = SplitOutsideBrackets(orClause, "&&");
+            var andClauses = SplitOutsideNesting(orClause, "&&");
             bool allTrue = true;
             foreach (var clause in andClauses)
             {
-                if (!EvaluateSingle(clause, cpu, memory))
+                if (!EvaluateLeaf(clause, cpu, memory))
                 { allTrue = false; break; }
             }
             if (allTrue) return true;
@@ -70,14 +55,38 @@ public static class ConditionEvaluator
         return false;
     }
 
-    private static List<string> SplitOutsideBrackets(string s, string delim)
+    private static bool EvaluateLeaf(string rawClause, MC68030 cpu, Memory memory)
+    {
+        string trimmed = rawClause.Trim();
+        if (trimmed.Length == 0) return true;
+
+        // Check for (...) grouping
+        if (trimmed[0] == '(' && trimmed[^1] == ')')
+        {
+            int depth = 0;
+            bool matched = true;
+            for (int k = 0; k < trimmed.Length; k++)
+            {
+                if (trimmed[k] == '(') depth++;
+                else if (trimmed[k] == ')') depth--;
+                if (depth == 0 && k < trimmed.Length - 1) { matched = false; break; }
+            }
+            if (matched)
+                return Evaluate(trimmed[1..^1], cpu, memory);
+        }
+
+        return EvaluateSingle(trimmed, cpu, memory);
+    }
+
+    private static List<string> SplitOutsideNesting(string s, string delim)
     {
         var parts = new List<string>();
         int start = 0, depth = 0;
         for (int k = 0; k < s.Length; k++)
         {
-            if (s[k] == '[') depth++;
-            else if (s[k] == ']') depth--;
+            char c = s[k];
+            if (c == '[' || c == '{' || c == '(') depth++;
+            else if (c == ']' || c == '}' || c == ')') depth--;
             else if (depth == 0 && k + delim.Length <= s.Length &&
                      s.Substring(k, delim.Length) == delim)
             {
@@ -163,6 +172,27 @@ public static class ConditionEvaluator
             else if (afterLhs + 1 < cond.Length && cond[afterLhs] == '!' && cond[afterLhs + 1] == '=')
                 { op = "!="; afterLhs += 2; }
             else return lhs != 0;
+        }
+        else if (afterLhs + 1 < cond.Length &&
+                 char.ToUpper(cond[afterLhs]) == 'I' && char.ToUpper(cond[afterLhs + 1]) == 'N' &&
+                 (afterLhs + 2 >= cond.Length || cond[afterLhs + 2] == ' ' || cond[afterLhs + 2] == '{'))
+        {
+            // IN {val1, val2, ...}
+            afterLhs += 2;
+            while (afterLhs < cond.Length && cond[afterLhs] == ' ') afterLhs++;
+            if (afterLhs >= cond.Length || cond[afterLhs] != '{') return true;
+            int closeBrace = cond.IndexOf('}', afterLhs + 1);
+            if (closeBrace < 0) return true;
+            string setStr = cond.Substring(afterLhs + 1, closeBrace - afterLhs - 1);
+            foreach (string part in setStr.Split(','))
+            {
+                string trimmed = part.Trim();
+                if (trimmed.Length == 0) continue;
+                if (!ParseRegisterValue(trimmed, cpu, out uint val))
+                    if (!ParseNumber(trimmed, 0, out _, out val)) return true;
+                if (lhs == val) return true;
+            }
+            return false;
         }
         else return true;
 
