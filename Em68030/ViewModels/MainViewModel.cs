@@ -2036,6 +2036,16 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void UpdatePCHighlight()
     {
+        // Build call stack address set for marking disassembly lines
+        HashSet<uint>? callStackAddrs = null;
+        if (!_isRunning)
+        {
+            var stack = GetCallStack();
+            callStackAddrs = new HashSet<uint>();
+            for (int j = 1; j < stack.Count; j++) // skip frame 0 (current PC)
+                callStackAddrs.Add(stack[j].Item1);
+        }
+
         int pcIndex = -1;
         for (int i = 0; i < DisassemblyLines.Count; i++)
         {
@@ -2044,13 +2054,14 @@ public class MainViewModel : INotifyPropertyChanged
             line.IsCurrentPC = isCurrent;
             if (isCurrent) pcIndex = i;
 
-            // Update breakpoint markers
+            // Update breakpoint and call stack markers
             if (line.HasAddress)
             {
                 bool hasBp = Breakpoints.ContainsKey(line.Address);
                 bool isDisabled = hasBp && !Breakpoints[line.Address].Enabled;
                 line.HasBreakpoint = hasBp;
                 line.HasDisabledBreakpoint = isDisabled;
+                line.IsCallStackFrame = callStackAddrs?.Contains(line.Address) == true;
             }
         }
         if (pcIndex >= 0 && _disasmFollowPC)
@@ -2354,6 +2365,13 @@ public class DisasmLineViewModel : INotifyPropertyChanged
     {
         get => _hasDisabledBreakpoint;
         set { if (_hasDisabledBreakpoint != value) { _hasDisabledBreakpoint = value; OnPropertyChanged(nameof(HasDisabledBreakpoint)); } }
+    }
+
+    private bool _isCallStackFrame;
+    public bool IsCallStackFrame
+    {
+        get => _isCallStackFrame;
+        set { if (_isCallStackFrame != value) { _isCallStackFrame = value; OnPropertyChanged(nameof(IsCallStackFrame)); } }
     }
     public string RawBytes { get; set; } = "";
     public string Mnemonic { get; set; } = "";
