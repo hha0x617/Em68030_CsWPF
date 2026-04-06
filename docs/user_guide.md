@@ -281,9 +281,11 @@ The window shows:
 - **Frame #0**: Current PC and A6 value (highlighted)
 - **Subsequent frames**: Return address and saved frame pointer, traced via the
   `LINK A6` / `UNLK A6` convention (`[A6]` = saved FP, `[A6+4]` = return address)
-- **Heuristic frames** (gray, marked `(heuristic)`): When the A6 chain is unavailable
-  (e.g., code compiled with `-fomit-frame-pointer`), the window scans the stack for
-  addresses that fall within the program code range
+- **Heuristic frames** (gray, marked `(heuristic)`): The window always scans the top
+  4KB of the stack for addresses that look like return addresses (even addresses within
+  the code range). These are shown in addition to any A6 chain frames, with duplicates
+  removed. Heuristic frames cover code compiled with `-fomit-frame-pointer`, hand-written
+  assembly, interrupt handlers, and broken frame chains.
 
 **Operations:**
 
@@ -292,8 +294,10 @@ The window shows:
 - While running, the window shows "Running..."
 
 > **Note**: The A6 chain requires that functions use `LINK A6` / `UNLK A6` instructions.
-> Hand-written assembly or code compiled without frame pointers may show incomplete
-> or no stack frames. In such cases, the heuristic fallback provides best-effort results.
+> Most kernel code and optimized user code omit frame pointers, so the heuristic scan
+> provides the majority of the call stack in practice. Heuristic frames may include
+> false positives (data values that happen to look like code addresses) — double-click
+> to verify in the disassembly view.
 
 ## Settings Reference
 
