@@ -142,6 +142,12 @@ namespace Em68030.Properties
         public static string Window_Settings => ResourceManager.GetString("Window_Settings", resourceCulture) ?? "";
         public static string Window_Input => ResourceManager.GetString("Window_Input", resourceCulture) ?? "";
 
+        // Call Stack Window
+        public static string Menu_CallStackWindow => ResourceManager.GetString("Menu_CallStackWindow", resourceCulture) ?? "";
+        public static string Window_CallStack => ResourceManager.GetString("Window_CallStack", resourceCulture) ?? "";
+        public static string CallStack_Running => ResourceManager.GetString("CallStack_Running", resourceCulture) ?? "";
+        public static string CallStack_Empty => ResourceManager.GetString("CallStack_Empty", resourceCulture) ?? "";
+
         // Breakpoints Window
         public static string Breakpoints_ClearAll => ResourceManager.GetString("Breakpoints_ClearAll", resourceCulture) ?? "";
         public static string Breakpoints_Delete => ResourceManager.GetString("Breakpoints_Delete", resourceCulture) ?? "";

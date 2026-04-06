@@ -1627,6 +1627,51 @@ public class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(IsTracing));
     }
 
+    public List<(uint Address, uint FramePointer, string Label)> GetCallStack(int maxDepth = 32)
+    {
+        var stack = new List<(uint, uint, string)>();
+        stack.Add((_cpu.PC, _cpu.A[6], "<current>"));
+
+        uint fp = _cpu.A[6];
+        uint memSize = _memory.FastRamSize;
+
+        for (int i = 0; i < maxDepth && fp != 0; i++)
+        {
+            if (fp + 4 >= memSize || fp < 0x1000 || (fp & 1) != 0) break;
+            try
+            {
+                uint retAddr = _memory.ReadLong(fp + 4);
+                uint savedFp = _memory.ReadLong(fp);
+                if (retAddr == 0 || retAddr >= memSize) break;
+                stack.Add((retAddr, savedFp, ""));
+                if (savedFp == 0 || savedFp == fp || savedFp <= fp) break;
+                fp = savedFp;
+            }
+            catch { break; }
+        }
+
+        // Heuristic fallback: scan stack for return addresses in code range
+        if (stack.Count <= 1 && _programStartAddress < _programEndAddress)
+        {
+            uint sp = _cpu.A[7];
+            for (uint offset = 0; offset < 256 && sp + offset + 3 < memSize; offset += 2)
+            {
+                try
+                {
+                    uint val = _memory.ReadLong(sp + offset);
+                    if (val >= _programStartAddress && val < _programEndAddress && (val & 1) == 0)
+                    {
+                        stack.Add((val, 0, "?"));
+                        if (stack.Count >= maxDepth) break;
+                    }
+                }
+                catch { break; }
+            }
+        }
+
+        return stack;
+    }
+
     public void SetPCToCursor(uint address)
     {
         _cpu.PC = address;

@@ -379,6 +379,7 @@
                 <MenuItem Header="{x:Static p:Strings.Menu_ConsoleWindow}" Click="ShowConsole_Click" />
                 <MenuItem x:Name="MenuShowFramebuffer" Header="{x:Static p:Strings.Menu_FramebufferWindow}" Click="ShowFramebuffer_Click" IsEnabled="False" />
                 <MenuItem Header="{x:Static p:Strings.Menu_BreakpointsWindow}" Click="ShowBreakpoints_Click" />
+                <MenuItem Header="{x:Static p:Strings.Menu_CallStackWindow}" Click="ShowCallStack_Click" />
                 <MenuItem Header="{x:Static p:Strings.Menu_ToggleLstView}" Click="ToggleLst_Click" IsEnabled="False" />
             </MenuItem>
             <MenuItem Header="{x:Static p:Strings.Menu_Settings}">

@@ -30,6 +30,7 @@ public partial class MainWindow : Window
     private MainViewModel _vm;
     private ConsoleWindow? _consoleWindow;
     private BreakpointsWindow? _breakpointsWindow;
+    private CallStackWindow? _callStackWindow;
     private FramebufferWindow? _framebufferWindow;
 
     public MainWindow()
@@ -78,6 +79,13 @@ public partial class MainWindow : Window
         _vm.OnFramebufferDeviceReset = () =>
         {
             Dispatcher.BeginInvoke(() => ReopenFramebufferWindow());
+        };
+
+        // Refresh call stack window when execution stops
+        _vm.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName is "IsRunning" or "PC")
+                Dispatcher.BeginInvoke(() => _callStackWindow?.RefreshList(_vm.IsRunning));
         };
 
         // Initialize menu state from saved config
@@ -202,6 +210,30 @@ public partial class MainWindow : Window
     private void ShowBreakpoints_Click(object sender, RoutedEventArgs e)
     {
         EnsureBreakpointsWindow();
+    }
+
+    private void ShowCallStack_Click(object sender, RoutedEventArgs e)
+    {
+        EnsureCallStackWindow();
+    }
+
+    private void EnsureCallStackWindow()
+    {
+        if (_callStackWindow == null || !_callStackWindow.IsLoaded)
+        {
+            _callStackWindow = new CallStackWindow(_vm);
+            _callStackWindow.Owner = this;
+            _callStackWindow.NavigateToAddressRequested += addr =>
+            {
+                _vm.ScrollToAddress(addr);
+            };
+            _callStackWindow.Show();
+        }
+        else
+        {
+            _callStackWindow.Activate();
+        }
+        _callStackWindow.RefreshList(_vm.IsRunning);
     }
 
     private void EnsureBreakpointsWindow()
