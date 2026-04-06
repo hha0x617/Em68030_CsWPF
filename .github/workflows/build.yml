@@ -87,6 +87,8 @@ jobs:
           TAG="${{ github.ref_name }}"
           INSTALLER=$(ls installer/Output/Em68030-WPF-Setup-*-*.exe | head -1)
           INSTALLER_NAME=$(basename "$INSTALLER")
+          # Delete existing release if tag was moved to a new commit
+          gh release delete "$TAG" --yes 2>/dev/null || true
           gh release create "$TAG" "$INSTALLER" --title "$TAG" --notes "$(cat <<EOF
           ## Em68030 ${TAG} (C#/WPF)
 
