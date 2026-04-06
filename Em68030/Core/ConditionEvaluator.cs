@@ -48,8 +48,7 @@ public static class ConditionEvaluator
             int closeBracket = cond.IndexOf(']', i + 1);
             if (closeBracket < 0) return true;
             string addrExpr = cond.Substring(i + 1, closeBracket - i - 1);
-            if (!ParseNumber(addrExpr, 0, out _, out uint addr))
-                if (!ParseRegisterValue(addrExpr, cpu, out addr)) return true;
+            if (!ParseAddrExpression(addrExpr, cpu, out uint addr)) return true;
 
             afterLhs = closeBracket + 1;
             if (afterLhs + 1 < cond.Length && cond[afterLhs] == '.')
@@ -127,6 +126,49 @@ public static class ConditionEvaluator
             ">=" => lhs >= rhs,
             _ => true
         };
+    }
+
+    /// <summary>
+    /// Parse an address expression with optional + or - operator.
+    /// Examples: "A7", "0x1000", "A7+12", "A7+0xC", "A7-4", "$1000+A0"
+    /// </summary>
+    private static bool ParseAddrExpression(string rawExpr, MC68030 cpu, out uint val)
+    {
+        val = 0;
+        string expr = rawExpr.Trim();
+        if (expr.Length == 0) return false;
+
+        // Find + or - operator (skip 0x prefix)
+        int opPos = -1;
+        for (int k = 1; k < expr.Length; k++)
+        {
+            if (expr[k] == '+' || expr[k] == '-')
+            {
+                if (k >= 2 && (expr[k - 1] == 'x' || expr[k - 1] == 'X') && expr[k - 2] == '0')
+                    continue;
+                opPos = k;
+                break;
+            }
+        }
+
+        if (opPos < 0)
+        {
+            // No operator — simple value
+            if (ParseNumber(expr, 0, out _, out val)) return true;
+            return ParseRegisterValue(expr, cpu, out val);
+        }
+
+        string leftStr = expr.Substring(0, opPos).TrimEnd();
+        string rightStr = expr.Substring(opPos + 1).TrimStart();
+        char op = expr[opPos];
+
+        if (!ParseNumber(leftStr, 0, out _, out uint leftVal))
+            if (!ParseRegisterValue(leftStr, cpu, out leftVal)) return false;
+        if (!ParseNumber(rightStr, 0, out _, out uint rightVal))
+            if (!ParseRegisterValue(rightStr, cpu, out rightVal)) return false;
+
+        val = op == '+' ? leftVal + rightVal : leftVal - rightVal;
+        return true;
     }
 
     private static bool ParseRegisterValue(string name, MC68030 cpu, out uint val)
