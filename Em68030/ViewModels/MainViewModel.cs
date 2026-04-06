@@ -1630,11 +1630,22 @@ public class MainViewModel : INotifyPropertyChanged
     public List<(uint Address, uint FramePointer, string Label)> GetCallStack(int maxDepth = 32)
     {
         var stack = new List<(uint, uint, string)>();
-        stack.Add((_cpu.PC, _cpu.A[6], "<current>"));
-
-        uint fp = _cpu.A[6];
         uint memSize = _memory.FastRamSize;
 
+        // Helper: check if an address looks like valid code
+        bool IsCodeAddress(uint addr)
+        {
+            if (addr == 0 || addr >= memSize || (addr & 1) != 0) return false;
+            if (_programStartAddress < _programEndAddress)
+                return addr >= _programStartAddress && addr < _programEndAddress;
+            return addr >= 0x1000;
+        }
+
+        // Frame 0: current PC
+        stack.Add((_cpu.PC, _cpu.A[6], "<current>"));
+
+        // Walk A6 frame pointer chain
+        uint fp = _cpu.A[6];
         for (int i = 0; i < maxDepth && fp != 0; i++)
         {
             if (fp + 4 >= memSize || fp < 0x1000 || (fp & 1) != 0) break;
@@ -1642,7 +1653,7 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 uint retAddr = _memory.ReadLong(fp + 4);
                 uint savedFp = _memory.ReadLong(fp);
-                if (retAddr == 0 || retAddr >= memSize) break;
+                if (!IsCodeAddress(retAddr)) break;
                 stack.Add((retAddr, savedFp, ""));
                 if (savedFp == 0 || savedFp == fp || savedFp <= fp) break;
                 fp = savedFp;
@@ -1650,18 +1661,23 @@ public class MainViewModel : INotifyPropertyChanged
             catch { break; }
         }
 
-        // Heuristic fallback: scan stack for return addresses in code range
-        if (stack.Count <= 1 && _programStartAddress < _programEndAddress)
+        // Heuristic: always scan stack for return address candidates (4KB range).
+        // Catches -fomit-frame-pointer code, hand-written asm, interrupt frames.
         {
+            var knownAddrs = new HashSet<uint>();
+            foreach (var e in stack) knownAddrs.Add(e.Item1);
+
             uint sp = _cpu.A[7];
-            for (uint offset = 0; offset < 256 && sp + offset + 3 < memSize; offset += 2)
+            const uint ScanBytes = 4096;
+            for (uint offset = 0; offset < ScanBytes && sp + offset + 3 < memSize; offset += 2)
             {
                 try
                 {
                     uint val = _memory.ReadLong(sp + offset);
-                    if (val >= _programStartAddress && val < _programEndAddress && (val & 1) == 0)
+                    if (IsCodeAddress(val) && !knownAddrs.Contains(val))
                     {
                         stack.Add((val, 0, "?"));
+                        knownAddrs.Add(val);
                         if (stack.Count >= maxDepth) break;
                     }
                 }
