@@ -272,20 +272,22 @@ Write watchpoint at $00001000.W: $0000 -> $BEEF
 > Emulation speed will be reduced when watchpoints are enabled. Disable or remove
 > watchpoints when they are no longer needed.
 
-## Call Stack Window
+## Call Stack Window (Experimental)
+
+> **This feature is under development.** The accuracy of the call stack depends on
+> how the guest code was compiled. See "Known Limitations" below.
 
 Displays the call stack by walking the A6 frame pointer chain. Open via **View → Call Stack Window**.
+Call stack frame addresses are also shown in the disassembly view as green triangle markers (**▸**).
 
 The window shows:
 
-- **Frame #0**: Current PC and A6 value (highlighted)
-- **Subsequent frames**: Return address and saved frame pointer, traced via the
+- **Frame #0**: Current PC and A6 value (highlighted in yellow)
+- **A6 chain frames**: Return address and saved frame pointer, traced via the
   `LINK A6` / `UNLK A6` convention (`[A6]` = saved FP, `[A6+4]` = return address)
-- **Heuristic frames** (gray, marked `(heuristic)`): The window always scans the top
-  4KB of the stack for addresses that look like return addresses (even addresses within
-  the code range). These are shown in addition to any A6 chain frames, with duplicates
-  removed. Heuristic frames cover code compiled with `-fomit-frame-pointer`, hand-written
-  assembly, interrupt handlers, and broken frame chains.
+- **Heuristic frames** (gray, marked `(heuristic)`): The window scans the top 4KB of
+  the stack for values that look like code addresses (even addresses within the program
+  range). Duplicates with A6 chain results are removed.
 
 **Operations:**
 
@@ -293,11 +295,25 @@ The window shows:
 - The window **auto-refreshes** on every Step, Stop, or breakpoint hit
 - While running, the window shows "Running..."
 
-> **Note**: The A6 chain requires that functions use `LINK A6` / `UNLK A6` instructions.
-> Most kernel code and optimized user code omit frame pointers, so the heuristic scan
-> provides the majority of the call stack in practice. Heuristic frames may include
-> false positives (data values that happen to look like code addresses) — double-click
-> to verify in the disassembly view.
+**When the call stack works well:**
+
+- Code compiled with `-fno-omit-frame-pointer` (A6 chain is fully intact)
+- User programs compiled with `-O0` for debugging
+- Kernel panic analysis (NetBSD kernel uses frame pointers by default in many paths)
+
+**Known Limitations:**
+
+- **Idle loops and interrupt handlers**: Stopping the CPU during an idle loop or
+  interrupt handler typically yields only the current frame (#0), because A6 does
+  not form a valid frame chain in these contexts.
+- **`-fomit-frame-pointer` (GCC default with optimization)**: Most optimized code
+  does not use `LINK A6` / `UNLK A6`, so the A6 chain is empty or incomplete.
+- **Heuristic false positives**: The stack scan cannot distinguish real return
+  addresses from data values that happen to fall within the code address range.
+  This can produce noisy results. Double-click a heuristic frame to verify in the
+  disassembly view.
+- **No symbol resolution**: Addresses are displayed as raw hex values. There is no
+  ELF symbol table integration to show function names.
 
 ## Settings Reference
 
