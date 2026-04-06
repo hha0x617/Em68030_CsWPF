@@ -397,6 +397,92 @@ public class ConditionEvaluatorTests : IClassFixture<CpuTestFixture>
     }
 
     // ========================================================================
+    // Logical OR (||) and AND (&&)
+    // ========================================================================
+
+    [Fact]
+    public void LogicalOr_FirstTrue()
+    {
+        Cpu.D[0] = 1;
+        Assert.True(Eval("D0==1 || D0==3"));
+    }
+
+    [Fact]
+    public void LogicalOr_SecondTrue()
+    {
+        Cpu.D[0] = 3;
+        Assert.True(Eval("D0==1 || D0==3"));
+    }
+
+    [Fact]
+    public void LogicalOr_NeitherTrue()
+    {
+        Cpu.D[0] = 2;
+        Assert.False(Eval("D0==1 || D0==3"));
+    }
+
+    [Fact]
+    public void LogicalOr_ThreeClauses()
+    {
+        Cpu.D[0] = 5;
+        Assert.True(Eval("D0==1 || D0==3 || D0==5"));
+        Cpu.D[0] = 4;
+        Assert.False(Eval("D0==1 || D0==3 || D0==5"));
+    }
+
+    [Fact]
+    public void LogicalAnd_BothTrue()
+    {
+        Cpu.D[0] = 10;
+        Cpu.D[1] = 20;
+        Assert.True(Eval("D0==10 && D1==20"));
+    }
+
+    [Fact]
+    public void LogicalAnd_OneFalse()
+    {
+        Cpu.D[0] = 10;
+        Cpu.D[1] = 99;
+        Assert.False(Eval("D0==10 && D1==20"));
+    }
+
+    [Fact]
+    public void LogicalOr_WithAnd_Precedence()
+    {
+        // "D0==1 || D0==3 && D1==10" means "D0==1 || (D0==3 && D1==10)"
+        Cpu.D[0] = 1; Cpu.D[1] = 0;
+        Assert.True(Eval("D0==1 || D0==3 && D1==10"));
+
+        Cpu.D[0] = 3; Cpu.D[1] = 10;
+        Assert.True(Eval("D0==1 || D0==3 && D1==10"));
+
+        Cpu.D[0] = 3; Cpu.D[1] = 0;
+        Assert.False(Eval("D0==1 || D0==3 && D1==10"));
+    }
+
+    [Fact]
+    public void LogicalOr_WithMemoryDeref()
+    {
+        Cpu.A[7] = 0x10000;
+        Mem.WriteLong(0x1000C, 1);
+        Assert.True(Eval("[A7+12].l==1 || [A7+12].l==3"));
+        Mem.WriteLong(0x1000C, 3);
+        Assert.True(Eval("[A7+12].l==1 || [A7+12].l==3"));
+        Mem.WriteLong(0x1000C, 2);
+        Assert.False(Eval("[A7+12].l==1 || [A7+12].l==3"));
+    }
+
+    [Fact]
+    public void LogicalAnd_WithBitwiseAnd()
+    {
+        Cpu.SR = 0x2700;
+        Cpu.D[0] = 0;
+        Assert.True(Eval("SR&0x2000!=0 && D0==0"));
+        Cpu.D[0] = 1;
+        Assert.False(Eval("SR&0x2000!=0 && D0==0"));
+    }
+
+    // ========================================================================
     // All data/address registers
     // ========================================================================
 

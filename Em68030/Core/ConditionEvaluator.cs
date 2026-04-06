@@ -31,7 +31,66 @@ public static class ConditionEvaluator
     /// Values: decimal, 0x hex, $hex
     /// Examples: "D0==0x1234", "A7&lt;0x10000", "SR&amp;0x2000!=0", "[0x1000].w==0xFF"
     /// </remarks>
+    /// <summary>
+    /// Evaluate a condition with support for || (OR) and &amp;&amp; (AND).
+    /// || has lower precedence than &amp;&amp;.
+    /// Examples: "D0==1 || D0==3", "[A7+12].l==1 &amp;&amp; D0!=0"
+    /// </summary>
     public static bool Evaluate(string cond, MC68030 cpu, Memory memory)
+    {
+        if (string.IsNullOrEmpty(cond)) return true;
+
+        // Check if || or && are present (outside brackets)
+        bool hasLogical = false;
+        int depth = 0;
+        for (int k = 0; k < cond.Length - 1; k++)
+        {
+            if (cond[k] == '[') depth++;
+            else if (cond[k] == ']') depth--;
+            else if (depth == 0 && ((cond[k] == '|' && cond[k + 1] == '|') ||
+                                     (cond[k] == '&' && cond[k + 1] == '&')))
+            { hasLogical = true; break; }
+        }
+        if (!hasLogical) return EvaluateSingle(cond, cpu, memory);
+
+        // Split by || (OR)
+        var orClauses = SplitOutsideBrackets(cond, "||");
+        foreach (var orClause in orClauses)
+        {
+            // Split by && (AND)
+            var andClauses = SplitOutsideBrackets(orClause, "&&");
+            bool allTrue = true;
+            foreach (var clause in andClauses)
+            {
+                if (!EvaluateSingle(clause, cpu, memory))
+                { allTrue = false; break; }
+            }
+            if (allTrue) return true;
+        }
+        return false;
+    }
+
+    private static List<string> SplitOutsideBrackets(string s, string delim)
+    {
+        var parts = new List<string>();
+        int start = 0, depth = 0;
+        for (int k = 0; k < s.Length; k++)
+        {
+            if (s[k] == '[') depth++;
+            else if (s[k] == ']') depth--;
+            else if (depth == 0 && k + delim.Length <= s.Length &&
+                     s.Substring(k, delim.Length) == delim)
+            {
+                parts.Add(s.Substring(start, k - start));
+                k += delim.Length - 1;
+                start = k + 1;
+            }
+        }
+        parts.Add(s.Substring(start));
+        return parts;
+    }
+
+    private static bool EvaluateSingle(string cond, MC68030 cpu, Memory memory)
     {
         if (string.IsNullOrEmpty(cond)) return true;
 
