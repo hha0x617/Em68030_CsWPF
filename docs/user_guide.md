@@ -220,6 +220,7 @@ Conditions support:
 | Comparison | `==`, `!=`, `<`, `>`, `<=`, `>=` | Unsigned 32-bit comparison |
 | Bitwise AND | `SR&0x2000!=0` | Test specific bits: `(SR & 0x2000) != 0` |
 | Memory read | `[0x1000].b`, `[A0].w`, `[$2000].l` | Read byte/word/long from address |
+| Address arithmetic | `[A7+12].l`, `[A0+0xC].w`, `[A7-4].b` | `+` or `-` offset inside `[...]` |
 | Number formats | `255`, `0xFF`, `$FF` | Decimal, C-style hex, or Motorola-style hex |
 
 **Condition examples:**
@@ -230,6 +231,8 @@ Conditions support:
 | `A7<0x10000` | Break when stack pointer is below 64KB |
 | `SR&0x2000!=0` | Break when in supervisor mode |
 | `[0x1000].w==0xBEEF` | Break when word at address $1000 equals $BEEF |
+| `[A7+12].l==0` | Break when longword at (A7+12) equals 0 (stack-relative) |
+| `[A0+D1].w!=0` | Break when word at (A0+D1) is non-zero |
 | `D0==D1` | Break when D0 and D1 have the same value |
 | `D0` | Break when D0 is non-zero (bare expression) |
 
