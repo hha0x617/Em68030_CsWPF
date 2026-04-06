@@ -320,6 +320,60 @@
   <data name="Breakpoints_Delete" xml:space="preserve">
     <value>Del</value>
   </data>
+  <data name="Breakpoints_AddWatchpoint" xml:space="preserve">
+    <value>Add Watchpoint</value>
+  </data>
+  <data name="Breakpoints_SectionBreakpoints" xml:space="preserve">
+    <value>Breakpoints</value>
+  </data>
+  <data name="Breakpoints_SectionWatchpoints" xml:space="preserve">
+    <value>Watchpoints</value>
+  </data>
+  <data name="Breakpoints_EditCondition" xml:space="preserve">
+    <value>Cond</value>
+  </data>
+  <data name="Breakpoints_EditConditionTitle" xml:space="preserve">
+    <value>Edit Condition</value>
+  </data>
+  <data name="Breakpoints_ConditionFor" xml:space="preserve">
+    <value>Condition for</value>
+  </data>
+  <data name="Breakpoints_ConditionHint" xml:space="preserve">
+    <value>Examples: D0==0x1234, SR&amp;0x2000!=0, [A0].w==0xFF, D0&lt;D1. Leave empty for unconditional.</value>
+  </data>
+  <data name="Breakpoints_ClearCondition" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Watchpoint_DialogTitle" xml:space="preserve">
+    <value>Add Watchpoint</value>
+  </data>
+  <data name="Watchpoint_AddressLabel" xml:space="preserve">
+    <value>Address:</value>
+  </data>
+  <data name="Watchpoint_SizeLabel" xml:space="preserve">
+    <value>Size:</value>
+  </data>
+  <data name="Watchpoint_TypeLabel" xml:space="preserve">
+    <value>Type:</value>
+  </data>
+  <data name="Watchpoint_TypeWrite" xml:space="preserve">
+    <value>Write</value>
+  </data>
+  <data name="Watchpoint_TypeRead" xml:space="preserve">
+    <value>Read</value>
+  </data>
+  <data name="Watchpoint_TypeReadWrite" xml:space="preserve">
+    <value>Read/Write</value>
+  </data>
+  <data name="Watchpoint_ConditionLabel" xml:space="preserve">
+    <value>Condition (optional):</value>
+  </data>
+  <data name="Watchpoint_Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Watchpoint_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
 
   <!-- Dialog Buttons -->
   <data name="Dialog_OK" xml:space="preserve">

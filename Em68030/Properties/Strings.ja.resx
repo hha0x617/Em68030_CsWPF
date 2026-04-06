@@ -320,6 +320,60 @@
   <data name="Breakpoints_Delete" xml:space="preserve">
     <value>削除</value>
   </data>
+  <data name="Breakpoints_AddWatchpoint" xml:space="preserve">
+    <value>ウォッチポイント追加</value>
+  </data>
+  <data name="Breakpoints_SectionBreakpoints" xml:space="preserve">
+    <value>ブレークポイント</value>
+  </data>
+  <data name="Breakpoints_SectionWatchpoints" xml:space="preserve">
+    <value>ウォッチポイント</value>
+  </data>
+  <data name="Breakpoints_EditCondition" xml:space="preserve">
+    <value>条件</value>
+  </data>
+  <data name="Breakpoints_EditConditionTitle" xml:space="preserve">
+    <value>条件の編集</value>
+  </data>
+  <data name="Breakpoints_ConditionFor" xml:space="preserve">
+    <value>条件:</value>
+  </data>
+  <data name="Breakpoints_ConditionHint" xml:space="preserve">
+    <value>例: D0==0x1234, SR&amp;0x2000!=0, [A0].w==0xFF, D0&lt;D1。空欄で無条件。</value>
+  </data>
+  <data name="Breakpoints_ClearCondition" xml:space="preserve">
+    <value>クリア</value>
+  </data>
+  <data name="Watchpoint_DialogTitle" xml:space="preserve">
+    <value>ウォッチポイント追加</value>
+  </data>
+  <data name="Watchpoint_AddressLabel" xml:space="preserve">
+    <value>アドレス:</value>
+  </data>
+  <data name="Watchpoint_SizeLabel" xml:space="preserve">
+    <value>サイズ:</value>
+  </data>
+  <data name="Watchpoint_TypeLabel" xml:space="preserve">
+    <value>種類:</value>
+  </data>
+  <data name="Watchpoint_TypeWrite" xml:space="preserve">
+    <value>書き込み</value>
+  </data>
+  <data name="Watchpoint_TypeRead" xml:space="preserve">
+    <value>読み取り</value>
+  </data>
+  <data name="Watchpoint_TypeReadWrite" xml:space="preserve">
+    <value>読み書き</value>
+  </data>
+  <data name="Watchpoint_ConditionLabel" xml:space="preserve">
+    <value>条件 (省略可):</value>
+  </data>
+  <data name="Watchpoint_Add" xml:space="preserve">
+    <value>追加</value>
+  </data>
+  <data name="Watchpoint_Cancel" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
 
   <!-- Dialog Buttons -->
   <data name="Dialog_OK" xml:space="preserve">

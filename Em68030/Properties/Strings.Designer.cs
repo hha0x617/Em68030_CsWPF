@@ -145,6 +145,28 @@ namespace Em68030.Properties
         // Breakpoints Window
         public static string Breakpoints_ClearAll => ResourceManager.GetString("Breakpoints_ClearAll", resourceCulture) ?? "";
         public static string Breakpoints_Delete => ResourceManager.GetString("Breakpoints_Delete", resourceCulture) ?? "";
+        public static string Breakpoints_AddWatchpoint => ResourceManager.GetString("Breakpoints_AddWatchpoint", resourceCulture) ?? "";
+        public static string Breakpoints_SectionBreakpoints => ResourceManager.GetString("Breakpoints_SectionBreakpoints", resourceCulture) ?? "";
+        public static string Breakpoints_SectionWatchpoints => ResourceManager.GetString("Breakpoints_SectionWatchpoints", resourceCulture) ?? "";
+
+        // Breakpoint Condition Edit
+        public static string Breakpoints_EditCondition => ResourceManager.GetString("Breakpoints_EditCondition", resourceCulture) ?? "";
+        public static string Breakpoints_EditConditionTitle => ResourceManager.GetString("Breakpoints_EditConditionTitle", resourceCulture) ?? "";
+        public static string Breakpoints_ConditionFor => ResourceManager.GetString("Breakpoints_ConditionFor", resourceCulture) ?? "";
+        public static string Breakpoints_ConditionHint => ResourceManager.GetString("Breakpoints_ConditionHint", resourceCulture) ?? "";
+        public static string Breakpoints_ClearCondition => ResourceManager.GetString("Breakpoints_ClearCondition", resourceCulture) ?? "";
+
+        // Watchpoint Dialog
+        public static string Watchpoint_DialogTitle => ResourceManager.GetString("Watchpoint_DialogTitle", resourceCulture) ?? "";
+        public static string Watchpoint_AddressLabel => ResourceManager.GetString("Watchpoint_AddressLabel", resourceCulture) ?? "";
+        public static string Watchpoint_SizeLabel => ResourceManager.GetString("Watchpoint_SizeLabel", resourceCulture) ?? "";
+        public static string Watchpoint_TypeLabel => ResourceManager.GetString("Watchpoint_TypeLabel", resourceCulture) ?? "";
+        public static string Watchpoint_TypeWrite => ResourceManager.GetString("Watchpoint_TypeWrite", resourceCulture) ?? "";
+        public static string Watchpoint_TypeRead => ResourceManager.GetString("Watchpoint_TypeRead", resourceCulture) ?? "";
+        public static string Watchpoint_TypeReadWrite => ResourceManager.GetString("Watchpoint_TypeReadWrite", resourceCulture) ?? "";
+        public static string Watchpoint_ConditionLabel => ResourceManager.GetString("Watchpoint_ConditionLabel", resourceCulture) ?? "";
+        public static string Watchpoint_Add => ResourceManager.GetString("Watchpoint_Add", resourceCulture) ?? "";
+        public static string Watchpoint_Cancel => ResourceManager.GetString("Watchpoint_Cancel", resourceCulture) ?? "";
 
         // Console Window
         public static string Console_Log => ResourceManager.GetString("Console_Log", resourceCulture) ?? "";
