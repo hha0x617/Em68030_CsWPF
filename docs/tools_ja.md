@@ -71,7 +71,9 @@ sudo ./tools/create-debian-disk.sh -s 1G -p root -o debian.img
 stage3 tarball から Gentoo/m68k のディスクイメージを作成します。root 権限が必要です。
 
 ```bash
-sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-openrc-*.tar.xz -s 2G -o gentoo.img
+sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-openrc-<DATE>.tar.xz -s 2G -o gentoo.img
+# or
+sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-systemd-<DATE>.tar.xz -s 2G -o gentoo.img
 ```
 
 | オプション | デフォルト | 説明 |
@@ -84,7 +86,17 @@ sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-openrc-*.tar.xz -s 2G -o gento
 | `-i` | 自動判定 | init システム (`openrc` または `systemd`)。tarball のファイル名から自動判定 |
 | `-n` | (無効) | NAT ネットワーク設定を有効化 (10.0.2.15/24) |
 
-Stage3 ダウンロード先: `https://distfiles.gentoo.org/releases/m68k/autobuilds/`
+**Stage3 ダウンロード**（スクリプト実行前にダウンロードしてください）:
+
+```bash
+# 最新の tarball ファイル名を確認 (openrc または systemd)
+curl -s https://distfiles.gentoo.org/releases/m68k/autobuilds/latest-stage3-m68k-openrc.txt
+curl -s https://distfiles.gentoo.org/releases/m68k/autobuilds/latest-stage3-m68k-systemd.txt
+
+# いずれかをダウンロード (<DATE> を上記で確認したタイムスタンプに置き換え)
+wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-openrc/stage3-m68k-openrc-<DATE>.tar.xz
+wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-systemd/stage3-m68k-systemd-<DATE>.tar.xz
+```
 
 ---
 

@@ -72,7 +72,9 @@ Requirements: `debootstrap`, `qemu-user-static` (with binfmt_misc F flag),
 Creates a Gentoo/m68k disk image from a stage3 tarball. Requires root privileges.
 
 ```bash
-sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-openrc-*.tar.xz -s 2G -o gentoo.img
+sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-openrc-<DATE>.tar.xz -s 2G -o gentoo.img
+# or
+sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-systemd-<DATE>.tar.xz -s 2G -o gentoo.img
 ```
 
 | Option | Default | Description |
@@ -85,7 +87,17 @@ sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-openrc-*.tar.xz -s 2G -o gento
 | `-i` | auto-detect | Init system (`openrc` or `systemd`). Auto-detected from tarball filename if omitted |
 | `-n` | (disabled) | Enable NAT network (10.0.2.15/24) |
 
-Stage3 download: `https://distfiles.gentoo.org/releases/m68k/autobuilds/`
+**Stage3 download** (download before running the script):
+
+```bash
+# Check the latest tarball filename (openrc or systemd)
+curl -s https://distfiles.gentoo.org/releases/m68k/autobuilds/latest-stage3-m68k-openrc.txt
+curl -s https://distfiles.gentoo.org/releases/m68k/autobuilds/latest-stage3-m68k-systemd.txt
+
+# Download one of the variants (replace <DATE> with the actual timestamp from above)
+wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-openrc/stage3-m68k-openrc-<DATE>.tar.xz
+wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-systemd/stage3-m68k-systemd-<DATE>.tar.xz
+```
 
 ---
 

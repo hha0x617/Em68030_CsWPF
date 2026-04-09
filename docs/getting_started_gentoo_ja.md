@@ -66,11 +66,19 @@ M48T02 RTC の年エンコーディングは NetBSD と Linux で異なります
 `tools/create-gentoo-disk.sh` スクリプトで手順 1.2〜1.6 を自動化できます:
 
 ```bash
-# Stage3 をダウンロード
-wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-openrc/stage3-m68k-openrc-<DATE>.tar.xz
+# 最新の tarball ファイル名を確認 (openrc または systemd)
+curl -s https://distfiles.gentoo.org/releases/m68k/autobuilds/latest-stage3-m68k-openrc.txt
+curl -s https://distfiles.gentoo.org/releases/m68k/autobuilds/latest-stage3-m68k-systemd.txt
 
-# ディスクイメージを作成
-sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-openrc-*.tar.xz -s 2G -o gentoo.img
+# いずれかをダウンロード (<DATE> を上記で確認したタイムスタンプに置き換え)
+wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-openrc/stage3-m68k-openrc-<DATE>.tar.xz
+# or
+wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-systemd/stage3-m68k-systemd-<DATE>.tar.xz
+
+# ディスクイメージを作成 (init システムは tarball のファイル名から自動検出)
+sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-openrc-<DATE>.tar.xz -s 2G -o gentoo.img
+# or
+sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-systemd-<DATE>.tar.xz -s 2G -o gentoo.img
 ```
 
 全オプションと必要なパッケージは [Disk Image and Utility Tools](tools_ja.md#gentoo-ディスクイメージの作成) を参照してください。

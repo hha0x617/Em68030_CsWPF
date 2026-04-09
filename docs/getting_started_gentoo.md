@@ -67,11 +67,19 @@ The `tools/create-gentoo-disk.sh` script automates steps 1.2 through 1.6
 (disk creation, partitioning, stage3 extraction, and configuration) in a single command:
 
 ```bash
-# Download stage3 first
-wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-openrc/stage3-m68k-openrc-<DATE>.tar.xz
+# Check the latest tarball filename (openrc or systemd)
+curl -s https://distfiles.gentoo.org/releases/m68k/autobuilds/latest-stage3-m68k-openrc.txt
+curl -s https://distfiles.gentoo.org/releases/m68k/autobuilds/latest-stage3-m68k-systemd.txt
 
-# Create disk image
-sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-openrc-*.tar.xz -s 2G -o gentoo.img
+# Download one of the variants (replace <DATE> with the actual timestamp from above)
+wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-openrc/stage3-m68k-openrc-<DATE>.tar.xz
+# or
+wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-systemd/stage3-m68k-systemd-<DATE>.tar.xz
+
+# Create disk image (init system is auto-detected from tarball filename)
+sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-openrc-<DATE>.tar.xz -s 2G -o gentoo.img
+# or
+sudo ./tools/create-gentoo-disk.sh -t stage3-m68k-systemd-<DATE>.tar.xz -s 2G -o gentoo.img
 ```
 
 See [Disk Image and Utility Tools](tools.md#create-gentoo-disk-image) for full options and requirements.
