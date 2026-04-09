@@ -38,7 +38,7 @@ Optionally places a miniroot image on sd0b for installation.
 | Option | Default | Description |
 |--------|---------|-------------|
 | `-s` / `-Size` | `2G` | Disk image size (500M to 4T) |
-| `-m` / `-Miniroot` | (none) | NetBSD miniroot.fs to place on sd0b |
+| `-m` / `-Miniroot` | auto-detect | NetBSD miniroot.fs to place on sd0b. If omitted, searches for `miniroot.fs` or `miniroot.fs.gz` in the output and script directories. `.gz` files are decompressed automatically |
 | `-o` / `-Output` | `disk.img` | Output file |
 | `-w` | `32` | Swap partition size in MB |
 
@@ -189,14 +189,18 @@ via the emulator's SCSI CD-ROM.
 
 ## Requirements Summary
 
-| Script | Root | Docker | Other |
-|--------|------|--------|-------|
+| Script | Root | Docker | Required Packages |
+|--------|------|--------|-------------------|
 | `create-netbsd-disk.ps1` | — | Yes | — |
-| `create-netbsd-disk.sh` | No | No | `gcc` |
-| `create-debian-disk.sh` | Yes | No | `debootstrap`, `qemu-user-static`, `sfdisk` |
-| `create-gentoo-disk.sh` | Yes | No | `sfdisk`, `mkfs.ext2`, `tar` |
+| `create-netbsd-disk.sh` | No | No | `gcc`, `libc6-dev` |
+| `create-debian-disk.sh` | Yes | No | `debootstrap`, `qemu-user-static`, `sfdisk`, `mkfs.ext4`, `openssl` |
+| `create-gentoo-disk.sh` | Yes | No | `sfdisk`, `mkfs.ext2`, `openssl` |
 | `expand-netbsd-disk.ps1` | — | Yes | — |
-| `expand-netbsd-disk.sh` | No | No | `gcc` |
+| `expand-netbsd-disk.sh` | No | No | `gcc`, `libc6-dev` |
 | `expand-linux-disk.sh` | Yes | No | `sfdisk`, `resize2fs`, `e2fsck` |
 | `create-iso.ps1` | — | Yes | — |
 | `create-iso.sh` | No | No | `genisoimage` or `mkisofs` |
+
+> **Note:** All shell scripts automatically detect missing packages at startup.
+> If any are missing, the script prompts for confirmation before installing via `apt-get`.
+> If installation is declined, the script exits with an error.
