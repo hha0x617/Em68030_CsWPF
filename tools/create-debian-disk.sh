@@ -87,17 +87,39 @@ done
 
 # Validate environment
 [ "$(id -u)" -eq 0 ] || die "Must run as root (use sudo)"
-command -v debootstrap >/dev/null || die "debootstrap not found. Install: apt install debootstrap"
-command -v sfdisk >/dev/null || die "sfdisk not found. Install: apt install fdisk"
-command -v mkfs.ext4 >/dev/null || die "mkfs.ext4 not found. Install: apt install e2fsprogs"
-command -v qemu-m68k-static >/dev/null || die "qemu-m68k-static not found. Install: apt install qemu-user-static"
 
-# Check binfmt_misc F flag
-if [ -f /proc/sys/fs/binfmt_misc/qemu-m68k ]; then
-    if ! grep -q 'flags:.*F' /proc/sys/fs/binfmt_misc/qemu-m68k; then
-        echo "Warning: qemu-m68k binfmt_misc does not have F flag."
-        echo "  chroot may fail. Reinstall qemu-user-static or register with F flag."
-    fi
+# Install missing packages
+MISSING_PKGS=()
+command -v debootstrap >/dev/null || MISSING_PKGS+=(debootstrap)
+command -v sfdisk >/dev/null || MISSING_PKGS+=(fdisk)
+command -v mkfs.ext4 >/dev/null || MISSING_PKGS+=(e2fsprogs)
+command -v qemu-m68k-static >/dev/null || MISSING_PKGS+=(qemu-user-static)
+command -v openssl >/dev/null || MISSING_PKGS+=(openssl)
+
+if [ ${#MISSING_PKGS[@]} -gt 0 ]; then
+    echo "Installing missing packages: ${MISSING_PKGS[*]}"
+    apt-get update -qq
+    apt-get install -y -qq "${MISSING_PKGS[@]}" \
+        || die "Failed to install packages: ${MISSING_PKGS[*]}"
+fi
+
+# Ensure binfmt_misc is mounted
+if [ ! -d /proc/sys/fs/binfmt_misc ]; then
+    mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc \
+        || die "Failed to mount binfmt_misc"
+fi
+
+# Register qemu-m68k with F flag if not present
+BINFMT_ENTRY=':qemu-m68k:M::\x7fELF\x01\x02\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x04:\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xfe\xff\xff:/usr/bin/qemu-m68k-static:F'
+if [ ! -f /proc/sys/fs/binfmt_misc/qemu-m68k ]; then
+    echo "Registering qemu-m68k binfmt_misc handler..."
+    printf '%s\n' "$BINFMT_ENTRY" > /proc/sys/fs/binfmt_misc/register \
+        || die "Failed to register qemu-m68k binfmt_misc handler"
+elif ! grep -q 'flags:.*F' /proc/sys/fs/binfmt_misc/qemu-m68k; then
+    echo "Re-registering qemu-m68k with F flag..."
+    echo -1 > /proc/sys/fs/binfmt_misc/qemu-m68k
+    printf '%s\n' "$BINFMT_ENTRY" > /proc/sys/fs/binfmt_misc/register \
+        || die "Failed to re-register qemu-m68k binfmt_misc handler"
 fi
 
 # Parse and validate size
@@ -148,7 +170,18 @@ debootstrap --arch=m68k --foreign --no-check-gpg \
     "$SUITE" "$MOUNTPOINT" "$MIRROR"
 
 echo "[4/7] Running debootstrap (second stage)..."
+
+# Ensure qemu-m68k-static is available inside chroot (needed without binfmt F flag)
+QEMU_BIN=$(command -v qemu-m68k-static)
+if [ -n "$QEMU_BIN" ]; then
+    mkdir -p "$MOUNTPOINT/$(dirname "$QEMU_BIN")"
+    cp "$QEMU_BIN" "$MOUNTPOINT/$QEMU_BIN"
+fi
+
 chroot "$MOUNTPOINT" /debootstrap/debootstrap --second-stage
+
+# Clean up qemu binary from target (not needed at runtime in emulator)
+rm -f "$MOUNTPOINT/$QEMU_BIN"
 
 # Step 5: Configure root filesystem
 echo "[5/7] Configuring system..."

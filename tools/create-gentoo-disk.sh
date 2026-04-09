@@ -23,9 +23,17 @@
 #   - Root privileges (sudo)
 #   - sfdisk, mkfs.ext2, mkswap, openssl, tar (with xz support)
 #
+# Download stage3 tarball:
+#   Available variants: m68k-openrc, m68k-systemd, m68k_musl-openrc, m68k_musl-systemd
+#   wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-openrc/stage3-m68k-openrc-<DATE>.tar.xz
+#
+#   To find the latest filename:
+#   curl -s https://distfiles.gentoo.org/releases/m68k/autobuilds/latest-stage3-m68k-openrc.txt
+#   curl -s https://distfiles.gentoo.org/releases/m68k/autobuilds/latest-stage3-m68k-systemd.txt
+#
 # Examples:
-#   sudo ./create-gentoo-disk.sh -t stage3-m68k-openrc-20260301.tar.xz
-#   sudo ./create-gentoo-disk.sh -t stage3-m68k-systemd-20260301.tar.xz -i systemd -s 4G -n
+#   sudo ./create-gentoo-disk.sh -t stage3-m68k-openrc-20260403T164601Z.tar.xz
+#   sudo ./create-gentoo-disk.sh -t stage3-m68k-systemd-20260403T164601Z.tar.xz -i systemd -s 4G -n
 
 set -euo pipefail
 
@@ -90,8 +98,19 @@ done
 [ "$(id -u)" -eq 0 ] || die "Must run as root (use sudo)"
 [ -n "$TARBALL" ] || die "Stage3 tarball required (-t). Download from:\n  https://distfiles.gentoo.org/releases/m68k/autobuilds/"
 [ -f "$TARBALL" ] || die "Tarball not found: $TARBALL"
-command -v sfdisk >/dev/null || die "sfdisk not found. Install: apt install fdisk"
-command -v mkfs.ext2 >/dev/null || die "mkfs.ext2 not found. Install: apt install e2fsprogs"
+
+# Install missing packages
+MISSING_PKGS=()
+command -v sfdisk >/dev/null || MISSING_PKGS+=(fdisk)
+command -v mkfs.ext2 >/dev/null || MISSING_PKGS+=(e2fsprogs)
+command -v openssl >/dev/null || MISSING_PKGS+=(openssl)
+
+if [ ${#MISSING_PKGS[@]} -gt 0 ]; then
+    echo "Installing missing packages: ${MISSING_PKGS[*]}"
+    apt-get update -qq
+    apt-get install -y -qq "${MISSING_PKGS[@]}" \
+        || die "Failed to install packages: ${MISSING_PKGS[*]}"
+fi
 
 # Auto-detect init system from tarball filename if -i not specified
 if [ $INIT_EXPLICIT -eq 0 ]; then
