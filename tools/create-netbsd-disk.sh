@@ -83,6 +83,30 @@ while getopts "s:m:o:h" opt; do
     esac
 done
 
+# Auto-detect miniroot if not specified
+if [ -z "$MINIROOT" ]; then
+    OUTPUT_DIR="$(cd "$(dirname "$OUTPUT")" 2>/dev/null && pwd)" || OUTPUT_DIR="$(pwd)"
+    for candidate in \
+        "$OUTPUT_DIR/miniroot.fs" \
+        "$OUTPUT_DIR/miniroot.fs.gz" \
+        "$SCRIPT_DIR/miniroot.fs" \
+        "$SCRIPT_DIR/miniroot.fs.gz"; do
+        if [ -f "$candidate" ]; then
+            MINIROOT="$candidate"
+            echo "Auto-detected miniroot: $MINIROOT"
+            break
+        fi
+    done
+fi
+
+# Decompress miniroot.fs.gz if needed
+if [ -n "$MINIROOT" ] && echo "$MINIROOT" | grep -q '\.gz$'; then
+    MINIROOT_DECOMPRESSED="${MINIROOT%.gz}"
+    echo "Decompressing $MINIROOT ..."
+    gzip -dkf "$MINIROOT"
+    MINIROOT="$MINIROOT_DECOMPRESSED"
+fi
+
 # Parse and validate size
 SIZE_BYTES=$(parse_size "$SIZE")
 MIN_BYTES=$((500 * 1024 * 1024))            # 500 MB

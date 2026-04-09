@@ -41,6 +41,38 @@ function Parse-Size([string]$sizeStr) {
     exit 1
 }
 
+# Auto-detect miniroot if not specified
+if (-not $Miniroot) {
+    $OutputDir = Split-Path -Parent $Output
+    if (-not $OutputDir) { $OutputDir = "." }
+    $OutputDir = (Resolve-Path $OutputDir -ErrorAction SilentlyContinue)?.Path ?? (Get-Location).Path
+    $candidates = @(
+        (Join-Path $OutputDir "miniroot.fs"),
+        (Join-Path $OutputDir "miniroot.fs.gz"),
+        (Join-Path $ScriptDir "miniroot.fs"),
+        (Join-Path $ScriptDir "miniroot.fs.gz")
+    )
+    foreach ($candidate in $candidates) {
+        if (Test-Path $candidate) {
+            $Miniroot = $candidate
+            Write-Host "Auto-detected miniroot: $Miniroot"
+            break
+        }
+    }
+}
+
+# Decompress miniroot.fs.gz if needed
+if ($Miniroot -and $Miniroot.EndsWith(".gz")) {
+    $decompressed = $Miniroot -replace '\.gz$', ''
+    Write-Host "Decompressing $Miniroot ..."
+    $gzIn = [System.IO.File]::OpenRead($Miniroot)
+    $gzStream = New-Object System.IO.Compression.GZipStream($gzIn, [System.IO.Compression.CompressionMode]::Decompress)
+    $fsOut = [System.IO.File]::Create($decompressed)
+    $gzStream.CopyTo($fsOut)
+    $fsOut.Close(); $gzStream.Close(); $gzIn.Close()
+    $Miniroot = $decompressed
+}
+
 # Parse and validate size
 $SizeBytes = Parse-Size $Size
 $MinBytes = [uint64](500 * 1024 * 1024)
