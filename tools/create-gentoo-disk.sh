@@ -106,7 +106,13 @@ command -v mkfs.ext2 >/dev/null || MISSING_PKGS+=(e2fsprogs)
 command -v openssl >/dev/null || MISSING_PKGS+=(openssl)
 
 if [ ${#MISSING_PKGS[@]} -gt 0 ]; then
-    echo "Installing missing packages: ${MISSING_PKGS[*]}"
+    echo "The following packages are required but not installed: ${MISSING_PKGS[*]}"
+    printf "Install them now? [y/N] "
+    read -r REPLY
+    case "$REPLY" in
+        [yY]|[yY][eE][sS]) ;;
+        *) die "Required packages not installed: ${MISSING_PKGS[*]}" ;;
+    esac
     apt-get update -qq
     apt-get install -y -qq "${MISSING_PKGS[@]}" \
         || die "Failed to install packages: ${MISSING_PKGS[*]}"

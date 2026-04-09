@@ -76,9 +76,22 @@ IMAGE="$1"
 
 # Validate environment
 [ "$(id -u)" -eq 0 ] || die "Must run as root (use sudo)"
-command -v sfdisk >/dev/null || die "sfdisk not found. Install: apt install fdisk"
-command -v resize2fs >/dev/null || die "resize2fs not found. Install: apt install e2fsprogs"
-command -v e2fsck >/dev/null || die "e2fsck not found. Install: apt install e2fsprogs"
+MISSING_PKGS=()
+command -v sfdisk >/dev/null || MISSING_PKGS+=(fdisk)
+command -v resize2fs >/dev/null || command -v e2fsck >/dev/null || MISSING_PKGS+=(e2fsprogs)
+
+if [ ${#MISSING_PKGS[@]} -gt 0 ]; then
+    echo "The following packages are required but not installed: ${MISSING_PKGS[*]}"
+    printf "Install them now? [y/N] "
+    read -r REPLY
+    case "$REPLY" in
+        [yY]|[yY][eE][sS]) ;;
+        *) die "Required packages not installed: ${MISSING_PKGS[*]}" ;;
+    esac
+    apt-get update -qq
+    apt-get install -y -qq "${MISSING_PKGS[@]}" \
+        || die "Failed to install packages: ${MISSING_PKGS[*]}"
+fi
 
 # Current image size
 CUR_BYTES=$(stat -c%s "$IMAGE" 2>/dev/null || stat -f%z "$IMAGE")

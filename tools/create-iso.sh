@@ -38,14 +38,23 @@ if [ -z "$OUTPUT" ]; then
     OUTPUT="$(basename "$SRCDIR").iso"
 fi
 
+if ! command -v genisoimage >/dev/null 2>&1 && ! command -v mkisofs >/dev/null 2>&1; then
+    echo "The following packages are required but not installed: genisoimage"
+    printf "Install them now? [y/N] "
+    read -r REPLY
+    case "$REPLY" in
+        [yY]|[yY][eE][sS]) ;;
+        *) echo "Error: Required packages not installed: genisoimage" >&2; exit 1 ;;
+    esac
+    apt-get update -qq
+    apt-get install -y -qq genisoimage \
+        || { echo "Error: Failed to install genisoimage" >&2; exit 1; }
+fi
+
 if command -v genisoimage >/dev/null 2>&1; then
     genisoimage -o "$OUTPUT" -R -J "$SRCDIR"
-elif command -v mkisofs >/dev/null 2>&1; then
-    mkisofs -o "$OUTPUT" -R -J "$SRCDIR"
 else
-    echo "Error: genisoimage or mkisofs not found" >&2
-    echo "Install: apt install genisoimage" >&2
-    exit 1
+    mkisofs -o "$OUTPUT" -R -J "$SRCDIR"
 fi
 
 echo "ISO created: $OUTPUT ($(du -h "$OUTPUT" | cut -f1))"

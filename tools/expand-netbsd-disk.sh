@@ -129,6 +129,18 @@ echo ""
 # Compile mkdisklabel if needed
 MKDISKLABEL="$SCRIPT_DIR/mkdisklabel"
 if [ ! -x "$MKDISKLABEL" ] || [ "$SCRIPT_DIR/mkdisklabel.c" -nt "$MKDISKLABEL" ]; then
+    if ! command -v "${CC:-gcc}" >/dev/null 2>&1; then
+        echo "The following packages are required but not installed: gcc"
+        printf "Install them now? [y/N] "
+        read -r REPLY
+        case "$REPLY" in
+            [yY]|[yY][eE][sS]) ;;
+            *) die "Required packages not installed: gcc" ;;
+        esac
+        apt-get update -qq
+        apt-get install -y -qq gcc libc6-dev \
+            || die "Failed to install packages: gcc libc6-dev"
+    fi
     echo "Compiling mkdisklabel..."
     ${CC:-gcc} -o "$MKDISKLABEL" "$SCRIPT_DIR/mkdisklabel.c"
 fi
