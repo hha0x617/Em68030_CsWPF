@@ -185,8 +185,8 @@ public class InstructionDecoder
 
     private void FastRTS(ushort opcode)
     {
-
         _cpu.PC = _cpu.PopLong();
+        _cpu.ShadowPop();
     }
 
     private void FastADD_L_Dn_Dm(ushort opcode)
@@ -1151,6 +1151,7 @@ public class InstructionDecoder
             // Restore SR with proper USP/SSP swap
             _cpu.SetSR(newSR);
             _cpu.PC = newPC;
+            _cpu.ShadowPop();
             return;
         }
 
@@ -1160,6 +1161,7 @@ public class InstructionDecoder
             short disp = (short)_cpu.FetchWord();
             _cpu.PC = _cpu.PopLong();
             _cpu.A[7] += (uint)disp;
+            _cpu.ShadowPop();
             return;
         }
 
@@ -1167,6 +1169,7 @@ public class InstructionDecoder
         if (opcode == 0x4E75)
         {
             _cpu.PC = _cpu.PopLong();
+            _cpu.ShadowPop();
             return;
         }
 
@@ -1175,6 +1178,7 @@ public class InstructionDecoder
         {
             _cpu.CCR = (byte)_cpu.PopWord();
             _cpu.PC = _cpu.PopLong();
+            _cpu.ShadowPop();
             return;
         }
 
@@ -1201,6 +1205,7 @@ public class InstructionDecoder
             var (eaMode, eaR) = EffectiveAddress.Decode(mode, reg);
             uint addr = EffectiveAddress.ResolveAddress(_cpu, eaMode, eaR, 4);
             _cpu.PushLong(_cpu.PC);
+            _cpu.ShadowPush(_cpu._lastPC, addr, _cpu.PC);
             _cpu.PC = addr;
             return;
         }
@@ -1658,6 +1663,7 @@ public class InstructionDecoder
                 break;
             case 1: // BSR
                 _cpu.PushLong(_cpu.PC);
+                _cpu.ShadowPush(_cpu._lastPC, targetPC, _cpu.PC);
                 _cpu.PC = targetPC;
                 break;
             default: // Bcc

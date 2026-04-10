@@ -206,6 +206,44 @@ public class MC68030
     // Last PC before instruction execution (for caller-side bus error recovery)
     internal uint _lastPC;
 
+    // ========================================================================
+    // Shadow call stack (runtime BSR/JSR/RTS tracking)
+    // ========================================================================
+
+    public struct ShadowStackEntry
+    {
+        public uint CallPC;     // PC of BSR/JSR or exception
+        public uint TargetPC;   // Where execution went
+        public uint ReturnPC;   // Expected return address
+        public uint SP;         // A7 after push
+        public byte Kind;       // 0=Call(BSR/JSR), 1=Exception, 2=Interrupt
+    }
+
+    public const int ShadowStackMaxDepth = 256;
+    public readonly ShadowStackEntry[] ShadowStack = new ShadowStackEntry[ShadowStackMaxDepth];
+    public int ShadowStackTop;
+    public bool ShadowStackEnabled;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void ShadowPush(uint callPC, uint targetPC, uint returnPC, byte kind = 0)
+    {
+        if (!ShadowStackEnabled) return;
+        if (ShadowStackTop < ShadowStackMaxDepth)
+            ShadowStack[ShadowStackTop++] = new ShadowStackEntry
+                { CallPC = callPC, TargetPC = targetPC, ReturnPC = returnPC, SP = A[7], Kind = kind };
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void ShadowPop()
+    {
+        if (!ShadowStackEnabled || ShadowStackTop == 0) return;
+        --ShadowStackTop;
+        while (ShadowStackTop > 0 && A[7] > ShadowStack[ShadowStackTop - 1].SP)
+            --ShadowStackTop;
+    }
+
+    public void ShadowStackClear() => ShadowStackTop = 0;
+
     /// <summary>
     /// Handle a BusErrorException thrown during ExecuteNextFast().
     /// Restores PC and all registers to their pre-instruction state, then raises the bus error.
@@ -301,6 +339,7 @@ public class MC68030
         InstructionCount = 0;
         _stopTimingActive = false;
         _totalStopTicks = 0;
+        ShadowStackClear();
     }
 
     /// <summary>Returns accumulated STOP idle ticks and resets the accumulator.</summary>
@@ -962,7 +1001,9 @@ public class MC68030
 
         // Read vector address from vector table (supervisor data mode, through MMU)
         uint vectorAddr = VBR + (uint)(vector * 4);
+        uint oldPC = PC;
         PC = ReadLong(vectorAddr);
+        ShadowPush(oldPC, PC, oldPC, 1); // kind=1 (Exception)
 
         ExceptionOccurred?.Invoke($"Exception vector {vector} at ${vectorAddr:X8}, new PC=${PC:X8}");
 
@@ -1183,7 +1224,9 @@ public class MC68030
         PushWord(oldSR);
 
         uint vectorAddr = VBR + (uint)(vector * 4);
+        uint oldPC = PC;
         PC = ReadLong(vectorAddr);
+        ShadowPush(oldPC, PC, oldPC, 2); // kind=2 (Interrupt)
     }
 
     public void RaiseTrap(int trapNum)

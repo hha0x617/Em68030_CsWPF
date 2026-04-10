@@ -227,6 +227,16 @@ public partial class MainWindow : Window
             {
                 _vm.ScrollToAddress(addr);
             };
+
+            // Enable shadow call stack tracking
+            _vm.Cpu.ShadowStackEnabled = true;
+            _vm.Cpu.ShadowStackClear();
+
+            _callStackWindow.Closed += (s, e) =>
+            {
+                _vm.Cpu.ShadowStackEnabled = false;
+            };
+
             _callStackWindow.Show();
         }
         else
