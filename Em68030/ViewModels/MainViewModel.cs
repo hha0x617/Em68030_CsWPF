@@ -39,6 +39,7 @@ public class MainViewModel : INotifyPropertyChanged
     private volatile bool _stopRequested;
     private Dispatcher? _dispatcher;
     private uint? _runToCursorAddress;
+    private uint? _stepOutSP;
     private bool _isRunning;
     private string? _lstFilePath;
     private List<LstLine>? _lstLines;
@@ -1229,8 +1230,11 @@ public class MainViewModel : INotifyPropertyChanged
         if (_cpu.Halted) return;
         if (_cpu.Stopped && !_cpu.HasExternalDevices) return;
 
-        uint returnAddr = _memory.ReadLong(_cpu.A[7]);
-        RunToCursor(returnAddr);
+        // SP-based StepOut: run until RTS is executed with A7 >= current A7.
+        // This works regardless of frame pointer conventions (-fomit-frame-pointer).
+        _stepOutSP = _cpu.A[7];
+        _runToCursorAddress = null;
+        StartEmulation();
     }
 
     public void Run()
@@ -1280,6 +1284,8 @@ public class MainViewModel : INotifyPropertyChanged
         bool hasBreakpoints = EnabledBreakpoints.Count > 0;
         bool hasRunToCursor = _runToCursorAddress.HasValue;
         uint runToCursorAddr = _runToCursorAddress.GetValueOrDefault();
+        bool hasStepOutSP = _stepOutSP.HasValue;
+        uint stepOutSP = _stepOutSP.GetValueOrDefault();
         bool hasWatchpoints = _hasEnabledWatchpoints;
         bool hasConditionalBP = _hasConditionalBreakpoints;
         _cpu.WatchpointsEnabled = hasWatchpoints;
@@ -1298,7 +1304,7 @@ public class MainViewModel : INotifyPropertyChanged
                 if (_cpu.Halted) { RequestStopOnUI(); return; }
                 if (_cpu.Stopped && !_cpu.HasExternalDevices) { RequestStopOnUI(); return; }
 
-                if (!hasBreakpoints && !hasRunToCursor && !hasWatchpoints)
+                if (!hasBreakpoints && !hasRunToCursor && !hasStepOutSP && !hasWatchpoints)
                 {
                     // Fast path: no breakpoints, run-to-cursor, or watchpoints
                     uint loopDetectPC = uint.MaxValue;
@@ -1391,6 +1397,16 @@ public class MainViewModel : INotifyPropertyChanged
                         }
                         if (hasRunToCursor && _cpu.PC == runToCursorAddr)
                         { RequestStopOnUI(); return; }
+                        // StepOut: stop when about to execute RTS with SP >= recorded value
+                        if (hasStepOutSP && _cpu.A[7] >= stepOutSP)
+                        {
+                            ushort nextOp = _memory.ReadWord(_cpu.PC);
+                            if (nextOp == 0x4E75) // RTS
+                            {
+                                _cpu.ExecuteStep();
+                                RequestStopOnUI(); return;
+                            }
+                        }
 
                         // Detect supervisor-mode infinite loop
                         if (_cpu.PC == loopDetectPC)
@@ -1476,6 +1492,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         _emulationThread = null;
         _runToCursorAddress = null;
+        _stepOutSP = null;
         IsRunning = false;
         // Final MHz/MIPS calculation
         long now = Stopwatch.GetTimestamp();
@@ -1507,6 +1524,7 @@ public class MainViewModel : INotifyPropertyChanged
         _emulationThread?.Join(2000); // Wait up to 2 seconds
         _emulationThread = null;
         _runToCursorAddress = null;
+        _stepOutSP = null;
         _cpu.WatchpointsEnabled = false;
         _watchpointHit = null;
         IsRunning = false;
@@ -1630,58 +1648,23 @@ public class MainViewModel : INotifyPropertyChanged
     public List<(uint Address, uint FramePointer, string Label)> GetCallStack(int maxDepth = 32)
     {
         var stack = new List<(uint, uint, string)>();
-        uint memSize = _memory.FastRamSize;
-
-        // Helper: check if an address looks like valid code
-        bool IsCodeAddress(uint addr)
-        {
-            if (addr == 0 || addr >= memSize || (addr & 1) != 0) return false;
-            if (_programStartAddress < _programEndAddress)
-                return addr >= _programStartAddress && addr < _programEndAddress;
-            return addr >= 0x1000;
-        }
 
         // Frame 0: current PC
-        stack.Add((_cpu.PC, _cpu.A[6], "<current>"));
+        stack.Add((_cpu.PC, 0, "<current>"));
 
-        // Walk A6 frame pointer chain
-        uint fp = _cpu.A[6];
-        for (int i = 0; i < maxDepth && fp != 0; i++)
+        if (_cpu.ShadowStackEnabled && _cpu.ShadowStackTop > 0)
         {
-            if (fp + 4 >= memSize || fp < 0x1000 || (fp & 1) != 0) break;
-            try
+            // Read shadow stack in reverse order (most recent call first)
+            for (int i = _cpu.ShadowStackTop - 1; i >= 0 && stack.Count < maxDepth; --i)
             {
-                uint retAddr = _memory.ReadLong(fp + 4);
-                uint savedFp = _memory.ReadLong(fp);
-                if (!IsCodeAddress(retAddr)) break;
-                stack.Add((retAddr, savedFp, ""));
-                if (savedFp == 0 || savedFp == fp || savedFp <= fp) break;
-                fp = savedFp;
-            }
-            catch { break; }
-        }
-
-        // Heuristic: always scan stack for return address candidates (4KB range).
-        // Catches -fomit-frame-pointer code, hand-written asm, interrupt frames.
-        {
-            var knownAddrs = new HashSet<uint>();
-            foreach (var e in stack) knownAddrs.Add(e.Item1);
-
-            uint sp = _cpu.A[7];
-            const uint ScanBytes = 4096;
-            for (uint offset = 0; offset < ScanBytes && sp + offset + 3 < memSize; offset += 2)
-            {
-                try
+                var entry = _cpu.ShadowStack[i];
+                string label = entry.Kind switch
                 {
-                    uint val = _memory.ReadLong(sp + offset);
-                    if (IsCodeAddress(val) && !knownAddrs.Contains(val))
-                    {
-                        stack.Add((val, 0, "?"));
-                        knownAddrs.Add(val);
-                        if (stack.Count >= maxDepth) break;
-                    }
-                }
-                catch { break; }
+                    1 => "(exception)",
+                    2 => "(interrupt)",
+                    _ => ""
+                };
+                stack.Add((entry.ReturnPC, entry.CallPC, label));
             }
         }
 
