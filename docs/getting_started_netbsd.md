@@ -39,7 +39,17 @@ gzip -d netbsd-GENERIC.gz
 
 ## Create a Virtual SCSI Disk Image
 
-### Option A: Using the Emulator GUI
+> **Which option should I use?** If you want to install NetBSD, **Option B (the
+> command-line script with `-Miniroot`) is strongly recommended**. It produces
+> an image that already has the miniroot installer written to partition `b`, so
+> you can skip Phase 1 entirely and go straight to Phase 2 (sysinst).
+>
+> **Option A (the GUI Create button) only creates an empty disk image** with a
+> disklabel — it does **not** write the miniroot. If you use Option A, you must
+> still complete Phase 1 below to boot the RAMDISK kernel and write the miniroot
+> by hand.
+
+### Option A: Using the Emulator GUI (empty image — Phase 1 required)
 
 1. Launch Em68030
 2. Open **Settings** from the menu bar
@@ -50,22 +60,41 @@ gzip -d netbsd-GENERIC.gz
 7. Set **Memory Size** to 64 MB (67108864 bytes) — recommended
 8. Click **OK** to save
 
-The emulator creates an empty disk image with a valid NetBSD `cpu_disklabel` pre-written, including partition `a` (root filesystem) and partition `b` (swap, also used for the miniroot during installation).
+The emulator creates an **empty** disk image with a valid NetBSD `cpu_disklabel`
+pre-written, including partition `a` (root filesystem) and partition `b` (swap,
+also used for the miniroot during installation). The miniroot itself is **not**
+written by this option — you will need to complete Phase 1 below before sysinst
+can run.
 
-### Option B: Using the Command-Line Script
+### Option B: Using the Command-Line Script (recommended for installation)
 
-The `tools/create-netbsd-disk.ps1` script creates a disk image with a BSD disklabel
-from the command line. If a miniroot image is provided, it is placed on sd0b:
+The `tools/create-netbsd-disk.ps1` script creates a disk image with a BSD
+disklabel from the command line. When a miniroot image is provided via
+`-Miniroot`, the script writes it directly to partition `b` (sd0b), producing
+an image that is ready to boot into sysinst without going through Phase 1:
 
 ```powershell
 .\tools\create-netbsd-disk.ps1 -Size 2G -Miniroot miniroot.fs -Output netbsd.img
 ```
 
-See [Disk Image and Utility Tools](tools.md#create-netbsd-disk-image) for full options and Linux/WSL usage.
+After creating the image with this command:
+
+1. Launch Em68030 and open **Settings**
+2. Add `netbsd.img` at **SCSI ID 0** in the SCSI Disks list
+3. Click **OK**, then **skip Phase 1 below** and proceed directly to
+   [Phase 2: Boot Miniroot](#phase-2-boot-miniroot--install-netbsd-with-sysinst)
+
+See [Disk Image and Utility Tools](tools.md#create-netbsd-disk-image) for full
+options and Linux/WSL usage.
 
 ---
 
 ## Phase 1: Boot RAMDISK — Write Miniroot to Partition b
+
+> **Skip this phase** if you created your disk image with
+> `create-netbsd-disk.ps1 -Miniroot miniroot.fs` (Option B above). The miniroot
+> is already on partition `b` and you can go straight to
+> [Phase 2: Boot Miniroot](#phase-2-boot-miniroot--install-netbsd-with-sysinst).
 
 The RAMDISK kernel contains a minimal in-memory root filesystem with basic utilities for disk setup. Its root is on `md0` (memory disk), leaving the SCSI disk available for writing.
 
@@ -233,6 +262,15 @@ export PKG_PATH=https://cdn.netbsd.org/pub/pkgsrc/packages/NetBSD/m68k/10.0_2025
 #export SSL_NO_VERIFY_PEER=1
 #
 ```
+
+> **Note on the `10.0_2025Q4` path**: Although this guide targets NetBSD 10.1, the
+> path above intentionally points to the `10.0_2025Q4` directory. NetBSD's package
+> mirror currently serves the same m68k binaries to both NetBSD 10.0 and 10.1 — the
+> `10.1/` path is a server-side HTTP 302 redirect to `10.0_2025Q4/`. NetBSD 10.x
+> maintains binary compatibility within the major release, so these packages work
+> correctly on NetBSD 10.1. If a dedicated 10.1 build is published in the future,
+> update this URL to match. Check
+> `https://cdn.netbsd.org/pub/pkgsrc/packages/NetBSD/m68k/` for the current list.
 
 Once you have finished configuring the system, enable multi-user mode by setting `rc_configured=YES` in `/etc/rc.conf`.
 
