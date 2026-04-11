@@ -57,7 +57,9 @@ For detailed OS installation guides, see [Getting Started](getting_started.md).
 | File | Exit | Alt+F4 | Close the application |
 | Run | Run | F5 | Start or resume CPU execution |
 | Run | Stop | Shift+F5 | Halt CPU execution |
-| Run | Step | F10 | Execute one instruction |
+| Run | Step | F10 | Execute one instruction (steps **into** subroutine calls) |
+| Run | Step Over | F11 | Execute one instruction; for `JSR` / `BSR`, run until just after the call returns |
+| Run | Step Out | Shift+F11 | Run until the current subroutine returns (next `RTS` with `A7` ≥ recorded SP) |
 | Run | Run to Cursor | F4 | Execute until the selected address |
 | Run | Set PC to Cursor | | Set PC to the selected disassembly address |
 | Run | Reset | | CPU soft reset |
@@ -75,7 +77,9 @@ For detailed OS installation guides, see [Getting Started](getting_started.md).
 |--------|-------------|
 | Run (F5) | Start or resume execution |
 | Stop | Halt execution |
-| Step (F10) | Single-step one instruction |
+| Step (F10) | Single-step one instruction (steps into `JSR` / `BSR`) |
+| Step Over (F11) | Single-step, but run to the instruction after a `JSR` / `BSR` call |
+| Step Out (Shift+F11) | Run until the current subroutine returns |
 | Reset | CPU soft reset |
 | Full Reset | Complete system reset |
 | Trace | Toggle execution trace mode |
@@ -188,6 +192,7 @@ and the `em68030fb` kernel module loaded in the guest OS.
 
 | Shortcut | Action |
 |----------|--------|
+| Ctrl+Shift+G | Toggle mouse grab (relative pointer capture). While grabbed, the host cursor is confined to the framebuffer window and the title bar shows `[Mouse Grabbed — Ctrl+Shift+G to release]`. |
 | Ctrl+Shift+V | Paste clipboard text as key events |
 
 ### Mouse Input
@@ -286,22 +291,18 @@ Write watchpoint at $00001000.W: $0000 -> $BEEF
 > Emulation speed will be reduced when watchpoints are enabled. Disable or remove
 > watchpoints when they are no longer needed.
 
-## Call Stack Window (Experimental)
+## Call Stack Window
 
-> **This feature is under development.** The accuracy of the call stack depends on
-> how the guest code was compiled. See "Known Limitations" below.
-
-Displays the call stack by walking the A6 frame pointer chain. Open via **View → Call Stack Window**.
-Call stack frame addresses are also shown in the disassembly view as green triangle markers (**▸**).
+Displays the current call stack. Open via **View → Call Stack Window**.
+Call stack frame addresses are also shown in the disassembly view as green triangle
+markers (**▸**).
 
 The window shows:
 
-- **Frame #0**: Current PC and A6 value (highlighted in yellow)
-- **A6 chain frames**: Return address and saved frame pointer, traced via the
-  `LINK A6` / `UNLK A6` convention (`[A6]` = saved FP, `[A6+4]` = return address)
-- **Heuristic frames** (gray, marked `(heuristic)`): The window scans the top 4KB of
-  the stack for values that look like code addresses (even addresses within the program
-  range). Duplicates with A6 chain results are removed.
+- **Frame #0**: Current PC (highlighted in yellow)
+- Each subsequent frame, most recent caller first
+- Frames originating from a CPU exception or interrupt are tagged `(exception)` or
+  `(interrupt)`
 
 **Operations:**
 
@@ -309,25 +310,66 @@ The window shows:
 - The window **auto-refreshes** on every Step, Stop, or breakpoint hit
 - While running, the window shows "Running..."
 
-**When the call stack works well:**
+### Inspection modes
 
-- Code compiled with `-fno-omit-frame-pointer` (A6 chain is fully intact)
-- User programs compiled with `-O0` for debugging
-- Kernel panic analysis (NetBSD kernel uses frame pointers by default in many paths)
+The Call Stack window supports two inspection modes, switchable in
+**Settings → Advanced → Call Stack → Mode**. The default is **Shadow Stack**.
 
-**Known Limitations:**
+#### Shadow Stack (default)
 
-- **Idle loops and interrupt handlers**: Stopping the CPU during an idle loop or
-  interrupt handler typically yields only the current frame (#0), because A6 does
-  not form a valid frame chain in these contexts.
-- **`-fomit-frame-pointer` (GCC default with optimization)**: Most optimized code
-  does not use `LINK A6` / `UNLK A6`, so the A6 chain is empty or incomplete.
-- **Heuristic false positives**: The stack scan cannot distinguish real return
-  addresses from data values that happen to fall within the code address range.
-  This can produce noisy results. Double-click a heuristic frame to verify in the
-  disassembly view.
-- **No symbol resolution**: Addresses are displayed as raw hex values. There is no
-  ELF symbol table integration to show function names.
+Tracks `BSR` / `JSR` / `RTS` / `RTE` / `RTD` / `RTR` execution at runtime in a
+side-table maintained by the emulator, independently of any frame pointer
+convention. This is the most accurate mode and works with virtually any code:
+
+- **Strengths**: Works with `-fomit-frame-pointer`, hand-written assembly, and
+  optimized code that does not use `LINK A6` / `UNLK A6`. CPU exceptions and
+  interrupts are tracked, so you can see the path that led into a trap or ISR.
+- **Cost**: Tracking is only active while the Call Stack window is open. There is
+  a small overhead on every subroutine call/return when tracking is on; no overhead
+  at all when the window is closed.
+- **Caveats**: The shadow stack accumulates from the moment the window is opened.
+  Frames belonging to subroutines that were already on the stack when you opened
+  the window will not be visible until the program returns and calls them again.
+  If this matters, open the Call Stack window before starting the run you want to
+  analyze.
+
+#### A6 Frame Pointer Chain
+
+Walks the A6 frame pointer chain established by `LINK A6` / `UNLK A6`
+(`[A6]` = saved A6, `[A6+4]` = return address), then performs a heuristic scan of
+the top 4 KB of the supervisor/user stack to surface return-address-shaped
+longwords that the chain may have missed. This is the legacy mode and is provided
+mainly for bare-metal programs that do not use an OS:
+
+- **When to use it**: Hand-written or hand-compiled programs that follow the
+  classic A6 calling convention (e.g. small ROM monitors, bootloaders, freestanding
+  programs built without `-fomit-frame-pointer`).
+- **Strengths**: No runtime overhead. Yields a meaningful stack the moment the
+  window is opened, with no need to wait for tracking to accumulate.
+- **Limitations**:
+  - **`-fomit-frame-pointer` code** (GCC default at `-O1` and above): Most
+    optimized code does not maintain A6 as a frame pointer, so the chain is empty
+    or truncated.
+  - **Idle loops and interrupt handlers**: Stopping inside the kernel idle loop
+    or an ISR usually yields only frame #0, because A6 is not a valid chain there.
+  - **Heuristic false positives**: The 4 KB stack scan cannot tell a real return
+    address from a data value that happens to fall in the code range. Heuristic
+    entries are marked `?` and may be noisy. Double-click to verify in the
+    disassembly view.
+  - **No symbol resolution**: Addresses are shown as raw hex.
+
+### Choosing a mode
+
+| Situation | Recommended mode |
+|-----------|------------------|
+| OS guests (NetBSD, Linux, 147Bug) | Shadow Stack |
+| Compiled C/C++ user programs | Shadow Stack |
+| Bare-metal hand-written assembly | Either, A6 Chain if you cannot reopen the window |
+| Standalone programs built `-fno-omit-frame-pointer` | Either |
+| Standalone programs built with optimization | Shadow Stack |
+
+> **No symbol resolution**: In both modes, addresses are displayed as raw hex
+> values. There is no ELF symbol table integration to show function names.
 
 ## Settings Reference
 
@@ -355,14 +397,15 @@ The settings dialog is organized into three tabs: **General**, **MVME147**, and 
 These are emulator-specific virtual devices for the Generic board mode.
 They do not correspond to real hardware.
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| Console Device Enabled | On | Virtual serial console (MMIO) |
-| Console Base Addr | 0x00FF0000 | Console MMIO address |
-| Scrollback Lines | 2000 | Console scrollback buffer size |
-| Terminal Size | 80 x 24 | Console columns and rows |
-| HDD Device Enabled | On | Virtual HDD controller (MMIO) |
-| HDD Base Addr | 0x00FF1000 | HDD MMIO address |
+| Setting | Range | Default | Description |
+|---------|-------|---------|-------------|
+| Console Device Enabled | On / Off | On | Virtual serial console (MMIO) |
+| Console Base Addr | — | 0x00FF0000 | Console MMIO address |
+| Scrollback Lines | 0–100000 | 2000 | Console scrollback buffer size |
+| Terminal Columns | 80–320 | 80 | Console column count |
+| Terminal Rows | 24–80 | 24 | Console row count |
+| HDD Device Enabled | On / Off | On | Virtual HDD controller (MMIO) |
+| HDD Base Addr | — | 0x00FF1000 | HDD MMIO address |
 
 #### Display
 
@@ -429,7 +472,7 @@ SCSI disk emulation via the WD33C93 SCSI controller (real MVME147 hardware).
 | Disk Image Path | Path to a raw SCSI disk image file |
 | SCSI ID | 0–6 (each disk must have a unique ID) |
 | + Add Disk | Add another SCSI disk |
-| Create | Create a new empty disk image (size in MB) |
+| Create | Create a new empty disk image (size in MB, range 100–2097152) |
 
 > **Note**: SCSI disk path changes take effect after rebooting the guest OS.
 > CD-ROM ISO images can be swapped at any time.
@@ -467,11 +510,28 @@ Emulator-specific virtual framebuffer device. The real MVME147 does not have a b
 
 #### Performance
 
+| Setting | Range | Default | Description |
+|---------|-------|---------|-------------|
+| Enable JIT Compiler | On / Off | Off | Experimental JIT for register-only blocks |
+| Min Block Length | 1–64 | 3 | Minimum instructions for JIT compilation |
+| Compile Threshold | 1–255 | 32 | Executions before a block is compiled |
+
+#### Call Stack
+
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Enable JIT Compiler | Off | Experimental JIT for register-only blocks |
-| Min Block Length | 3 | Minimum instructions for JIT compilation |
-| Compile Threshold | 32 | Executions before a block is compiled |
+| Mode | Shadow Stack | Selects the call stack inspection method |
+
+- **Shadow Stack**: Tracks `BSR` / `JSR` / `RTS` at runtime while the Call Stack
+  window is open. Accurate for any code (including `-fomit-frame-pointer` and
+  hand-written assembly), with a small runtime cost while the window is open.
+- **A6 Frame Pointer Chain**: Walks the A6 chain set up by `LINK A6` / `UNLK A6`,
+  plus a heuristic stack scan. No runtime cost. Recommended for bare-metal programs
+  built without `-fomit-frame-pointer`. Will return only the current frame for
+  optimized code or interrupt contexts.
+
+See the [Call Stack Window](#call-stack-window) section for a detailed
+comparison of the two modes.
 
 #### Debug
 
