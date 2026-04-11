@@ -1157,7 +1157,9 @@ public class MainViewModel : INotifyPropertyChanged
         {
             if (fs.Length < 512) return;
             byte[] sector = new byte[512];
+#pragma warning disable CA2022 // Partial read is safe: zeroed bytes cause magic check to fail → writes fresh label
             fs.Read(sector, 0, 512);
+#pragma warning restore CA2022
             uint magic1 = (uint)(sector[0x3A] << 24 | sector[0x3B] << 16 | sector[0x3C] << 8 | sector[0x3D]);
             uint magic2 = (uint)(sector[0x13C] << 24 | sector[0x13D] << 16 | sector[0x13E] << 8 | sector[0x13F]);
             if (magic1 == DISKMAGIC && magic2 == DISKMAGIC)
