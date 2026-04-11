@@ -16,9 +16,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:Em68030.ViewModels"
         xmlns:p="clr-namespace:Em68030.Properties"
+        xmlns:local="clr-namespace:Em68030"
         Title="{x:Static p:Strings.MainWindow_Title}" Height="750" Width="1100"
         WindowStartupLocation="CenterScreen"
         Background="#FF1E1E1E" Foreground="#FFD4D4D4">
+    <Window.CommandBindings>
+        <CommandBinding Command="{x:Static local:MainWindow.OpenElfCommand}" Executed="OpenElf_Executed" />
+        <CommandBinding Command="{x:Static local:MainWindow.OpenBinaryCommand}" Executed="OpenBinary_Executed" />
+        <CommandBinding Command="{x:Static local:MainWindow.OpenSRecordCommand}" Executed="OpenSRecord_Executed" />
+    </Window.CommandBindings>
     <Window.InputBindings>
         <KeyBinding Key="F5" Command="{Binding RunCommand}" />
         <KeyBinding Key="F5" Modifiers="Shift" Command="{Binding StopCommand}" />
@@ -357,9 +363,9 @@
         <!-- Menu Bar -->
         <Menu DockPanel.Dock="Top" Background="#FF2D2D30" Foreground="#FFF0F0F0">
             <MenuItem Header="{x:Static p:Strings.Menu_File}">
-                <MenuItem Header="{x:Static p:Strings.Menu_OpenElf}" Click="OpenElf_Click" />
-                <MenuItem Header="{x:Static p:Strings.Menu_OpenBinary}" Click="OpenBinary_Click" />
-                <MenuItem Header="{x:Static p:Strings.Menu_OpenSRecord}" Click="OpenSRecord_Click" />
+                <MenuItem Header="{x:Static p:Strings.Menu_OpenElf}" Command="{x:Static local:MainWindow.OpenElfCommand}" />
+                <MenuItem Header="{x:Static p:Strings.Menu_OpenBinary}" Command="{x:Static local:MainWindow.OpenBinaryCommand}" />
+                <MenuItem Header="{x:Static p:Strings.Menu_OpenSRecord}" Command="{x:Static local:MainWindow.OpenSRecordCommand}" />
                 <Separator />
                 <MenuItem Header="{x:Static p:Strings.Menu_Exit}" Click="Exit_Click" />
             </MenuItem>
@@ -367,8 +373,8 @@
                 <MenuItem Header="{x:Static p:Strings.Menu_RunF5}" Command="{Binding RunCommand}" />
                 <MenuItem Header="{x:Static p:Strings.Menu_StopShiftF5}" Command="{Binding StopCommand}" />
                 <MenuItem Header="{x:Static p:Strings.Menu_StepF10}" Command="{Binding StepCommand}" />
-                <MenuItem Header="Step Over (F11)" Command="{Binding StepOverCommand}" />
-                <MenuItem Header="Step Out (Shift+F11)" Command="{Binding StepOutCommand}" />
+                <MenuItem Header="{x:Static p:Strings.Menu_StepOverF11}" Command="{Binding StepOverCommand}" />
+                <MenuItem Header="{x:Static p:Strings.Menu_StepOutShiftF11}" Command="{Binding StepOutCommand}" />
                 <MenuItem Header="{x:Static p:Strings.Menu_RunToCursor}" Click="RunToCursor_Click" />
                 <Separator />
                 <MenuItem Header="{x:Static p:Strings.Menu_SetPCToCursor}" Click="SetPCToCursor_Click" />
@@ -396,8 +402,8 @@
                 <Button Content="{x:Static p:Strings.Toolbar_Run}" Command="{Binding RunCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button Content="{x:Static p:Strings.Toolbar_Stop}" Command="{Binding StopCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button Content="{x:Static p:Strings.Toolbar_Step}" Command="{Binding StepCommand}" Style="{StaticResource ToolBarButton}" />
-                <Button Content="Step Over" Command="{Binding StepOverCommand}" Style="{StaticResource ToolBarButton}" />
-                <Button Content="Step Out" Command="{Binding StepOutCommand}" Style="{StaticResource ToolBarButton}" />
+                <Button Content="{x:Static p:Strings.Toolbar_StepOver}" Command="{Binding StepOverCommand}" Style="{StaticResource ToolBarButton}" />
+                <Button Content="{x:Static p:Strings.Toolbar_StepOut}" Command="{Binding StepOutCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button Content="{x:Static p:Strings.Toolbar_Reset}" Command="{Binding ResetCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button Content="{x:Static p:Strings.Toolbar_FullReset}" Command="{Binding FullResetCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button x:Name="BtnTrace" Content="{x:Static p:Strings.Toolbar_Trace}" Command="{Binding ToggleTraceCommand}" Style="{StaticResource ToolBarButton}" />
@@ -430,7 +436,7 @@
                             <Setter Property="Text" Value="" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsTracing}" Value="True">
-                                    <Setter Property="Text" Value="[TRACE ON]" />
+                                    <Setter Property="Text" Value="{x:Static p:Strings.Status_TraceOn}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>

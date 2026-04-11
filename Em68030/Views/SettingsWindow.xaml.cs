@@ -40,6 +40,10 @@ public partial class SettingsWindow : Window
     private readonly List<DiskRowInfo> _diskRows = new();
     private int _desiredCdromId = 3;
     private readonly Action? _unmountScsiDisks;
+    // Snapshot of the config values currently reflected in live hardware.
+    // Fields that differ between Config and _appliedConfig are marked as "pending"
+    // (orange foreground) in LoadSettings().
+    private readonly EmulatorConfig _appliedConfig;
 
     private static string GetSelectedItemText(ComboBox box)
     {
@@ -61,10 +65,11 @@ public partial class SettingsWindow : Window
         box.SelectedIndex = 0;
     }
 
-    public SettingsWindow(EmulatorConfig config, Action? unmountScsiDisks = null)
+    public SettingsWindow(EmulatorConfig config, EmulatorConfig applied, Action? unmountScsiDisks = null)
     {
         InitializeComponent();
         Config = config;
+        _appliedConfig = applied;
         _unmountScsiDisks = unmountScsiDisks;
         LoadSettings();
     }
@@ -141,6 +146,7 @@ public partial class SettingsWindow : Window
         JitEnabledBox.IsChecked = Config.JitEnabled;
         JitMinBlockLengthBox.Text = Config.JitMinBlockLength.ToString();
         JitCompileThresholdBox.Text = Config.JitCompileThreshold.ToString();
+        CallStackModeBox.SelectedIndex = Config.CallStackMode == "A6Chain" ? 1 : 0;
 
         // Debug
         EnableTraceButtonBox.IsChecked = Config.EnableTraceButton;
@@ -157,6 +163,100 @@ public partial class SettingsWindow : Window
         }
         FbResolutionBox.SelectedIndex = resIdx;
         FbBppBox.SelectedIndex = Config.FramebufferBpp switch { 8 => 0, 32 => 2, _ => 1 };
+
+        MarkPendingFields();
+    }
+
+    // ========================================================================
+    // Pending-field visualization (UX proposal B)
+    //
+    // Compare each "cold" (non-hot-swappable) field between Config and
+    // _appliedConfig. If they differ, mark the corresponding control's
+    // Foreground orange so the user can see at a glance that the value is
+    // saved but not yet applied to live hardware.
+    // ========================================================================
+
+    private static readonly Brush PendingBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xA5, 0x00));
+    private static readonly Brush DefaultBrush = new SolidColorBrush(Color.FromRgb(0xD4, 0xD4, 0xD4));
+    private static readonly Brush SectionHeaderDefaultBrush = new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0xCC));
+
+    private static void MarkControl(Control? control, bool isPending)
+    {
+        if (control != null)
+            control.Foreground = isPending ? PendingBrush : DefaultBrush;
+    }
+
+    private static void MarkSectionLabel(TextBlock? header, bool isPending)
+    {
+        if (header != null)
+            header.Foreground = isPending ? PendingBrush : SectionHeaderDefaultBrush;
+    }
+
+    private void MarkPendingFields()
+    {
+        var c = Config;
+        var a = _appliedConfig;
+        bool anyPending = false;
+        bool Diff(bool d) { if (d) anyPending = true; return d; }
+
+        // General tab — mark the control's Foreground (TextBox/ComboBox/CheckBox)
+        MarkControl(BoardTypeBox,          Diff(c.BoardType != a.BoardType));
+        MarkControl(MemSizeBox,            Diff(c.MemorySize != a.MemorySize));
+        MarkControl(ConsoleEnabledBox,     Diff(c.ConsoleEnabled != a.ConsoleEnabled));
+        MarkControl(ConsoleAddrBox,        Diff(c.ConsoleBaseAddress != a.ConsoleBaseAddress));
+        MarkControl(ConsoleColumnsBox,     Diff(c.ConsoleColumns != a.ConsoleColumns));
+        MarkControl(ConsoleRowsBox,        Diff(c.ConsoleRows != a.ConsoleRows));
+        MarkControl(HddEnabledBox,         Diff(c.HddEnabled != a.HddEnabled));
+        MarkControl(HddAddrBox,            Diff(c.HddBaseAddress != a.HddBaseAddress));
+        MarkControl(HddPathBox,            Diff(c.HddImagePath != a.HddImagePath));
+
+        // MVME147 tab
+        MarkControl(Mvme147RomBox,         Diff(c.Mvme147RomPath != a.Mvme147RomPath));
+        MarkControl(TargetOSBox,           Diff(c.TargetOS != a.TargetOS));
+        MarkControl(NetBsdKernelImagePathBox, Diff(c.NetBsdKernelImagePath != a.NetBsdKernelImagePath));
+        MarkControl(BootPartitionBox,      Diff(c.Mvme147BootPartition != a.Mvme147BootPartition));
+        MarkControl(LinuxKernelImagePathBox,  Diff(c.LinuxKernelImagePath != a.LinuxKernelImagePath));
+        MarkControl(LinuxCommandLineBox,   Diff(c.LinuxCommandLine != a.LinuxCommandLine));
+
+        // SCSI disks list — mark section header
+        bool scsiDisksDiffer = c.Mvme147ScsiDisks.Count != a.Mvme147ScsiDisks.Count;
+        if (!scsiDisksDiffer)
+        {
+            for (int i = 0; i < c.Mvme147ScsiDisks.Count; i++)
+            {
+                if (c.Mvme147ScsiDisks[i].Path != a.Mvme147ScsiDisks[i].Path ||
+                    c.Mvme147ScsiDisks[i].ScsiId != a.Mvme147ScsiDisks[i].ScsiId)
+                {
+                    scsiDisksDiffer = true; break;
+                }
+            }
+        }
+        MarkSectionLabel(LblScsiDisks, Diff(scsiDisksDiffer));
+
+        // CD-ROM SCSI ID (path is hot-swappable, not tracked here)
+        if (ScsiCdromIdBox != null)
+            MarkControl(ScsiCdromIdBox, Diff(c.Mvme147ScsiCdromId != a.Mvme147ScsiCdromId));
+
+        // Network
+        MarkControl(NetworkModeBox,        Diff(c.NetworkMode != a.NetworkMode));
+        MarkControl(TapAdapterBox,         Diff(c.TapAdapterGuid != a.TapAdapterGuid));
+        MarkControl(NatGatewayIpBox,       Diff(c.NatGatewayIp != a.NatGatewayIp));
+        MarkControl(NatGatewayMacBox,      Diff(c.NatGatewayMac != a.NatGatewayMac));
+
+        // Framebuffer (individual controls + section header)
+        MarkControl(FramebufferEnabledBox, Diff(c.FramebufferEnabled != a.FramebufferEnabled));
+        MarkControl(FbResolutionBox,       Diff(c.FramebufferWidth != a.FramebufferWidth
+                                             || c.FramebufferHeight != a.FramebufferHeight));
+        MarkControl(FbBppBox,              Diff(c.FramebufferBpp != a.FramebufferBpp));
+        bool fbAnyDiff = c.FramebufferEnabled != a.FramebufferEnabled
+                      || c.FramebufferWidth != a.FramebufferWidth
+                      || c.FramebufferHeight != a.FramebufferHeight
+                      || c.FramebufferBpp != a.FramebufferBpp;
+        MarkSectionLabel(LblFramebuffer, fbAnyDiff);
+
+        // Legend visibility
+        if (PendingLegendText != null)
+            PendingLegendText.Visibility = anyPending ? Visibility.Visible : Visibility.Collapsed;
     }
 
     // ========================================================================
@@ -490,6 +590,8 @@ public partial class SettingsWindow : Window
             Config.JitMinBlockLength = Math.Clamp(minBlock, 1, 64);
         if (int.TryParse(JitCompileThresholdBox.Text, out int threshold))
             Config.JitCompileThreshold = Math.Clamp(threshold, 1, 255);
+        if (CallStackModeBox.SelectedItem is ComboBoxItem csmItem && csmItem.Tag is string csmTag)
+            Config.CallStackMode = csmTag;
 
         // Debug
         Config.EnableTraceButton = EnableTraceButtonBox.IsChecked == true;

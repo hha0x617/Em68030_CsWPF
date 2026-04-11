@@ -52,6 +52,8 @@ namespace Em68030.Properties
         public static string Menu_RunF5 => ResourceManager.GetString("Menu_RunF5", resourceCulture) ?? "";
         public static string Menu_StopShiftF5 => ResourceManager.GetString("Menu_StopShiftF5", resourceCulture) ?? "";
         public static string Menu_StepF10 => ResourceManager.GetString("Menu_StepF10", resourceCulture) ?? "";
+        public static string Menu_StepOverF11 => ResourceManager.GetString("Menu_StepOverF11", resourceCulture) ?? "";
+        public static string Menu_StepOutShiftF11 => ResourceManager.GetString("Menu_StepOutShiftF11", resourceCulture) ?? "";
         public static string Menu_RunToCursor => ResourceManager.GetString("Menu_RunToCursor", resourceCulture) ?? "";
         public static string Menu_SetPCToCursor => ResourceManager.GetString("Menu_SetPCToCursor", resourceCulture) ?? "";
         public static string Menu_Reset => ResourceManager.GetString("Menu_Reset", resourceCulture) ?? "";
@@ -76,6 +78,8 @@ namespace Em68030.Properties
         public static string Toolbar_Run => ResourceManager.GetString("Toolbar_Run", resourceCulture) ?? "";
         public static string Toolbar_Stop => ResourceManager.GetString("Toolbar_Stop", resourceCulture) ?? "";
         public static string Toolbar_Step => ResourceManager.GetString("Toolbar_Step", resourceCulture) ?? "";
+        public static string Toolbar_StepOver => ResourceManager.GetString("Toolbar_StepOver", resourceCulture) ?? "";
+        public static string Toolbar_StepOut => ResourceManager.GetString("Toolbar_StepOut", resourceCulture) ?? "";
         public static string Toolbar_Reset => ResourceManager.GetString("Toolbar_Reset", resourceCulture) ?? "";
         public static string Toolbar_FullReset => ResourceManager.GetString("Toolbar_FullReset", resourceCulture) ?? "";
         public static string Toolbar_Trace => ResourceManager.GetString("Toolbar_Trace", resourceCulture) ?? "";
@@ -126,6 +130,10 @@ namespace Em68030.Properties
         public static string Status_CyclesFormat => ResourceManager.GetString("Status_CyclesFormat", resourceCulture) ?? "";
         public static string Status_MhzFormat => ResourceManager.GetString("Status_MhzFormat", resourceCulture) ?? "";
         public static string Status_AvgMhzFormat => ResourceManager.GetString("Status_AvgMhzFormat", resourceCulture) ?? "";
+        public static string Status_NetFormat => ResourceManager.GetString("Status_NetFormat", resourceCulture) ?? "";
+        public static string Status_JitOn => ResourceManager.GetString("Status_JitOn", resourceCulture) ?? "";
+        public static string Status_JitOff => ResourceManager.GetString("Status_JitOff", resourceCulture) ?? "";
+        public static string Status_TraceOn => ResourceManager.GetString("Status_TraceOn", resourceCulture) ?? "";
 
         // About Dialog
         public static string About_Title => ResourceManager.GetString("About_Title", resourceCulture) ?? "";
@@ -278,5 +286,15 @@ namespace Em68030.Properties
         public static string Settings_Debug => ResourceManager.GetString("Settings_Debug", resourceCulture) ?? "";
         public static string Settings_EnableTraceButton => ResourceManager.GetString("Settings_EnableTraceButton", resourceCulture) ?? "";
         public static string Settings_TraceDescription => ResourceManager.GetString("Settings_TraceDescription", resourceCulture) ?? "";
+        public static string Settings_CallStack => ResourceManager.GetString("Settings_CallStack", resourceCulture) ?? "";
+        public static string Settings_CallStackMode => ResourceManager.GetString("Settings_CallStackMode", resourceCulture) ?? "";
+        public static string Settings_CallStackModeShadow => ResourceManager.GetString("Settings_CallStackModeShadow", resourceCulture) ?? "";
+        public static string Settings_CallStackModeA6 => ResourceManager.GetString("Settings_CallStackModeA6", resourceCulture) ?? "";
+        public static string Settings_CallStackDescription => ResourceManager.GetString("Settings_CallStackDescription", resourceCulture) ?? "";
+        public static string Settings_PendingChangesTitle => ResourceManager.GetString("Settings_PendingChangesTitle", resourceCulture) ?? "";
+        public static string Settings_PendingChangesMessage => ResourceManager.GetString("Settings_PendingChangesMessage", resourceCulture) ?? "";
+        public static string Settings_PendingChangesSaveButton => ResourceManager.GetString("Settings_PendingChangesSaveButton", resourceCulture) ?? "";
+        public static string Settings_PendingChangesCancelButton => ResourceManager.GetString("Settings_PendingChangesCancelButton", resourceCulture) ?? "";
+        public static string Settings_PendingLegend => ResourceManager.GetString("Settings_PendingLegend", resourceCulture) ?? "";
     }
 }

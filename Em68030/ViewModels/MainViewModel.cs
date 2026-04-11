@@ -35,6 +35,10 @@ public class MainViewModel : INotifyPropertyChanged
     private ConsoleDevice _consoleDevice = null!;
     private HddDevice _hddDevice = null!;
     private EmulatorConfig _config;
+    // Snapshot of config values currently reflected in live hardware. Differs
+    // from _config when the user edited non-hot-swappable settings while the CPU
+    // was running; SettingsWindow uses this to highlight "pending" fields.
+    private EmulatorConfig _appliedConfig = null!;
     private Thread? _emulationThread;
     private volatile bool _stopRequested;
     private Dispatcher? _dispatcher;
@@ -164,9 +168,9 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    public string NetworkModeText => "Net: " + _config.NetworkMode;
+    public string NetworkModeText => string.Format(Properties.Strings.Status_NetFormat, _config.NetworkMode);
 
-    public string JitStatusText => _config.JitEnabled ? "JIT: ON" : "JIT: OFF";
+    public string JitStatusText => _config.JitEnabled ? Properties.Strings.Status_JitOn : Properties.Strings.Status_JitOff;
 
     public bool IsMemoryEditMode
     {
@@ -334,6 +338,17 @@ public class MainViewModel : INotifyPropertyChanged
     public MC68030 Cpu => _cpu;
     public Memory Memory => _memory;
     public EmulatorConfig Config => _config;
+
+    /// <summary>
+    /// Snapshot of the configuration values currently reflected in live hardware.
+    /// Differs from <see cref="Config"/> when the user edited non-hot-swappable
+    /// settings (Memory, SCSI disks, TargetOS, network, etc.) while the CPU was
+    /// running: those changes are saved to Config but do not take effect until the
+    /// CPU is stopped and Settings is applied again. SettingsWindow uses this to
+    /// highlight pending fields in orange.
+    /// </summary>
+    public EmulatorConfig AppliedConfig => _appliedConfig;
+
     public FramebufferDevice? FramebufferDevice => _framebufferDevice;
     public InputDevice? InputDevice => _inputDevice;
     public Action? OnFramebufferDeviceReset;
@@ -371,6 +386,9 @@ public class MainViewModel : INotifyPropertyChanged
     public MainViewModel()
     {
         _config = EmulatorConfig.Load();
+        // At startup, loaded config is what the hardware will be initialized
+        // with, so applied == saved until the user edits it at runtime.
+        _appliedConfig = _config.Clone();
 
         // Initialize _consoleDevice and _hddDevice with defaults (may be replaced by SetupGeneric)
         _consoleDevice = new ConsoleDevice(_config.ConsoleBaseAddress);
@@ -1651,6 +1669,69 @@ public class MainViewModel : INotifyPropertyChanged
     {
         var stack = new List<(uint, uint, string)>();
 
+        // A6 chain mode: walk the frame pointer chain + heuristically scan the
+        // stack for return-address-shaped longwords. Useful for bare-metal code
+        // that uses LINK A6/UNLK A6 (no OS, no shadow stack tracking).
+        if (Config.CallStackMode == "A6Chain")
+        {
+            uint memSize = _memory.FastRamSize;
+
+            bool IsCodeAddress(uint addr)
+            {
+                if (addr == 0 || addr >= memSize || (addr & 1) != 0) return false;
+                if (_programStartAddress < _programEndAddress)
+                    return addr >= _programStartAddress && addr < _programEndAddress;
+                return addr >= 0x1000;
+            }
+
+            // Frame 0: current PC
+            stack.Add((_cpu.PC, _cpu.A[6], "<current>"));
+
+            // Walk A6 frame pointer chain
+            uint fp = _cpu.A[6];
+            for (int i = 0; i < maxDepth && fp != 0; i++)
+            {
+                if (fp + 4 >= memSize || fp < 0x1000 || (fp & 1) != 0) break;
+                try
+                {
+                    uint retAddr = _memory.ReadLong(fp + 4);
+                    uint savedFp = _memory.ReadLong(fp);
+                    if (!IsCodeAddress(retAddr)) break;
+                    stack.Add((retAddr, savedFp, ""));
+                    if (savedFp == 0 || savedFp == fp || savedFp <= fp) break;
+                    fp = savedFp;
+                }
+                catch { break; }
+            }
+
+            // Heuristic stack scan for return-address-shaped longwords (4KB range).
+            // Catches -fomit-frame-pointer code, hand-written asm, interrupt frames.
+            {
+                var knownAddrs = new HashSet<uint>();
+                foreach (var e in stack) knownAddrs.Add(e.Item1);
+
+                uint sp = _cpu.A[7];
+                const uint ScanBytes = 4096;
+                for (uint offset = 0; offset < ScanBytes && sp + offset + 3 < memSize; offset += 2)
+                {
+                    try
+                    {
+                        uint val = _memory.ReadLong(sp + offset);
+                        if (IsCodeAddress(val) && !knownAddrs.Contains(val))
+                        {
+                            stack.Add((val, 0, "?"));
+                            knownAddrs.Add(val);
+                            if (stack.Count >= maxDepth) break;
+                        }
+                    }
+                    catch { break; }
+                }
+            }
+
+            return stack;
+        }
+
+        // Default mode: shadow call stack (BSR/JSR/RTS tracked at runtime).
         // Frame 0: current PC
         stack.Add((_cpu.PC, 0, "<current>"));
 
@@ -1822,6 +1903,61 @@ public class MainViewModel : INotifyPropertyChanged
         _scsiCdrom?.UnmountImage();
     }
 
+    /// <summary>
+    /// Returns true if newConfig contains changes that cannot be applied while the
+    /// CPU is running (hardware reconfiguration, SCSI bus, TargetOS, memory size,
+    /// framebuffer, network backend, etc.). The caller should warn the user that
+    /// these changes will be saved but not take effect until the CPU is stopped
+    /// and settings are reapplied.
+    ///
+    /// Hot-swappable fields (do NOT trigger warning): JIT settings,
+    /// CD-ROM ISO path (media swap), CallStackMode, UI font/scrollback/labels.
+    /// </summary>
+    public bool HasPendingHardwareChanges(EmulatorConfig n)
+    {
+        var c = _config;
+        // Board-level fields
+        if (c.BoardType != n.BoardType) return true;
+        if (c.MemorySize != n.MemorySize) return true;
+        if (c.TargetOS != n.TargetOS) return true;
+        // Kernel image paths and Linux command line
+        if (c.NetBsdKernelImagePath != n.NetBsdKernelImagePath) return true;
+        if (c.LinuxKernelImagePath != n.LinuxKernelImagePath) return true;
+        if (c.LinuxCommandLine != n.LinuxCommandLine) return true;
+        // MVME147 board-specific
+        if (c.Mvme147RomPath != n.Mvme147RomPath) return true;
+        if (c.Mvme147BootPartition != n.Mvme147BootPartition) return true;
+        if (c.Mvme147ScsiCdromId != n.Mvme147ScsiCdromId) return true;
+        // SCSI disks list (path or ID changes)
+        if (c.Mvme147ScsiDisks.Count != n.Mvme147ScsiDisks.Count) return true;
+        for (int i = 0; i < c.Mvme147ScsiDisks.Count; ++i)
+        {
+            if (c.Mvme147ScsiDisks[i].Path != n.Mvme147ScsiDisks[i].Path) return true;
+            if (c.Mvme147ScsiDisks[i].ScsiId != n.Mvme147ScsiDisks[i].ScsiId) return true;
+        }
+        // Network backend
+        if (c.NetworkMode != n.NetworkMode) return true;
+        if (c.NatGatewayIp != n.NatGatewayIp) return true;
+        if (c.NatGatewayMac != n.NatGatewayMac) return true;
+        if (c.TapAdapterGuid != n.TapAdapterGuid) return true;
+        // Generic board I/O devices
+        if (c.ConsoleEnabled != n.ConsoleEnabled) return true;
+        if (c.ConsoleBaseAddress != n.ConsoleBaseAddress) return true;
+        if (c.ConsoleColumns != n.ConsoleColumns) return true;
+        if (c.ConsoleRows != n.ConsoleRows) return true;
+        if (c.HddEnabled != n.HddEnabled) return true;
+        if (c.HddBaseAddress != n.HddBaseAddress) return true;
+        if (c.HddImagePath != n.HddImagePath) return true;
+        // Framebuffer
+        if (c.FramebufferEnabled != n.FramebufferEnabled) return true;
+        if (c.FramebufferWidth != n.FramebufferWidth) return true;
+        if (c.FramebufferHeight != n.FramebufferHeight) return true;
+        if (c.FramebufferBpp != n.FramebufferBpp) return true;
+        // All changed fields are hot-swappable (JIT / CD-ROM media /
+        // CallStackMode / UI-only) — no hardware reconfiguration needed.
+        return false;
+    }
+
     public void ApplyConfig(EmulatorConfig newConfig)
     {
         // Hardware configuration changes (memory map, SCSI bus, UART, boot stub) are
@@ -1848,6 +1984,20 @@ public class MainViewModel : INotifyPropertyChanged
                 else
                     _scsiCdrom.UnmountImage();
             }
+
+            // Update _appliedConfig only for fields actually applied to hardware.
+            // All other fields remain "pending" and will be shown with orange labels
+            // in SettingsWindow until the next stopped-path ApplyConfig.
+            _appliedConfig.JitEnabled = _config.JitEnabled;
+            _appliedConfig.JitMinBlockLength = _config.JitMinBlockLength;
+            _appliedConfig.JitCompileThreshold = _config.JitCompileThreshold;
+            _appliedConfig.Mvme147ScsiCdromPath = _config.Mvme147ScsiCdromPath;
+            // UI-only fields (don't cause "pending" state)
+            _appliedConfig.EnableTraceButton = _config.EnableTraceButton;
+            _appliedConfig.CallStackMode = _config.CallStackMode;
+            _appliedConfig.FontFamily = _config.FontFamily;
+            _appliedConfig.FontSize = _config.FontSize;
+            _appliedConfig.ConsoleScrollbackLines = _config.ConsoleScrollbackLines;
 
             _config.Save();
             OnPropertyChanged(nameof(Config));
@@ -1974,6 +2124,9 @@ public class MainViewModel : INotifyPropertyChanged
         _cpu.JitCompileThreshold = _config.JitCompileThreshold;
         if (!_config.JitEnabled)
             _cpu.JitCache.InvalidateAll();
+
+        // Full hardware reconfiguration completed: all fields are now applied.
+        _appliedConfig = _config.Clone();
 
         _config.Save();
         OnPropertyChanged(nameof(Config));

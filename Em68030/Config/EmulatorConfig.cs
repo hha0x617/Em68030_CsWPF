@@ -108,6 +108,13 @@ public class EmulatorConfig
     public int JitMinBlockLength { get; set; } = 3;
     public int JitCompileThreshold { get; set; } = 32;
 
+    // Call stack inspection mode.
+    // "ShadowStack" : track BSR/JSR/RTS at runtime (accurate, OS-aware, default).
+    // "A6Chain"     : walk the A6 frame pointer chain + scan stack heuristically
+    //                 (works for code that uses LINK A6/UNLK A6, e.g. bare-metal
+    //                 programs without an OS).
+    public string CallStackMode { get; set; } = "ShadowStack";
+
     // Debug
     public bool EnableTraceButton { get; set; } = false;
 
@@ -119,7 +126,7 @@ public class EmulatorConfig
     };
 
     /// <summary>
-    /// User-writable data directory (%LOCALAPPDATA%\Em68030\).
+    /// User-writable data directory (%LOCALAPPDATA%\Em68030_CsWPF\).
     /// Falls back to exe directory if LOCALAPPDATA is unavailable.
     /// </summary>
     public static string DataDirectory { get; }

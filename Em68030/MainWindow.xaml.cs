@@ -27,6 +27,23 @@ namespace Em68030;
 
 public partial class MainWindow : Window
 {
+    // RoutedUICommands for the File > Open ... entries.
+    // The KeyGesture in the InputGestureCollection both invokes the command
+    // when the user presses the shortcut and is auto-displayed next to the
+    // menu item caption. Wired to the existing _Click handlers via CommandBindings
+    // declared in MainWindow.xaml. Mirrors the WinUI3 version's KeyboardAccelerators.
+    public static readonly RoutedUICommand OpenElfCommand = new(
+        "Open ELF", nameof(OpenElfCommand), typeof(MainWindow),
+        new InputGestureCollection { new KeyGesture(Key.E, ModifierKeys.Control) });
+
+    public static readonly RoutedUICommand OpenBinaryCommand = new(
+        "Open Binary", nameof(OpenBinaryCommand), typeof(MainWindow),
+        new InputGestureCollection { new KeyGesture(Key.O, ModifierKeys.Control) });
+
+    public static readonly RoutedUICommand OpenSRecordCommand = new(
+        "Open S-Record", nameof(OpenSRecordCommand), typeof(MainWindow),
+        new InputGestureCollection { new KeyGesture(Key.S, ModifierKeys.Control) });
+
     private MainViewModel _vm;
     private ConsoleWindow? _consoleWindow;
     private BreakpointsWindow? _breakpointsWindow;
@@ -103,6 +120,12 @@ public partial class MainWindow : Window
         }
         return _consoleWindow;
     }
+
+    // Adapter wrappers so the same handlers can be used by both menu Click
+    // (RoutedEventArgs) and CommandBinding Executed (ExecutedRoutedEventArgs).
+    private void OpenElf_Executed(object sender, ExecutedRoutedEventArgs e) => OpenElf_Click(sender, e);
+    private void OpenBinary_Executed(object sender, ExecutedRoutedEventArgs e) => OpenBinary_Click(sender, e);
+    private void OpenSRecord_Executed(object sender, ExecutedRoutedEventArgs e) => OpenSRecord_Click(sender, e);
 
     private void OpenBinary_Click(object sender, RoutedEventArgs e)
     {
@@ -314,15 +337,24 @@ public partial class MainWindow : Window
 
     private void Settings_Click(object sender, RoutedEventArgs e)
     {
-        var settings = new SettingsWindow(_vm.Config.Clone(), () => _vm.UnmountAllScsiDisks());
+        var settings = new SettingsWindow(_vm.Config.Clone(), _vm.AppliedConfig, () => _vm.UnmountAllScsiDisks());
         settings.Owner = this;
         if (settings.ShowDialog() == true)
         {
+            // UX proposal B: no warning dialog. Non-hot-swappable changes are
+            // always saved and will take effect on the next stopped-path
+            // ApplyConfig. SettingsWindow visually marks pending fields in
+            // orange when the dialog is opened while they differ from
+            // AppliedConfig.
             _vm.ApplyConfig(settings.Config);
             MenuShowFramebuffer.IsEnabled = settings.Config.FramebufferEnabled;
             BtnTrace.Visibility = settings.Config.EnableTraceButton ? Visibility.Visible : Visibility.Collapsed;
             _consoleWindow?.SetScrollbackLines(settings.Config.ConsoleScrollbackLines);
             _consoleWindow?.SetTerminalSize(settings.Config.ConsoleColumns, settings.Config.ConsoleRows);
+            // Re-render the Call Stack window in case CallStackMode changed.
+            // Without this, the open window would keep the old mode's view
+            // until the next Step / Stop / breakpoint hit triggers a refresh.
+            _callStackWindow?.RefreshList(_vm.IsRunning);
         }
     }
 

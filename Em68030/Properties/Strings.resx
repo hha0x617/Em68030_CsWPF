@@ -92,6 +92,12 @@
   <data name="Menu_StepF10" xml:space="preserve">
     <value>S_tep (F10)</value>
   </data>
+  <data name="Menu_StepOverF11" xml:space="preserve">
+    <value>Step _Over (F11)</value>
+  </data>
+  <data name="Menu_StepOutShiftF11" xml:space="preserve">
+    <value>Step O_ut (Shift+F11)</value>
+  </data>
   <data name="Menu_RunToCursor" xml:space="preserve">
     <value>Run to _Cursor (F4)</value>
   </data>
@@ -147,6 +153,12 @@
   </data>
   <data name="Toolbar_Step" xml:space="preserve">
     <value>Step (F10)</value>
+  </data>
+  <data name="Toolbar_StepOver" xml:space="preserve">
+    <value>Step Over (F11)</value>
+  </data>
+  <data name="Toolbar_StepOut" xml:space="preserve">
+    <value>Step Out (Shift+F11)</value>
   </data>
   <data name="Toolbar_Reset" xml:space="preserve">
     <value>CPU Reset</value>
@@ -274,6 +286,18 @@
   </data>
   <data name="Status_AvgMhzFormat" xml:space="preserve">
     <value>Avg {0:F2} MHz ({1:F2} MIPS)</value>
+  </data>
+  <data name="Status_NetFormat" xml:space="preserve">
+    <value>Net: {0}</value>
+  </data>
+  <data name="Status_JitOn" xml:space="preserve">
+    <value>JIT: ON</value>
+  </data>
+  <data name="Status_JitOff" xml:space="preserve">
+    <value>JIT: OFF</value>
+  </data>
+  <data name="Status_TraceOn" xml:space="preserve">
+    <value>[TRACE ON]</value>
   </data>
 
   <!-- About Dialog -->
@@ -668,6 +692,41 @@ partition table. Only use this for NetBSD disk images.</value>
   </data>
   <data name="Settings_TraceDescription" xml:space="preserve">
     <value>When enabled, a Trace button appears on the toolbar. Clicking it toggles verbose instruction tracing to a log file.</value>
+  </data>
+  <data name="Settings_PendingChangesTitle" xml:space="preserve">
+    <value>Settings changes pending</value>
+  </data>
+  <data name="Settings_PendingChangesMessage" xml:space="preserve">
+    <value>The CPU is currently running. Some of the settings you just changed (such as Target OS, memory size, SCSI disks, network mode, framebuffer, or console/HDD device addresses) cannot take effect while the CPU is running.
+
+Your changes will be saved to the configuration file, but the hardware will not be reconfigured until the CPU is stopped and the settings are reapplied. To apply all changes immediately, Stop the CPU first and then open Settings again.
+
+Save these pending changes?</value>
+  </data>
+  <data name="Settings_PendingChangesSaveButton" xml:space="preserve">
+    <value>Save (apply on next stop)</value>
+  </data>
+  <data name="Settings_PendingChangesCancelButton" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Settings_PendingLegend" xml:space="preserve">
+    <value>⚠ Orange labels indicate settings that are saved but have not yet been applied to the hardware. These changes will take effect when the CPU is stopped and Settings is reopened and saved.</value>
+  </data>
+  <data name="Settings_CallStack" xml:space="preserve">
+    <value>Call Stack</value>
+  </data>
+  <data name="Settings_CallStackMode" xml:space="preserve">
+    <value>Mode:</value>
+  </data>
+  <data name="Settings_CallStackModeShadow" xml:space="preserve">
+    <value>Shadow Stack (default)</value>
+  </data>
+  <data name="Settings_CallStackModeA6" xml:space="preserve">
+    <value>A6 Frame Pointer Chain</value>
+  </data>
+  <data name="Settings_CallStackDescription" xml:space="preserve">
+    <value>Shadow Stack: tracks BSR/JSR/RTS at runtime. Accurate for any code, including hand-written assembly and code that does not use a frame pointer. Adds a small runtime cost while the Call Stack window is open.
+A6 Chain: walks the A6 frame pointer chain set up by LINK A6/UNLK A6, plus a heuristic stack scan. Use this for bare-metal programs or hand-written code that follows the A6 calling convention. No runtime cost.</value>
   </data>
   <data name="Settings_KernelImage" xml:space="preserve">
     <value>Kernel Image:</value>

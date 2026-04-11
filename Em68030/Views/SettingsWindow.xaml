@@ -187,6 +187,16 @@
                     Background="#FF3E3E42" Foreground="#FFD4D4D4" Padding="4" />
         </StackPanel>
 
+        <!-- Pending-changes legend: shown only when at least one field differs from AppliedConfig. -->
+        <TextBlock x:Name="PendingLegendText"
+                   DockPanel.Dock="Top"
+                   Text="{x:Static p:Strings.Settings_PendingLegend}"
+                   Foreground="#FFFFA500"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Margin="0,0,0,8"
+                   Visibility="Collapsed" />
+
         <TabControl x:Name="SettingsTabs">
             <!-- ==================== General Tab ==================== -->
             <TabItem Header="General">
@@ -399,7 +409,7 @@
                         </StackPanel>
 
                         <!-- SCSI Disk Settings -->
-                        <TextBlock Text="{x:Static p:Strings.Settings_ScsiDisks}" Style="{StaticResource SectionHeader}" />
+                        <TextBlock x:Name="LblScsiDisks" Text="{x:Static p:Strings.Settings_ScsiDisks}" Style="{StaticResource SectionHeader}" />
                         <TextBlock Text="{x:Static p:Strings.Settings_ScsiDescription}"
                                    Foreground="#FF808080" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
                         <StackPanel x:Name="ScsiDiskListPanel" />
@@ -487,7 +497,7 @@
                         </Grid>
 
                         <!-- Framebuffer -->
-                        <TextBlock Text="{x:Static p:Strings.Settings_Framebuffer}" Style="{StaticResource SectionHeader}" />
+                        <TextBlock x:Name="LblFramebuffer" Text="{x:Static p:Strings.Settings_Framebuffer}" Style="{StaticResource SectionHeader}" />
                         <CheckBox x:Name="FramebufferEnabledBox" Content="{x:Static p:Strings.Settings_EnableFramebuffer}"
                                   Foreground="#FFD4D4D4" Margin="0,4" />
                         <TextBlock Text="{x:Static p:Strings.Settings_FramebufferDescription}"
@@ -548,6 +558,21 @@
                             <TextBlock Text="{x:Static p:Strings.Settings_CompileThreshold}" Style="{StaticResource SettingLabel}" />
                             <TextBox x:Name="JitCompileThresholdBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                         </Grid>
+
+                        <!-- Call Stack -->
+                        <TextBlock Text="{x:Static p:Strings.Settings_CallStack}" Style="{StaticResource SectionHeader}" />
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180" /><ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{x:Static p:Strings.Settings_CallStackMode}" Style="{StaticResource SettingLabel}" />
+                            <ComboBox x:Name="CallStackModeBox" Grid.Column="1" MinWidth="240">
+                                <ComboBoxItem Content="{x:Static p:Strings.Settings_CallStackModeShadow}" Tag="ShadowStack" />
+                                <ComboBoxItem Content="{x:Static p:Strings.Settings_CallStackModeA6}" Tag="A6Chain" />
+                            </ComboBox>
+                        </Grid>
+                        <TextBlock Text="{x:Static p:Strings.Settings_CallStackDescription}"
+                                   Foreground="#FF9E9E9E" FontSize="11" TextWrapping="Wrap" Margin="24,4,0,4" />
 
                         <!-- Debug -->
                         <TextBlock Text="{x:Static p:Strings.Settings_Debug}" Style="{StaticResource SectionHeader}" />
