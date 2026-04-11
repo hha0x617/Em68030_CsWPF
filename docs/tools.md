@@ -59,9 +59,8 @@ Optionally places a miniroot image on sd0b for installation.
 | Option | Default | Description |
 |--------|---------|-------------|
 | `-s` / `-Size` | `2G` | Disk image size (500M to 4T) |
-| `-m` / `-Miniroot` | auto-detect | NetBSD miniroot.fs to place on sd0b. If omitted, searches for `miniroot.fs` or `miniroot.fs.gz` in the output and script directories. `.gz` files are decompressed automatically |
+| `-m` / `-Miniroot` | auto-detect | NetBSD miniroot.fs to place on sd0b. If omitted, searches for `miniroot.fs` or `miniroot.fs.gz` in the output and script directories. `.gz` files are decompressed automatically. If no miniroot is found, sd0b is left as a plain 32 MB swap partition. |
 | `-o` / `-Output` | `disk.img` | Output file |
-| `-w` | `32` | Swap partition size in MB |
 
 Miniroot download: `https://cdn.netbsd.org/pub/NetBSD/NetBSD-10.1/mvme68k/installation/miniroot/`
 
@@ -171,7 +170,7 @@ sudo ./tools/expand-linux-disk.sh -s 4G gentoo.img
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `-s` | `2G` | New size (must be larger than current) |
+| `-s` | (required) | New size (must be larger than the current image; the script refuses smaller values). The `2G` / `4G` in the examples above is illustrative, not a usable default. |
 | `-w` | `64` | Swap partition size in MB |
 | `-f` | auto-detect | Filesystem type (`ext2`, `ext3`, `ext4`) |
 
@@ -185,7 +184,7 @@ via the emulator's SCSI CD-ROM.
 **Windows (PowerShell, requires Docker):**
 ```powershell
 .\tools\create-iso.ps1 C:\path\to\files
-.\tools\create-iso.ps1 -Output transfer.iso C:\path\to\files
+.\tools\create-iso.ps1 C:\path\to\files -Output transfer.iso
 ```
 
 **Linux / WSL:**
