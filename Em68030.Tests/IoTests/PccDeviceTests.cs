@@ -41,7 +41,6 @@ public class PccDeviceTests
     private const uint SccIcr        = Base + 0x26;
     private const uint LanceIcr      = Base + 0x28;
     private const uint ScsiIcr       = Base + 0x2A;
-    private const uint ScsiIcrAlias  = Base + 0x30;
     private const uint Soft1Icr      = Base + 0x2C;
     private const uint VectorBaseReg = Base + 0x2D;
     private const uint Soft2Icr      = Base + 0x2E;
@@ -133,26 +132,6 @@ public class PccDeviceTests
 
         _pcc.SetDeviceInterrupt("scc", false);
         Assert.Equal(0x00, _pcc.ReadByte(SccIcr) & 0x80);
-    }
-
-    // ========================================================================
-    // SCSI ICR alias at offset 0x30 (Linux uses this)
-    // ========================================================================
-
-    [Fact]
-    public void ScsiIcrAlias_ReadsFromSameRegister()
-    {
-        _pcc.SetDeviceInterrupt("scsi", true);
-        _pcc.WriteByte(ScsiIcr, 0x0D);
-        Assert.Equal(_pcc.ReadByte(ScsiIcr), _pcc.ReadByte(ScsiIcrAlias));
-    }
-
-    [Fact]
-    public void ScsiIcrAlias_WritesAffectSameRegister()
-    {
-        _pcc.SetDeviceInterrupt("scsi", true);
-        _pcc.WriteByte(ScsiIcrAlias, 0x0D);
-        Assert.Equal(0x0D, _pcc.ReadByte(ScsiIcr) & 0x0F);
     }
 
     // ========================================================================

@@ -431,7 +431,6 @@ public class PccDevice : IMemoryMappedDevice
             0x28 => _lanceIcr,
             0x29 => _generalStatus,
             0x2A => _scsiIcr,
-            0x30 => _scsiIcr, // SCSI ICR alias (real HW offset; Linux uses this)
             0x2B => _slaveBaseAddr,
             0x2C => _soft1Icr,
             0x2D => _vectorBase,
@@ -518,7 +517,6 @@ public class PccDevice : IMemoryMappedDevice
             case 0x2D: _vectorBase = value; break;
             case 0x2E: WriteSoftIcr(ref _soft2Icr, value); break;
             case 0x2F: _revision = value; break;
-            case 0x30: WriteDeviceIcr(ref _scsiIcr, value, _scsiDeviceActive); break; // SCSI ICR alias (real HW offset; Linux uses this)
         }
     }
 
