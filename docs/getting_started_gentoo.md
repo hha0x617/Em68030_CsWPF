@@ -63,8 +63,8 @@ All filesystem preparation is done on a Linux host or WSL2, since Windows cannot
 
 ### 1.1 Quick Setup with Script (Recommended)
 
-The `tools/create-gentoo-disk.sh` script automates steps 1.2 through 1.6
-(disk creation, partitioning, stage3 extraction, and configuration) in a single command:
+The `tools/create-gentoo-disk.sh` script automates steps 1.3 through 1.7
+(disk creation, partitioning, formatting, stage3 extraction, configuration, and unmounting) in a single command:
 
 ```bash
 # Check the latest tarball filename (openrc or systemd)
@@ -97,11 +97,11 @@ wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-o
 Check the latest available date at:
 `https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-openrc/`
 
-> **Note**: A **systemd** variant (`stage3-m68k-systemd-<DATE>.tar.xz`) is also available. If you prefer systemd, download it from `current-stage3-m68k-systemd/` instead, and see the notes in [Section 1.5](#15-configure-the-root-filesystem) and [Section 2.4](#24-configure-kernel) for the additional configuration required.
+> **Note**: A **systemd** variant (`stage3-m68k-systemd-<DATE>.tar.xz`) is also available. If you prefer systemd, download it from `current-stage3-m68k-systemd/` instead, and see the notes in [Section 1.6](#16-configure-the-root-filesystem) and [Section 2.4](#24-configure-kernel) for the additional configuration required.
 
 The tarball is approximately 200 MB.
 
-### 1.2 Create and Partition the Disk Image
+### 1.3 Create and Partition the Disk Image
 
 Create a 2048 MB disk image and partition it with `fdisk`.
 The Gentoo stage3 tarball (~197 MB compressed) expands to over 1 GB when extracted,
@@ -126,7 +126,7 @@ t 2 82
 w
 ```
 
-### 1.3 Format and Mount
+### 1.4 Format and Mount
 
 Set up loop devices, format, and mount:
 
@@ -144,7 +144,7 @@ sudo mount ${LOOPDEV}p1 /mnt/gentoo
 
 > **Note**: Use ext2 rather than ext4. The m68k kernel may have limited ext4 support, and ext2 is simpler and well-tested on m68k.
 
-### 1.4 Extract the Stage3 Tarball
+### 1.5 Extract the Stage3 Tarball
 
 ```bash
 # OpenRC variant:
@@ -153,7 +153,7 @@ sudo tar xpf stage3-m68k-openrc-*.tar.xz -C /mnt/gentoo --xattrs-include='*.*' -
 # sudo tar xpf stage3-m68k-systemd-*.tar.xz -C /mnt/gentoo --xattrs-include='*.*' --numeric-owner
 ```
 
-### 1.5 Configure the Root Filesystem
+### 1.6 Configure the Root Filesystem
 
 #### fstab
 
@@ -196,7 +196,7 @@ Choose **one** of the following depending on your stage3 init system:
 >
 > ```bash
 > sudo mkdir -p /mnt/gentoo/etc/systemd/system/getty.target.wants
-> sudo ln -s /usr/lib/systemd/system/serial-getty@.service \
+> sudo ln -sf /usr/lib/systemd/system/serial-getty@.service \
 >     /mnt/gentoo/etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service
 > ```
 
@@ -223,7 +223,7 @@ Choose **one** of the following depending on your stage3 init system:
 > config_eth0="10.0.2.15/24"
 > routes_eth0="default via 10.0.2.2"
 > EOF
-> cd /mnt/gentoo/etc/init.d && sudo ln -s net.lo net.eth0
+> cd /mnt/gentoo/etc/init.d && sudo ln -sf net.lo net.eth0
 > ```
 
 > **Option B — systemd** (systemd-networkd):
@@ -253,7 +253,7 @@ TAP bridge mode connects the guest directly to the host LAN, allowing DHCP and f
 network participation. Requires TAP-Windows driver installation and Windows bridge
 configuration. See [TAP Bridge Setup Guide](setup_tap_bridge.md) for detailed instructions.
 
-### 1.6 Unmount
+### 1.7 Unmount
 
 Make sure your current directory is outside the mount point before unmounting.
 If you are inside `/mnt/gentoo/...`, `umount` will fail with "target is busy".
@@ -273,7 +273,7 @@ The `gentoo.img` file is now ready. Copy it to the Em68030 directory on Windows.
 > **Shortcut**: Pre-built kernel image and modules are available on the
 > [Em68030-Guest-Linux Releases](https://github.com/hha0x617/Em68030-Guest-Linux/releases) page.
 > Download `vmlinux-*`, `em68030fb-*.ko`, and `em68030input-*.ko`, then skip to
-> [Phase 3](#phase-3-prepare-disk-image). Rename `.ko` files to their original names
+> [Phase 3](#phase-3-boot-the-system). Rename `.ko` files to their original names
 > (`em68030fb.ko`, `em68030input.ko`) before installing on the guest.
 
 ### 2.1 Install Cross-Compiler
@@ -454,7 +454,7 @@ The kernel will display boot messages. After the boot sequence completes, the in
 
 ### 3.3 First Login
 
-Login as `root` with the password you set in Phase 1.5.
+Login as `root` with the password you set in Phase 1.6.
 
 ### 3.4 Halt and Reboot
 

@@ -63,7 +63,7 @@ M48T02 RTC の年エンコーディングは NetBSD と Linux で異なります
 
 ### 1.1 スクリプトによる簡易セットアップ（推奨）
 
-`tools/create-gentoo-disk.sh` スクリプトで手順 1.2〜1.6 を自動化できます:
+`tools/create-gentoo-disk.sh` スクリプトで手順 1.3〜1.7 (ディスク作成・パーティション分割・フォーマット・stage3 展開・設定・アンマウント) を自動化できます:
 
 ```bash
 # 最新の tarball ファイル名を確認 (openrc または systemd)
@@ -96,11 +96,11 @@ wget https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-o
 最新の日付は以下で確認できます:
 `https://distfiles.gentoo.org/releases/m68k/autobuilds/current-stage3-m68k-openrc/`
 
-> **注意**: **systemd** 版 (`stage3-m68k-systemd-<DATE>.tar.xz`) も利用可能です。systemd を使用したい場合は `current-stage3-m68k-systemd/` からダウンロードし、[セクション 1.5](#15-ルートファイルシステムの設定) と[セクション 2.4](#24-カーネルの設定) の追加設定に関する注記を参照してください。
+> **注意**: **systemd** 版 (`stage3-m68k-systemd-<DATE>.tar.xz`) も利用可能です。systemd を使用したい場合は `current-stage3-m68k-systemd/` からダウンロードし、[セクション 1.6](#16-ルートファイルシステムの設定) と[セクション 2.4](#24-カーネルの設定) の追加設定に関する注記を参照してください。
 
 tarball のサイズは約 200 MB です。
 
-### 1.2 ディスクイメージの作成とパーティション分割
+### 1.3 ディスクイメージの作成とパーティション分割
 
 2048 MB のディスクイメージを作成し、`fdisk` でパーティションを分割します。
 Gentoo の stage3 tarball（圧縮時約 197 MB）は展開すると 1 GB 以上になるため、
@@ -125,7 +125,7 @@ t 2 82
 w
 ```
 
-### 1.3 フォーマットとマウント
+### 1.4 フォーマットとマウント
 
 ループデバイスを設定し、フォーマットしてマウントします:
 
@@ -143,7 +143,7 @@ sudo mount ${LOOPDEV}p1 /mnt/gentoo
 
 > **注意**: ext4 ではなく ext2 を使用してください。m68k カーネルでは ext4 サポートが限定的な場合があり、ext2 のほうがシンプルで m68k での実績があります。
 
-### 1.4 Stage3 Tarball の展開
+### 1.5 Stage3 Tarball の展開
 
 ```bash
 # OpenRC 版:
@@ -152,7 +152,7 @@ sudo tar xpf stage3-m68k-openrc-*.tar.xz -C /mnt/gentoo --xattrs-include='*.*' -
 # sudo tar xpf stage3-m68k-systemd-*.tar.xz -C /mnt/gentoo --xattrs-include='*.*' --numeric-owner
 ```
 
-### 1.5 ルートファイルシステムの設定
+### 1.6 ルートファイルシステムの設定
 
 #### fstab
 
@@ -195,7 +195,7 @@ echo "mvme147" | sudo tee /mnt/gentoo/etc/hostname
 >
 > ```bash
 > sudo mkdir -p /mnt/gentoo/etc/systemd/system/getty.target.wants
-> sudo ln -s /usr/lib/systemd/system/serial-getty@.service \
+> sudo ln -sf /usr/lib/systemd/system/serial-getty@.service \
 >     /mnt/gentoo/etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service
 > ```
 
@@ -222,7 +222,7 @@ LAN の DNS サーバ）を指定してください。
 > config_eth0="10.0.2.15/24"
 > routes_eth0="default via 10.0.2.2"
 > EOF
-> cd /mnt/gentoo/etc/init.d && sudo ln -s net.lo net.eth0
+> cd /mnt/gentoo/etc/init.d && sudo ln -sf net.lo net.eth0
 > ```
 
 > **選択肢 B — systemd** (systemd-networkd):
@@ -252,7 +252,7 @@ TAP ブリッジモードはゲストをホスト LAN に直接接続し、DHCP 
 可能にします。TAP-Windows ドライバのインストールと Windows ブリッジ設定が必要です。
 詳細は [TAP ブリッジ セットアップガイド](setup_tap_bridge_ja.md) を参照してください。
 
-### 1.6 アンマウント
+### 1.7 アンマウント
 
 アンマウント前にカレントディレクトリがマウントポイントの外にあることを確認してください。
 `/mnt/gentoo/...` 内にいると `umount` は "target is busy" で失敗します。
@@ -272,7 +272,7 @@ sudo losetup -d ${LOOPDEV}
 > **ショートカット**: ビルド済みカーネルイメージとモジュールは
 > [Em68030-Guest-Linux Releases](https://github.com/hha0x617/Em68030-Guest-Linux/releases)
 > ページからダウンロードできます。`vmlinux-*`、`em68030fb-*.ko`、`em68030input-*.ko` を
-> ダウンロードし、[フェーズ 3](#フェーズ-3-ディスクイメージの作成) に進んでください。
+> ダウンロードし、[フェーズ 3](#フェーズ-3-システムの起動) に進んでください。
 > `.ko` ファイルはゲストにインストールする前に元の名前（`em68030fb.ko`、`em68030input.ko`）に
 > リネームしてください。
 
@@ -454,7 +454,7 @@ make ARCH=m68k CROSS_COMPILE=m68k-linux-gnu- vmlinux -j$(nproc)
 
 ### 3.3 初回ログイン
 
-フェーズ 1.5 で設定したパスワードを使用して `root` でログインします。
+フェーズ 1.6 で設定したパスワードを使用して `root` でログインします。
 
 ### 3.4 停止と再起動
 
