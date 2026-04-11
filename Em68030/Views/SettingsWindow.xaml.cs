@@ -177,13 +177,24 @@ public partial class SettingsWindow : Window
     // ========================================================================
 
     private static readonly Brush PendingBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xA5, 0x00));
-    private static readonly Brush DefaultBrush = new SolidColorBrush(Color.FromRgb(0xD4, 0xD4, 0xD4));
+    private static readonly Brush DefaultLabelBrush = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
+    private static readonly Brush DefaultControlBrush = new SolidColorBrush(Color.FromRgb(0xD4, 0xD4, 0xD4));
     private static readonly Brush SectionHeaderDefaultBrush = new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0xCC));
 
-    private static void MarkControl(Control? control, bool isPending)
+    // Mark a label (TextBlock) — used for fields whose visible "title" is a
+    // separate TextBlock next to the input control. Mirrors the WinUI3 version.
+    private static void MarkLabel(TextBlock? label, bool isPending)
     {
-        if (control != null)
-            control.Foreground = isPending ? PendingBrush : DefaultBrush;
+        if (label != null)
+            label.Foreground = isPending ? PendingBrush : DefaultLabelBrush;
+    }
+
+    // Mark a CheckBox — used for fields where the label *is* the control's
+    // Content (no separate TextBlock).
+    private static void MarkCheckBox(CheckBox? cb, bool isPending)
+    {
+        if (cb != null)
+            cb.Foreground = isPending ? PendingBrush : DefaultControlBrush;
     }
 
     private static void MarkSectionLabel(TextBlock? header, bool isPending)
@@ -199,24 +210,25 @@ public partial class SettingsWindow : Window
         bool anyPending = false;
         bool Diff(bool d) { if (d) anyPending = true; return d; }
 
-        // General tab — mark the control's Foreground (TextBox/ComboBox/CheckBox)
-        MarkControl(BoardTypeBox,          Diff(c.BoardType != a.BoardType));
-        MarkControl(MemSizeBox,            Diff(c.MemorySize != a.MemorySize));
-        MarkControl(ConsoleEnabledBox,     Diff(c.ConsoleEnabled != a.ConsoleEnabled));
-        MarkControl(ConsoleAddrBox,        Diff(c.ConsoleBaseAddress != a.ConsoleBaseAddress));
-        MarkControl(ConsoleColumnsBox,     Diff(c.ConsoleColumns != a.ConsoleColumns));
-        MarkControl(ConsoleRowsBox,        Diff(c.ConsoleRows != a.ConsoleRows));
-        MarkControl(HddEnabledBox,         Diff(c.HddEnabled != a.HddEnabled));
-        MarkControl(HddAddrBox,            Diff(c.HddBaseAddress != a.HddBaseAddress));
-        MarkControl(HddPathBox,            Diff(c.HddImagePath != a.HddImagePath));
+        // General tab — mark the LABEL TextBlock next to each control. For
+        // CheckBoxes (whose label is the Content), mark the CheckBox itself.
+        MarkLabel(LblBoard,                Diff(c.BoardType != a.BoardType));
+        MarkLabel(LblMemorySizeMB,         Diff(c.MemorySize != a.MemorySize));
+        MarkCheckBox(ConsoleEnabledBox,    Diff(c.ConsoleEnabled != a.ConsoleEnabled));
+        MarkLabel(LblConsoleBaseAddr,      Diff(c.ConsoleBaseAddress != a.ConsoleBaseAddress));
+        MarkLabel(LblTerminalSize,         Diff(c.ConsoleColumns != a.ConsoleColumns
+                                             || c.ConsoleRows != a.ConsoleRows));
+        MarkCheckBox(HddEnabledBox,        Diff(c.HddEnabled != a.HddEnabled));
+        MarkLabel(LblHddBaseAddr,          Diff(c.HddBaseAddress != a.HddBaseAddress));
+        MarkLabel(LblImageFile,            Diff(c.HddImagePath != a.HddImagePath));
 
         // MVME147 tab
-        MarkControl(Mvme147RomBox,         Diff(c.Mvme147RomPath != a.Mvme147RomPath));
-        MarkControl(TargetOSBox,           Diff(c.TargetOS != a.TargetOS));
-        MarkControl(NetBsdKernelImagePathBox, Diff(c.NetBsdKernelImagePath != a.NetBsdKernelImagePath));
-        MarkControl(BootPartitionBox,      Diff(c.Mvme147BootPartition != a.Mvme147BootPartition));
-        MarkControl(LinuxKernelImagePathBox,  Diff(c.LinuxKernelImagePath != a.LinuxKernelImagePath));
-        MarkControl(LinuxCommandLineBox,   Diff(c.LinuxCommandLine != a.LinuxCommandLine));
+        MarkLabel(LblRomImage,             Diff(c.Mvme147RomPath != a.Mvme147RomPath));
+        MarkLabel(LblOperatingSystem,      Diff(c.TargetOS != a.TargetOS));
+        MarkLabel(LblNetBsdKernelImage,    Diff(c.NetBsdKernelImagePath != a.NetBsdKernelImagePath));
+        MarkLabel(LblBootPartition,        Diff(c.Mvme147BootPartition != a.Mvme147BootPartition));
+        MarkLabel(LblLinuxKernelImage,     Diff(c.LinuxKernelImagePath != a.LinuxKernelImagePath));
+        MarkLabel(LblCommandLine,          Diff(c.LinuxCommandLine != a.LinuxCommandLine));
 
         // SCSI disks list — mark section header
         bool scsiDisksDiffer = c.Mvme147ScsiDisks.Count != a.Mvme147ScsiDisks.Count;
@@ -234,20 +246,19 @@ public partial class SettingsWindow : Window
         MarkSectionLabel(LblScsiDisks, Diff(scsiDisksDiffer));
 
         // CD-ROM SCSI ID (path is hot-swappable, not tracked here)
-        if (ScsiCdromIdBox != null)
-            MarkControl(ScsiCdromIdBox, Diff(c.Mvme147ScsiCdromId != a.Mvme147ScsiCdromId));
+        MarkLabel(LblScsiCdromId,          Diff(c.Mvme147ScsiCdromId != a.Mvme147ScsiCdromId));
 
         // Network
-        MarkControl(NetworkModeBox,        Diff(c.NetworkMode != a.NetworkMode));
-        MarkControl(TapAdapterBox,         Diff(c.TapAdapterGuid != a.TapAdapterGuid));
-        MarkControl(NatGatewayIpBox,       Diff(c.NatGatewayIp != a.NatGatewayIp));
-        MarkControl(NatGatewayMacBox,      Diff(c.NatGatewayMac != a.NatGatewayMac));
+        MarkLabel(LblNetworkMode,          Diff(c.NetworkMode != a.NetworkMode));
+        MarkLabel(LblTapAdapter,           Diff(c.TapAdapterGuid != a.TapAdapterGuid));
+        MarkLabel(LblGatewayIP,            Diff(c.NatGatewayIp != a.NatGatewayIp));
+        MarkLabel(LblGatewayMAC,           Diff(c.NatGatewayMac != a.NatGatewayMac));
 
-        // Framebuffer (individual controls + section header)
-        MarkControl(FramebufferEnabledBox, Diff(c.FramebufferEnabled != a.FramebufferEnabled));
-        MarkControl(FbResolutionBox,       Diff(c.FramebufferWidth != a.FramebufferWidth
+        // Framebuffer
+        MarkCheckBox(FramebufferEnabledBox, Diff(c.FramebufferEnabled != a.FramebufferEnabled));
+        MarkLabel(LblFbResolution,         Diff(c.FramebufferWidth != a.FramebufferWidth
                                              || c.FramebufferHeight != a.FramebufferHeight));
-        MarkControl(FbBppBox,              Diff(c.FramebufferBpp != a.FramebufferBpp));
+        MarkLabel(LblFbBpp,                Diff(c.FramebufferBpp != a.FramebufferBpp));
         bool fbAnyDiff = c.FramebufferEnabled != a.FramebufferEnabled
                       || c.FramebufferWidth != a.FramebufferWidth
                       || c.FramebufferHeight != a.FramebufferHeight

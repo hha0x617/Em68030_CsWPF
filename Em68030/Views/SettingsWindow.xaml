@@ -209,7 +209,7 @@
                                 <ColumnDefinition Width="150" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Static p:Strings.Settings_Board}" Style="{StaticResource SettingLabel}" />
+                            <TextBlock x:Name="LblBoard" Text="{x:Static p:Strings.Settings_Board}" Style="{StaticResource SettingLabel}" />
                             <ComboBox x:Name="BoardTypeBox" Grid.Column="1"
                                       SelectionChanged="BoardType_Changed">
                                 <ComboBoxItem Content="Generic" />
@@ -224,7 +224,7 @@
                                 <ColumnDefinition Width="150" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Static p:Strings.Settings_MemorySizeMB}" Style="{StaticResource SettingLabel}" />
+                            <TextBlock x:Name="LblMemorySizeMB" Text="{x:Static p:Strings.Settings_MemorySizeMB}" Style="{StaticResource SettingLabel}" />
                             <TextBox x:Name="MemSizeBox" Grid.Column="1" Style="{StaticResource SettingTextBox}"
                                      ToolTip="4-4096" />
                         </Grid>
@@ -240,7 +240,7 @@
                                 <ColumnDefinition Width="150" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Static p:Strings.Settings_ConsoleBaseAddr}" Style="{StaticResource SettingLabel}" />
+                            <TextBlock x:Name="LblConsoleBaseAddr" Text="{x:Static p:Strings.Settings_ConsoleBaseAddr}" Style="{StaticResource SettingLabel}" />
                             <TextBox x:Name="ConsoleAddrBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                         </Grid>
                         <Grid Margin="0,4,0,0">
@@ -259,7 +259,7 @@
                                 <ColumnDefinition Width="30" />
                                 <ColumnDefinition Width="60" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Static p:Strings.Settings_TerminalSize}" Style="{StaticResource SettingLabel}" />
+                            <TextBlock x:Name="LblTerminalSize" Text="{x:Static p:Strings.Settings_TerminalSize}" Style="{StaticResource SettingLabel}" />
                             <TextBox x:Name="ConsoleColumnsBox" Grid.Column="1" Style="{StaticResource SettingTextBox}"
                                      ToolTip="80-320" />
                             <TextBlock Text=" x " Grid.Column="2" Style="{StaticResource SettingLabel}" HorizontalAlignment="Center" />
@@ -274,7 +274,7 @@
                                 <ColumnDefinition Width="150" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Static p:Strings.Settings_HddBaseAddr}" Style="{StaticResource SettingLabel}" />
+                            <TextBlock x:Name="LblHddBaseAddr" Text="{x:Static p:Strings.Settings_HddBaseAddr}" Style="{StaticResource SettingLabel}" />
                             <TextBox x:Name="HddAddrBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                         </Grid>
 
@@ -286,7 +286,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Static p:Strings.Settings_ImageFile}" Style="{StaticResource SettingLabel}" />
+                            <TextBlock x:Name="LblImageFile" Text="{x:Static p:Strings.Settings_ImageFile}" Style="{StaticResource SettingLabel}" />
                             <TextBox x:Name="HddPathBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                             <Button Content="{x:Static p:Strings.Settings_Browse}" Grid.Column="2" Click="BrowseHdd_Click"
                                     Width="30" Margin="4,0,0,0"
@@ -332,7 +332,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Static p:Strings.Settings_RomImage}" Style="{StaticResource SettingLabel}" />
+                            <TextBlock x:Name="LblRomImage" Text="{x:Static p:Strings.Settings_RomImage}" Style="{StaticResource SettingLabel}" />
                             <TextBox x:Name="Mvme147RomBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                             <Button Content="{x:Static p:Strings.Settings_Browse}" Grid.Column="2" Click="BrowseRom_Click"
                                     Width="30" Margin="4,0,0,0"
@@ -346,7 +346,7 @@
                                 <ColumnDefinition Width="150" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Static p:Strings.Settings_OperatingSystem}" Style="{StaticResource SettingLabel}" />
+                            <TextBlock x:Name="LblOperatingSystem" Text="{x:Static p:Strings.Settings_OperatingSystem}" Style="{StaticResource SettingLabel}" />
                             <ComboBox x:Name="TargetOSBox" Grid.Column="1"
                                       SelectionChanged="TargetOS_Changed">
                                 <ComboBoxItem Content="NetBSD" />
@@ -361,7 +361,7 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="{x:Static p:Strings.Settings_KernelImage}" Style="{StaticResource SettingLabel}" />
+                                <TextBlock x:Name="LblNetBsdKernelImage" Text="{x:Static p:Strings.Settings_KernelImage}" Style="{StaticResource SettingLabel}" />
                                 <TextBox x:Name="NetBsdKernelImagePathBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                                 <Button Content="{x:Static p:Strings.Settings_Browse}" Grid.Column="2" Click="BrowseNetBsdKernel_Click"
                                         Width="30" Margin="4,0,0,0"
@@ -374,7 +374,7 @@
                                     <ColumnDefinition Width="150" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="{x:Static p:Strings.Settings_BootPartition}" Style="{StaticResource SettingLabel}" />
+                                <TextBlock x:Name="LblBootPartition" Text="{x:Static p:Strings.Settings_BootPartition}" Style="{StaticResource SettingLabel}" />
                                 <ComboBox x:Name="BootPartitionBox" Grid.Column="1"
                                           Width="60" HorizontalAlignment="Left">
                                     <ComboBoxItem Content="a" />
@@ -390,7 +390,7 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="{x:Static p:Strings.Settings_KernelImage}" Style="{StaticResource SettingLabel}" />
+                                <TextBlock x:Name="LblLinuxKernelImage" Text="{x:Static p:Strings.Settings_KernelImage}" Style="{StaticResource SettingLabel}" />
                                 <TextBox x:Name="LinuxKernelImagePathBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                                 <Button Content="{x:Static p:Strings.Settings_Browse}" Grid.Column="2" Click="BrowseLinuxKernel_Click"
                                         Width="30" Margin="4,0,0,0"
@@ -403,7 +403,7 @@
                                     <ColumnDefinition Width="150" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="{x:Static p:Strings.Settings_CommandLine}" Style="{StaticResource SettingLabel}" />
+                                <TextBlock x:Name="LblCommandLine" Text="{x:Static p:Strings.Settings_CommandLine}" Style="{StaticResource SettingLabel}" />
                                 <TextBox x:Name="LinuxCommandLineBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                             </Grid>
                         </StackPanel>
@@ -441,7 +441,7 @@
                             <Button Content="{x:Static p:Strings.Settings_Browse}" Grid.Column="2" Click="BrowseScsiCdrom_Click"
                                     Width="30" Margin="4,0,0,0"
                                     Background="#FF3E3E42" Foreground="#FFD4D4D4" />
-                            <TextBlock Text="{x:Static p:Strings.Settings_ScsiId}" Grid.Row="1" Style="{StaticResource SettingLabel}" />
+                            <TextBlock x:Name="LblScsiCdromId" Text="{x:Static p:Strings.Settings_ScsiId}" Grid.Row="1" Style="{StaticResource SettingLabel}" />
                             <ComboBox x:Name="ScsiCdromIdBox" Grid.Row="1" Grid.Column="1"
                                       Width="60" HorizontalAlignment="Left">
                                 <ComboBoxItem Content="0" />
@@ -461,7 +461,7 @@
                                 <ColumnDefinition Width="150" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Static p:Strings.Settings_NetworkMode}" Style="{StaticResource SettingLabel}" />
+                            <TextBlock x:Name="LblNetworkMode" Text="{x:Static p:Strings.Settings_NetworkMode}" Style="{StaticResource SettingLabel}" />
                             <ComboBox x:Name="NetworkModeBox" Grid.Column="1"
                                       SelectionChanged="NetworkMode_Changed">
                                 <ComboBoxItem Content="Virtual (Echo Server)" />
@@ -476,7 +476,7 @@
                                 <ColumnDefinition Width="150" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="TAP Adapter:" Style="{StaticResource SettingLabel}" />
+                            <TextBlock x:Name="LblTapAdapter" Text="TAP Adapter:" Style="{StaticResource SettingLabel}" />
                             <ComboBox x:Name="TapAdapterBox" Grid.Column="1" />
                         </Grid>
                         <Grid>
@@ -484,7 +484,7 @@
                                 <ColumnDefinition Width="150" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Static p:Strings.Settings_GatewayIP}" Style="{StaticResource SettingLabel}" />
+                            <TextBlock x:Name="LblGatewayIP" Text="{x:Static p:Strings.Settings_GatewayIP}" Style="{StaticResource SettingLabel}" />
                             <TextBox x:Name="NatGatewayIpBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                         </Grid>
                         <Grid>
@@ -492,7 +492,7 @@
                                 <ColumnDefinition Width="150" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Static p:Strings.Settings_GatewayMAC}" Style="{StaticResource SettingLabel}" />
+                            <TextBlock x:Name="LblGatewayMAC" Text="{x:Static p:Strings.Settings_GatewayMAC}" Style="{StaticResource SettingLabel}" />
                             <TextBox x:Name="NatGatewayMacBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                         </Grid>
 
@@ -507,7 +507,7 @@
                                 <ColumnDefinition Width="120" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Static p:Strings.Settings_FbResolution}" Style="{StaticResource SettingLabel}" />
+                            <TextBlock x:Name="LblFbResolution" Text="{x:Static p:Strings.Settings_FbResolution}" Style="{StaticResource SettingLabel}" />
                             <ComboBox x:Name="FbResolutionBox" Grid.Column="1" Width="140" HorizontalAlignment="Left">
                                 <ComboBoxItem Content="320 x 240" />
                                 <ComboBoxItem Content="640 x 480" />
@@ -523,7 +523,7 @@
                                 <ColumnDefinition Width="120" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{x:Static p:Strings.Settings_FbBpp}" Style="{StaticResource SettingLabel}" />
+                            <TextBlock x:Name="LblFbBpp" Text="{x:Static p:Strings.Settings_FbBpp}" Style="{StaticResource SettingLabel}" />
                             <ComboBox x:Name="FbBppBox" Grid.Column="1" Width="80" HorizontalAlignment="Left">
                                 <ComboBoxItem Content="8" />
                                 <ComboBoxItem Content="16" />
