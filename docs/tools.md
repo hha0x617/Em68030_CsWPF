@@ -3,6 +3,27 @@
 The `tools/` directory contains scripts for creating and managing disk images
 and transferring files to guest operating systems.
 
+## Prerequisites
+
+- **Shell scripts (`.sh`)** require a Linux environment. On Windows, use
+  **WSL (Windows Subsystem for Linux)** with Ubuntu 22.04 or later.
+  Install WSL via: `wsl --install Ubuntu-24.04`
+- If the repository was cloned on Windows with `core.autocrlf=true` (the default),
+  `.sh` files will have CRLF line endings and fail to run in WSL with
+  `/bin/bash^M: bad interpreter`. Fix by cloning with LF endings:
+  `git clone -c core.autocrlf=input <repo-url>`, or convert existing files:
+  `sed -i 's/\r$//' tools/*.sh`
+- **PowerShell scripts (`.ps1`)** run on Windows and require
+  **Docker Desktop** to be installed and running.
+  If script execution is blocked by the execution policy, you can either:
+  - Run `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` to allow
+    locally-created scripts to run. Note that this permits any local `.ps1`
+    file to execute without a digital signature.
+  - Or use the equivalent `.sh` script in WSL instead, which does not require
+    changing the execution policy or Docker.
+- Shell scripts that create Linux disk images (`create-debian-disk.sh`,
+  `expand-linux-disk.sh`) must be run with `sudo` (root privileges).
+
 ## Overview
 
 | Script | Platform | Description |
@@ -62,8 +83,13 @@ sudo ./tools/create-debian-disk.sh -s 1G -p root -o debian.img
 | `-w` | `64` | Swap partition size in MB |
 | `-n` | (disabled) | Enable NAT network (10.0.2.15/24) |
 
-Requirements: `debootstrap`, `qemu-user-static` (with binfmt_misc F flag),
+Requirements: `debootstrap`, `qemu-user-static` **6.0 or later** (with binfmt_misc F flag),
 `sfdisk`, `mkfs.ext4`, `openssl`.
+
+> **Note:** `qemu-m68k-static` version 6.0 or later is required. Older versions
+> (e.g., 2.11 shipped with Ubuntu 18.04) do not support all m68k instructions
+> used by current Debian sid packages, causing "Illegal instruction" errors
+> during debootstrap second stage.
 
 ---
 
@@ -193,7 +219,7 @@ via the emulator's SCSI CD-ROM.
 |--------|------|--------|-------------------|
 | `create-netbsd-disk.ps1` | — | Yes | — |
 | `create-netbsd-disk.sh` | No | No | `gcc`, `libc6-dev` |
-| `create-debian-disk.sh` | Yes | No | `debootstrap`, `qemu-user-static`, `sfdisk`, `mkfs.ext4`, `openssl` |
+| `create-debian-disk.sh` | Yes | No | `debootstrap`, `qemu-user-static` (>= 6.0), `sfdisk`, `mkfs.ext4`, `openssl` |
 | `create-gentoo-disk.sh` | Yes | No | `sfdisk`, `mkfs.ext2`, `openssl` |
 | `expand-netbsd-disk.ps1` | — | Yes | — |
 | `expand-netbsd-disk.sh` | No | No | `gcc`, `libc6-dev` |

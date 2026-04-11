@@ -2,6 +2,27 @@
 
 `tools/` ディレクトリには、ディスクイメージの作成・管理およびゲスト OS へのファイル転送用スクリプトが含まれています。
 
+## 前提条件
+
+- **シェルスクリプト (`.sh`)** の実行には Linux 環境が必要です。Windows では
+  **WSL (Windows Subsystem for Linux)** で Ubuntu 22.04 以降を使用してください。
+  WSL のインストール: `wsl --install Ubuntu-24.04`
+- Windows 上で `core.autocrlf=true`（デフォルト）のまま clone した場合、
+  `.sh` ファイルの改行コードが CRLF に変換され、WSL で実行すると
+  `/bin/bash^M: bad interpreter` エラーが発生します。対処方法:
+  LF のまま clone する: `git clone -c core.autocrlf=input <repo-url>`、
+  または既存ファイルを変換する: `sed -i 's/\r$//' tools/*.sh`
+- **PowerShell スクリプト (`.ps1`)** は Windows 上で動作し、
+  **Docker Desktop** のインストールと起動が必要です。
+  スクリプトの実行が実行ポリシーでブロックされる場合は、以下のいずれかで対応してください:
+  - `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` を実行し、
+    ローカルで作成されたスクリプトの実行を許可する。ただし、この設定により
+    デジタル署名のないローカルの `.ps1` ファイルがすべて実行可能になります。
+  - または、実行ポリシーの変更や Docker を必要としない、WSL 上の同等の
+    `.sh` スクリプトを使用する。
+- Linux ディスクイメージを作成するスクリプト（`create-debian-disk.sh`、
+  `expand-linux-disk.sh`）は `sudo`（root 権限）で実行する必要があります。
+
 ## 一覧
 
 | スクリプト | 動作環境 | 説明 |
@@ -61,8 +82,13 @@ sudo ./tools/create-debian-disk.sh -s 1G -p root -o debian.img
 | `-w` | `64` | スワップパーティションサイズ (MB) |
 | `-n` | (無効) | NAT ネットワーク設定を有効化 (10.0.2.15/24) |
 
-必要なパッケージ: `debootstrap`, `qemu-user-static` (binfmt_misc の F フラグ付き),
+必要なパッケージ: `debootstrap`, `qemu-user-static` **6.0 以上** (binfmt_misc の F フラグ付き),
 `sfdisk`, `mkfs.ext4`, `openssl`
+
+> **注意:** `qemu-m68k-static` はバージョン 6.0 以上が必要です。古いバージョン
+> （例: Ubuntu 18.04 付属の 2.11）では、現在の Debian sid パッケージが使用する
+> m68k 命令の一部に対応しておらず、debootstrap の second stage で
+> "Illegal instruction" エラーが発生します。
 
 ---
 
@@ -192,7 +218,7 @@ sudo ./tools/expand-linux-disk.sh -s 4G gentoo.img
 |-----------|------|--------|-----------------|
 | `create-netbsd-disk.ps1` | — | 必要 | — |
 | `create-netbsd-disk.sh` | 不要 | 不要 | `gcc`, `libc6-dev` |
-| `create-debian-disk.sh` | 必要 | 不要 | `debootstrap`, `qemu-user-static`, `sfdisk`, `mkfs.ext4`, `openssl` |
+| `create-debian-disk.sh` | 必要 | 不要 | `debootstrap`, `qemu-user-static` (>= 6.0), `sfdisk`, `mkfs.ext4`, `openssl` |
 | `create-gentoo-disk.sh` | 必要 | 不要 | `sfdisk`, `mkfs.ext2`, `openssl` |
 | `expand-netbsd-disk.ps1` | — | 必要 | — |
 | `expand-netbsd-disk.sh` | 不要 | 不要 | `gcc`, `libc6-dev` |
