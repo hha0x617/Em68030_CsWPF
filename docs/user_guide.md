@@ -26,10 +26,24 @@ For detailed OS installation guides, see [Getting Started](getting_started.md).
 
 1. Open **Settings**, set **Board Type** to "MVME147"
 2. Set **Target OS** to "Linux"
-3. Set the **Command Line** (e.g., `root=/dev/sda1 console=tty0 console=ttyS0 earlyprintk`)
+3. Set the **Command Line** (e.g., `root=/dev/sda1 console=tty0 console=ttyS0`)
 4. Add SCSI disk images and click **OK**
 5. **File → Open ELF** (Ctrl+E) to load a Linux kernel (`vmlinux`)
 6. Press **Run** (F5)
+
+> **Console priority**: When multiple `console=` parameters are specified, the
+> **last one** becomes the primary console (login prompt). For example,
+> `console=tty0 console=ttyS0` makes the serial port the primary console.
+
+> **Debugging**: To enable early boot messages before the main console driver
+> is initialized, add `earlyprintk` to the command line:
+> `root=/dev/sda1 console=ttyS0 earlyprintk`
+
+> **Known issue — Framebuffer**: Do not enable the framebuffer in Settings
+> unless the guest kernel has the framebuffer driver module installed.
+> Enabling it without the driver causes the kernel to switch to the
+> framebuffer console (`tty0`), which cannot display output, resulting in
+> no login prompt on any console.
 
 ## Main Window
 

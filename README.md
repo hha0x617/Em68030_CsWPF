@@ -1,6 +1,6 @@
 # Em68030 - MC68030 Emulator (C# / WPF)
 
-An emulator for the [Motorola MC68030](https://en.wikipedia.org/wiki/Motorola_68030) microprocessor, a 32-bit CPU from the late 1980s used in workstations, embedded systems, and single-board computers. This emulator targets the [MVME147](https://en.wikipedia.org/wiki/MVME147), a VMEbus single-board computer built around the MC68030, and can boot [NetBSD/mvme68k](https://www.netbsd.org/ports/mvme68k/), the mvme68k port of the NetBSD operating system.
+An emulator for the [Motorola MC68030](https://en.wikipedia.org/wiki/Motorola_68030) microprocessor, a 32-bit CPU from the late 1980s used in workstations, embedded systems, and single-board computers. This emulator targets the [MVME147](https://en.wikipedia.org/wiki/MVME147), a VMEbus single-board computer built around the MC68030, and can run MC68030 ELF binaries, [NetBSD/mvme68k](https://www.netbsd.org/ports/mvme68k/), and [Linux/m68k](https://www.debian.org/ports/m68k/).
 
 Developed through vibe coding with [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Application icon generated with [Claude](https://claude.ai/).
 
@@ -135,12 +135,18 @@ See [User Guide](docs/user_guide.md) for the full settings reference.
 | `JitMinBlockLength` | Minimum instruction count for JIT compilation | 3 |
 | `JitCompileThreshold` | Execution count before a block is compiled | 32 |
 
-## Booting NetBSD
+## Running MC68030 Binaries
 
-1. Prepare a NetBSD/mvme68k disk image
-2. In Settings, set `BoardType` to `MVME147` and specify the SCSI disk image path
-3. Load a NetBSD kernel (`netbsd-GENERIC`) via File > Open ELF
-4. Start execution with Run (F5)
+1. Load an MC68030 ELF binary via **File > Open ELF**
+2. Start execution with **Run** (F5)
+
+For MVME147 board emulation (SCSI, network, serial console), set `BoardType` to `MVME147` in Settings and configure the SCSI disk images.
+
+For detailed setup instructions for each guest OS, see:
+- [Getting Started with NetBSD](docs/getting_started_netbsd.md)
+- [Getting Started with Debian](docs/getting_started_debian.md)
+- [Getting Started with Gentoo](docs/getting_started_gentoo.md)
+- [User Guide](docs/user_guide.md)
 
 ## Project Structure
 
@@ -178,7 +184,7 @@ Em68030_CsWPF/
 
 ### Board
 - VMEbus is not implemented
-- NetBSD kernel can be loaded and run directly without a ROM image (built-in boot stub)
+- ROM image is not required; kernels and ELF binaries can be loaded and run directly (built-in boot stub)
 
 ## Roadmap
 

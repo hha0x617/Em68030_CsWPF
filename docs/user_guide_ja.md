@@ -26,10 +26,23 @@ OS インストールの詳細な手順については [Getting Started](getting
 
 1. **Settings** を開き、**Board Type** を "MVME147" に設定します
 2. **Target OS** を "Linux" に設定します
-3. **Command Line** を設定します (例: `root=/dev/sda1 console=tty0 console=ttyS0 earlyprintk`)
+3. **Command Line** を設定します (例: `root=/dev/sda1 console=tty0 console=ttyS0`)
 4. SCSI ディスクイメージを追加して **OK** をクリックします
 5. **File → Open ELF** (Ctrl+E) で Linux カーネル (`vmlinux`) を読み込みます
 6. **Run** (F5) を押します
+
+> **コンソールの優先順位**: `console=` パラメータを複数指定した場合、**最後に指定したもの**
+> がプライマリコンソール（ログインプロンプト表示先）になります。例えば
+> `console=tty0 console=ttyS0` ではシリアルポートがプライマリコンソールになります。
+
+> **デバッグ**: メインのコンソールドライバが初期化される前のブートメッセージを表示するには、
+> コマンドラインに `earlyprintk` を追加します:
+> `root=/dev/sda1 console=ttyS0 earlyprintk`
+
+> **既知の不具合 — フレームバッファ**: ゲストカーネルにフレームバッファドライバモジュール
+> がインストールされていない状態でフレームバッファを有効化しないでください。ドライバが
+> ない状態で有効化すると、カーネルがフレームバッファコンソール (`tty0`) に切り替わり、
+> 出力を表示できなくなるため、どのコンソールにもログインプロンプトが表示されなくなります。
 
 ## メインウィンドウ
 
