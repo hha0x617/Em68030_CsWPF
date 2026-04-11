@@ -58,16 +58,17 @@ public partial class FramebufferWindow : Window
         _pixelBuffer = new byte[_width * _height * 4]; // BGRA32
         DisplayImage.Source = _bitmap;
 
-        // Wire input event handlers
+        // Wire input event handlers.
+        // Mouse: WPF has no MouseMiddleButtonDown event, so we use the generic
+        // MouseDown/MouseUp and dispatch on e.ChangedButton. This also mirrors
+        // the WinUI3 version's unified PointerPressed/PointerReleased structure.
         if (_inputDevice != null)
         {
             PreviewKeyDown += OnKeyDown;
             PreviewKeyUp += OnKeyUp;
             DisplayImage.MouseMove += OnMouseMove;
-            DisplayImage.MouseLeftButtonDown += OnMouseLeftButtonDown;
-            DisplayImage.MouseLeftButtonUp += OnMouseLeftButtonUp;
-            DisplayImage.MouseRightButtonDown += OnMouseRightButtonDown;
-            DisplayImage.MouseRightButtonUp += OnMouseRightButtonUp;
+            DisplayImage.MouseDown += OnMouseDown;
+            DisplayImage.MouseUp += OnMouseUp;
         }
 
         // 30fps render timer
@@ -274,30 +275,44 @@ public partial class FramebufferWindow : Window
         _lastMouseValid = true;
     }
 
-    private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    // Unified mouse button handling. Uses e.ChangedButton to dispatch to the
+    // appropriate Linux BTN_* code. Capture is held on any button press and
+    // released only when all tracked buttons are up — this mirrors WinUI3's
+    // PointerPressed/PointerReleased behavior and keeps events flowing even
+    // when the user drags out of the DisplayImage bounds.
+    //
+    // Linux evdev codes: BTN_LEFT=0x110, BTN_RIGHT=0x111, BTN_MIDDLE=0x112
+    private static ushort BtnCodeOf(MouseButton button) => button switch
+    {
+        MouseButton.Left => 0x110,
+        MouseButton.Right => 0x111,
+        MouseButton.Middle => 0x112,
+        _ => 0 // XButton1/XButton2 not forwarded
+    };
+
+    private void OnMouseDown(object sender, MouseButtonEventArgs e)
     {
         if (_inputDevice == null) return;
+        ushort btn = BtnCodeOf(e.ChangedButton);
+        if (btn == 0) return;
+        // Capture on first button pressed (idempotent if already captured).
         DisplayImage.CaptureMouse();
-        _inputDevice.PushMouseButtonEvent(0x110, 1); // BTN_LEFT
+        _inputDevice.PushMouseButtonEvent(btn, 1);
     }
 
-    private void OnMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    private void OnMouseUp(object sender, MouseButtonEventArgs e)
     {
         if (_inputDevice == null) return;
-        DisplayImage.ReleaseMouseCapture();
-        _inputDevice.PushMouseButtonEvent(0x110, 0); // BTN_LEFT
-    }
-
-    private void OnMouseRightButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (_inputDevice == null) return;
-        _inputDevice.PushMouseButtonEvent(0x111, 1); // BTN_RIGHT
-    }
-
-    private void OnMouseRightButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        if (_inputDevice == null) return;
-        _inputDevice.PushMouseButtonEvent(0x111, 0); // BTN_RIGHT
+        ushort btn = BtnCodeOf(e.ChangedButton);
+        if (btn == 0) return;
+        _inputDevice.PushMouseButtonEvent(btn, 0);
+        // Release capture only when no tracked button remains pressed.
+        if (e.LeftButton == MouseButtonState.Released &&
+            e.RightButton == MouseButtonState.Released &&
+            e.MiddleButton == MouseButtonState.Released)
+        {
+            DisplayImage.ReleaseMouseCapture();
+        }
     }
 
     protected override void OnClosed(EventArgs e)
