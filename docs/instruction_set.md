@@ -408,13 +408,13 @@ instruction. Blocks that bail out too frequently (>64 times) are blacklisted and
 
 - IL code generation via System.Reflection.Emit (DynamicMethod)
 - Per-opcode cycle costs are summed at compile time and stored in CompiledBlock.TotalCycles
-- Sampling at TickInterval (256), threshold = 16 hits to compile
+- Sampling at TickInterval (256), threshold = 32 hits to compile
 
 #### Tuning Parameters
 
 The following parameters are configurable via Settings → Performance → JIT:
 
-- **Compile Threshold** (default: 16): The number of times a basic block must be sampled
+- **Compile Threshold** (default: 32): The number of times a basic block must be sampled
   at the hot-block detection point before it is compiled. The emulator samples the current PC
   every TickInterval (256) instructions; when the same block address accumulates this many hits,
   compilation is triggered. A lower value compiles more aggressively (more blocks compiled sooner,
@@ -436,7 +436,7 @@ The following parameters are configurable via Settings → Performance → JIT:
 - Bailout mechanism: memory access instructions call `TryReadLongCached()` and communicate
   partial execution via `_jitExecutedCount`/`_jitExecutedCycles` side-channel fields.
   Blocks exceeding 64 bailouts are blacklisted.
-- Tests: 327 total (including JIT-specific tests in Em68030.Tests/)
+- Tests: 758 total (including JIT-specific tests in Em68030.Tests/)
 
 ### Performance
 
