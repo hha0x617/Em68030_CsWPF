@@ -44,6 +44,9 @@ jobs:
       - name: Test
         run: dotnet test Em68030.Tests/Em68030.Tests.csproj -c Release
 
+      - name: Code Analysis
+        run: dotnet build Em68030/Em68030.csproj -c Release -p:EnableNETAnalyzers=true -p:AnalysisLevel=latest -warnaserror
+
       - name: Publish
         if: startsWith(github.ref, 'refs/tags/v')
         run: dotnet publish Em68030/Em68030.csproj -c Release -r win-x64 --no-self-contained -p:AppVersion=${{ steps.version.outputs.APP_VERSION }} -o publish
