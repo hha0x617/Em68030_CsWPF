@@ -109,6 +109,13 @@ if [ ${#MISSING_PKGS[@]} -gt 0 ]; then
         || die "Failed to install packages: ${MISSING_PKGS[*]}"
 fi
 
+# Check qemu-m68k-static version (>= 6.0 required for Debian sid)
+QEMU_VER=$(qemu-m68k-static --version 2>/dev/null | head -1 | grep -oP 'version \K[0-9]+\.[0-9]+' || echo "0.0")
+QEMU_MAJOR=$(echo "$QEMU_VER" | cut -d. -f1)
+if [ "$QEMU_MAJOR" -lt 6 ] 2>/dev/null; then
+    die "qemu-m68k-static $QEMU_VER is too old (>= 6.0 required).\n  Upgrade your distro or install a newer qemu-user-static.\n  Current Debian sid packages require recent QEMU for m68k instruction support."
+fi
+
 # Ensure binfmt_misc is mounted
 if [ ! -d /proc/sys/fs/binfmt_misc ]; then
     mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc \
@@ -215,8 +222,10 @@ echo "127.0.1.1 mvme147" >> "$MOUNTPOINT/etc/hosts"
 HASHED=$(openssl passwd -6 "$PASSWORD")
 chroot "$MOUNTPOINT" /bin/sh -c "usermod -p '$HASHED' root"
 
-# Serial console
-chroot "$MOUNTPOINT" /bin/sh -c "systemctl enable serial-getty@ttyS0.service 2>/dev/null" || true
+# Serial console — enable serial-getty@ttyS0 via symlink (systemctl doesn't work in chroot)
+mkdir -p "$MOUNTPOINT/etc/systemd/system/getty.target.wants"
+ln -sf /lib/systemd/system/serial-getty@.service \
+    "$MOUNTPOINT/etc/systemd/system/getty.target.wants/serial-getty@ttyS0.service"
 
 # APT sources
 cat > "$MOUNTPOINT/etc/apt/sources.list" << 'EOF'
