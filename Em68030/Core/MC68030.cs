@@ -222,7 +222,11 @@ public class MC68030
     public const int ShadowStackMaxDepth = 256;
     public readonly ShadowStackEntry[] ShadowStack = new ShadowStackEntry[ShadowStackMaxDepth];
     public int ShadowStackTop;
-    public bool ShadowStackEnabled;
+    // Shadow stack tracking is always on: BSR/JSR/RTS push/pop overhead is
+    // a couple of extra ops per call and the alternative ("enable only when
+    // the Call Stack window is open") loses all historical frames whenever
+    // the user opens the window mid-run or closes and reopens it.
+    public bool ShadowStackEnabled = true;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void ShadowPush(uint callPC, uint targetPC, uint returnPC, byte kind = 0)

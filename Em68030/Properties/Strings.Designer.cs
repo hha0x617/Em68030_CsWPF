@@ -130,6 +130,7 @@ namespace Em68030.Properties
         public static string Status_CyclesFormat => ResourceManager.GetString("Status_CyclesFormat", resourceCulture) ?? "";
         public static string Status_MhzFormat => ResourceManager.GetString("Status_MhzFormat", resourceCulture) ?? "";
         public static string Status_AvgMhzFormat => ResourceManager.GetString("Status_AvgMhzFormat", resourceCulture) ?? "";
+        public static string Status_BoardFormat => ResourceManager.GetString("Status_BoardFormat", resourceCulture) ?? "";
         public static string Status_NetFormat => ResourceManager.GetString("Status_NetFormat", resourceCulture) ?? "";
         public static string Status_JitOn => ResourceManager.GetString("Status_JitOn", resourceCulture) ?? "";
         public static string Status_JitOff => ResourceManager.GetString("Status_JitOff", resourceCulture) ?? "";
@@ -287,6 +288,8 @@ namespace Em68030.Properties
         public static string Settings_EnableTraceButton => ResourceManager.GetString("Settings_EnableTraceButton", resourceCulture) ?? "";
         public static string Settings_TraceDescription => ResourceManager.GetString("Settings_TraceDescription", resourceCulture) ?? "";
         public static string Settings_CallStack => ResourceManager.GetString("Settings_CallStack", resourceCulture) ?? "";
+        public static string CallStack_TitleModeShadow => ResourceManager.GetString("CallStack_TitleModeShadow", resourceCulture) ?? "";
+        public static string CallStack_TitleModeA6 => ResourceManager.GetString("CallStack_TitleModeA6", resourceCulture) ?? "";
         public static string Settings_CallStackMode => ResourceManager.GetString("Settings_CallStackMode", resourceCulture) ?? "";
         public static string Settings_CallStackModeShadow => ResourceManager.GetString("Settings_CallStackModeShadow", resourceCulture) ?? "";
         public static string Settings_CallStackModeA6 => ResourceManager.GetString("Settings_CallStackModeA6", resourceCulture) ?? "";

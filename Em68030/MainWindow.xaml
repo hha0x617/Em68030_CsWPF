@@ -44,7 +44,7 @@
         <SolidColorBrush x:Key="{x:Static SystemColors.MenuHighlightBrushKey}" Color="#FF0078D4" />
         <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#FF0078D4" />
         <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFFFFFFF" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.GrayTextBrushKey}" Color="#FF656565" />
+        <SolidColorBrush x:Key="{x:Static SystemColors.GrayTextBrushKey}" Color="#FF909090" />
         <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#FF3E3E42" />
         <!-- Borders and 3D edges used by menu popup/item templates -->
         <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#FF2D2D30" />
@@ -70,6 +70,16 @@
             <Setter Property="Foreground" Value="#FFD4D4D4" />
             <Setter Property="BorderBrush" Value="#FF3F3F46" />
             <Setter Property="CaretBrush" Value="White" />
+            <Style.Triggers>
+                <!-- Explicit disabled state: without this WPF falls back to
+                     SystemColors.GrayTextBrushKey which is barely readable on
+                     our dark background. Use the same brighter gray as menus. -->
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="#FF909090" />
+                    <Setter Property="Background" Value="#FF25252A" />
+                    <Setter Property="BorderBrush" Value="#FF3F3F46" />
+                </Trigger>
+            </Style.Triggers>
         </Style>
         <Style x:Key="RegisterTextBox" TargetType="TextBox" BasedOn="{StaticResource MonoTextBox}">
             <Setter Property="IsReadOnly" Value="True" />
@@ -123,7 +133,7 @@
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="border" Property="Background" Value="#FF2D2D30" />
                                 <Setter TargetName="border" Property="BorderBrush" Value="#FF3F3F46" />
-                                <Setter Property="Foreground" Value="#FF656565" />
+                                <Setter Property="Foreground" Value="#FF909090" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -167,7 +177,7 @@
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="border" Property="Background" Value="#FF2D2D30" />
                                 <Setter TargetName="border" Property="BorderBrush" Value="#FF3F3F46" />
-                                <Setter Property="Foreground" Value="#FF656565" />
+                                <Setter Property="Foreground" Value="#FF909090" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -214,10 +224,15 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
+                    <!-- TextElement.Foreground binding is required: ContentPresenter
+                         wraps string Headers in a generated TextBlock, and that
+                         TextBlock does not inherit Foreground unless it is set
+                         via the TextElement/TextBlock attached property. -->
                     <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"
-                                      VerticalAlignment="Center" />
+                                      VerticalAlignment="Center"
+                                      TextElement.Foreground="{TemplateBinding Foreground}" />
                     <TextBlock Grid.Column="1" Text="{TemplateBinding InputGestureText}"
-                               Foreground="#FF808080" Margin="20,0,0,0"
+                               Foreground="#FFA0A0A0" Margin="20,0,0,0"
                                VerticalAlignment="Center" />
                 </Grid>
             </Border>
@@ -227,7 +242,7 @@
                     <Setter Property="Foreground" Value="White" />
                 </Trigger>
                 <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Foreground" Value="#FF656565" />
+                    <Setter Property="Foreground" Value="#FF909090" />
                 </Trigger>
             </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -242,7 +257,8 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"
-                                      VerticalAlignment="Center" />
+                                      VerticalAlignment="Center"
+                                      TextElement.Foreground="{TemplateBinding Foreground}" />
                     <Path Grid.Column="1" Fill="{TemplateBinding Foreground}"
                           Data="M0,0 L4,4 L0,8 Z" VerticalAlignment="Center" Margin="8,0,0,0" />
                 </Grid>
@@ -251,6 +267,9 @@
                 <Trigger Property="IsHighlighted" Value="True">
                     <Setter TargetName="Bd" Property="Background" Value="#FF0078D4" />
                     <Setter Property="Foreground" Value="White" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="#FF909090" />
                 </Trigger>
             </ControlTemplate.Triggers>
         </ControlTemplate>
@@ -308,9 +327,19 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="MenuItem">
                         <Border x:Name="Bd" Background="Transparent" Padding="10,5">
-                            <ContentPresenter ContentSource="Header"
-                                              RecognizesAccessKey="True"
-                                              VerticalAlignment="Center" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter ContentSource="Header"
+                                                  RecognizesAccessKey="True"
+                                                  VerticalAlignment="Center"
+                                                  TextElement.Foreground="{TemplateBinding Foreground}" />
+                                <TextBlock Grid.Column="1" Text="{TemplateBinding InputGestureText}"
+                                           Foreground="#FFA0A0A0" Margin="20,0,0,0"
+                                           VerticalAlignment="Center" />
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
@@ -318,25 +347,17 @@
                                 <Setter Property="Foreground" Value="#FFFFFFFF" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Foreground" Value="#FF656565" />
+                                <Setter Property="Foreground" Value="#FF909090" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
-        <!-- Context menu separator style -->
-        <Style x:Key="CtxSeparator" TargetType="Separator">
-            <Setter Property="OverridesDefaultStyle" Value="True" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Separator">
-                        <Border Margin="4,3" BorderBrush="#FF555555" BorderThickness="0,1,0,0" />
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <!-- Dark theme ContextMenu -->
+
+        <!-- Implicit ContextMenu style: dark background + border + apply
+             CtxMenuItem to every child MenuItem, including the ones WPF
+             auto-generates for TextBox Copy/Cut/Paste/Undo. -->
         <Style TargetType="ContextMenu">
             <Setter Property="Background" Value="#FF2D2D30" />
             <Setter Property="Foreground" Value="#FFF0F0F0" />
@@ -354,6 +375,18 @@
                                 CornerRadius="2">
                             <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
                         </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle" Value="{StaticResource CtxMenuItem}" />
+        </Style>
+        <!-- Context menu separator style -->
+        <Style x:Key="CtxSeparator" TargetType="Separator">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Border Margin="4,3" BorderBrush="#FF555555" BorderThickness="0,1,0,0" />
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -386,7 +419,7 @@
                 <MenuItem x:Name="MenuShowFramebuffer" Header="{x:Static p:Strings.Menu_FramebufferWindow}" Click="ShowFramebuffer_Click" IsEnabled="False" />
                 <MenuItem Header="{x:Static p:Strings.Menu_BreakpointsWindow}" Click="ShowBreakpoints_Click" />
                 <MenuItem Header="{x:Static p:Strings.Menu_CallStackWindow}" Click="ShowCallStack_Click" />
-                <MenuItem Header="{x:Static p:Strings.Menu_ToggleLstView}" Click="ToggleLst_Click" IsEnabled="False" />
+                <MenuItem x:Name="MenuToggleLst" Header="{x:Static p:Strings.Menu_ToggleLstView}" Click="ToggleLst_Click" IsEnabled="False" />
             </MenuItem>
             <MenuItem Header="{x:Static p:Strings.Menu_Settings}">
                 <MenuItem Header="{x:Static p:Strings.Menu_EmulatorSettings}" Click="Settings_Click" />
@@ -422,6 +455,9 @@
         <StatusBar DockPanel.Dock="Bottom" Background="#FF007ACC">
             <StatusBarItem>
                 <TextBlock Text="{Binding StatusText}" Foreground="White" />
+            </StatusBarItem>
+            <StatusBarItem>
+                <TextBlock Text="{Binding BoardTypeText}" Foreground="White" Margin="16,0,0,0" />
             </StatusBarItem>
             <StatusBarItem>
                 <TextBlock Text="{Binding NetworkModeText}" Foreground="White" Margin="16,0,0,0" />
@@ -475,7 +511,7 @@
                                          Style="{StaticResource ToolBarToggleButton}" Margin="4,2"
                                          IsEnabled="{Binding IsRunning, Converter={StaticResource InverseBoolConverter}}" />
                             <Button Content="{x:Static p:Strings.Disasm_LST}" Click="ToggleLst_Click" Style="{StaticResource ToolBarButton}"
-                                    Margin="8,2" Visibility="{Binding HasLstFile, Converter={StaticResource BoolToVis}}" IsEnabled="False" />
+                                    Margin="8,2" Visibility="{Binding HasLstFile, Converter={StaticResource BoolToVis}}" />
                             <TextBlock Text="{Binding FileStatusText}" VerticalAlignment="Center"
                                        Style="{StaticResource MonoText}" Foreground="#FF9B9B9B" Margin="12,0" />
                         </StackPanel>

@@ -34,10 +34,26 @@ public partial class CallStackWindow : Window
         var decoder = BitmapDecoder.Create(iconUri, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
         Icon = decoder.Frames.OrderByDescending(f => f.PixelWidth).First();
         _vm = vm;
+        UpdateTitle();
+    }
+
+    /// <summary>
+    /// Refresh the title bar so it reflects the current Call Stack mode
+    /// (Shadow Stack vs. A6 Frame Chain). Called from the constructor and
+    /// from RefreshList so the title stays in sync when the user toggles
+    /// the mode via Settings (which triggers a RefreshList afterwards).
+    /// </summary>
+    private void UpdateTitle()
+    {
+        string modeLabel = _vm.Config.CallStackMode == "A6Chain"
+            ? Strings.CallStack_TitleModeA6
+            : Strings.CallStack_TitleModeShadow;
+        Title = $"{Strings.Window_CallStack}  [{modeLabel}]";
     }
 
     public void RefreshList(bool isRunning)
     {
+        UpdateTitle();
         CallStackList.Items.Clear();
 
         var consolasFont = new FontFamily("Consolas");

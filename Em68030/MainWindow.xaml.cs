@@ -98,15 +98,19 @@ public partial class MainWindow : Window
             Dispatcher.BeginInvoke(() => ReopenFramebufferWindow());
         };
 
-        // Refresh call stack window when execution stops
+        // Refresh call stack window when execution stops; sync LST menu state
+        // when the loaded ELF / S-record / binary acquires (or loses) a sibling .lst.
         _vm.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName is "IsRunning" or "PC")
                 Dispatcher.BeginInvoke(() => _callStackWindow?.RefreshList(_vm.IsRunning));
+            else if (e.PropertyName == nameof(MainViewModel.HasLstFile))
+                Dispatcher.BeginInvoke(() => MenuToggleLst.IsEnabled = _vm.HasLstFile);
         };
 
         // Initialize menu state from saved config
         MenuShowFramebuffer.IsEnabled = _vm.FramebufferDevice != null;
+        MenuToggleLst.IsEnabled = _vm.HasLstFile;
     }
 
     private ConsoleWindow EnsureConsoleWindow()
@@ -251,13 +255,12 @@ public partial class MainWindow : Window
                 _vm.ScrollToAddress(addr);
             };
 
-            // Enable shadow call stack tracking
-            _vm.Cpu.ShadowStackEnabled = true;
-            _vm.Cpu.ShadowStackClear();
-
+            // Shadow stack tracking is always on (see MC68030.ShadowStackEnabled).
+            // Do NOT clear here: clearing would throw away frames accumulated
+            // before the user first opened the Call Stack window.
             _callStackWindow.Closed += (s, e) =>
             {
-                _vm.Cpu.ShadowStackEnabled = false;
+                _callStackWindow = null;
             };
 
             _callStackWindow.Show();

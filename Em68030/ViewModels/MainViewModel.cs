@@ -168,6 +168,8 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    public string BoardTypeText => string.Format(Properties.Strings.Status_BoardFormat, _config.BoardType);
+
     public string NetworkModeText => string.Format(Properties.Strings.Status_NetFormat, _config.NetworkMode);
 
     public string JitStatusText => _config.JitEnabled ? Properties.Strings.Status_JitOn : Properties.Strings.Status_JitOff;
@@ -210,7 +212,18 @@ public class MainViewModel : INotifyPropertyChanged
     public bool ShowLst
     {
         get => _showLst;
-        set { _showLst = value; OnPropertyChanged(); UpdateDisassembly(); }
+        set
+        {
+            _showLst = value;
+            OnPropertyChanged();
+            // Toggling LST mode replaces the disassembly view contents
+            // (LST text vs. disassembled instructions). Invalidate the
+            // "full program already disassembled" cache so the next
+            // UpdateDisassembly() call performs a full rebuild instead
+            // of just refreshing PC highlights.
+            _fullProgramDisassembled = false;
+            UpdateDisassembly();
+        }
     }
 
     public bool HasLstFile => _lstLines != null;
@@ -1012,6 +1025,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
 
         LoadedFileName = System.IO.Path.GetFileName(path);
+        CheckForLstFile(path);
         _config.LastOpenedFile = path;
         _config.Save();
         RefreshAll();
@@ -2001,6 +2015,7 @@ public class MainViewModel : INotifyPropertyChanged
 
             _config.Save();
             OnPropertyChanged(nameof(Config));
+            OnPropertyChanged(nameof(BoardTypeText));
             OnPropertyChanged(nameof(NetworkModeText));
             OnPropertyChanged(nameof(JitStatusText));
             return;
@@ -2130,12 +2145,22 @@ public class MainViewModel : INotifyPropertyChanged
 
         _config.Save();
         OnPropertyChanged(nameof(Config));
+        OnPropertyChanged(nameof(BoardTypeText));
         OnPropertyChanged(nameof(NetworkModeText));
         OnPropertyChanged(nameof(JitStatusText));
     }
 
     public void UpdateDisassembly()
     {
+        // LST mode takes precedence: replace the disassembly view with the
+        // contents of the loaded .lst file. Bypasses both the "full program
+        // disassembled" cache and the per-PC sliding window.
+        if (_showLst && _lstLines != null)
+        {
+            UpdateDisassemblyFromLst();
+            return;
+        }
+
         if (_disasmFollowPC)
         {
             if (_fullProgramDisassembled)
@@ -2202,6 +2227,40 @@ public class MainViewModel : INotifyPropertyChanged
                 line.IsCallStackFrame = callStackAddrs?.Contains(line.Address) == true;
             }
         }
+        if (pcIndex >= 0 && _disasmFollowPC)
+            ScrollToLineRequested?.Invoke(pcIndex);
+    }
+
+    /// <summary>
+    /// Replace the disassembly view with the entire loaded .lst file
+    /// (Motorola listing format). Each line becomes one DisasmLineViewModel
+    /// regardless of whether it has an address. Lines that match _cpu.PC are
+    /// marked as the current PC line so the existing scroll/highlight logic works.
+    /// </summary>
+    private void UpdateDisassemblyFromLst()
+    {
+        DisassemblyLines.Clear();
+        if (_lstLines == null) return;
+
+        int pcIndex = -1;
+        for (int i = 0; i < _lstLines.Count; i++)
+        {
+            var lstLine = _lstLines[i];
+            bool hasBp = lstLine.HasAddress && Breakpoints.ContainsKey(lstLine.Address);
+            bool isDisabled = hasBp && !Breakpoints[lstLine.Address].Enabled;
+            bool isCurrent = lstLine.HasAddress && lstLine.Address == _cpu.PC;
+            if (isCurrent) pcIndex = i;
+            DisassemblyLines.Add(new DisasmLineViewModel
+            {
+                Address = lstLine.Address,
+                HasAddress = lstLine.HasAddress,
+                Text = lstLine.RawText,
+                IsCurrentPC = isCurrent,
+                HasBreakpoint = hasBp,
+                HasDisabledBreakpoint = isDisabled
+            });
+        }
+
         if (pcIndex >= 0 && _disasmFollowPC)
             ScrollToLineRequested?.Invoke(pcIndex);
     }
