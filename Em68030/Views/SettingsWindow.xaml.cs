@@ -549,7 +549,6 @@ public partial class SettingsWindow : Window
                 bool dark = ThemeHelper.ResolveDarkMode(newTheme);
                 App.ApplyTheme(dark);
                 ThemeHelper.SetAppMode(dark);
-                // Update title bars on all open windows
                 foreach (Window w in Application.Current.Windows)
                     ThemeHelper.ApplyTitleBar(w, dark);
             }

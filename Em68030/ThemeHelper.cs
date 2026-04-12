@@ -25,13 +25,16 @@ namespace Em68030;
 /// Two APIs are used:
 /// <list type="bullet">
 ///   <item><c>SetPreferredAppMode</c> — uxtheme ordinal #135,
-///     tells the OS to render ALL native menus (including TextBox's built-in
-///     Cut/Copy/Paste ContextMenu) in the matching mode. Must be called before any
-///     window is created.</item>
+///     tells the OS to render native menus and context menus in the matching mode.
+///     Must be called before any window is created.</item>
 ///   <item><c>DwmSetWindowAttribute(DWMWA_USE_IMMERSIVE_DARK_MODE)</c> —
 ///     sets the title bar and window border chrome. Applied per-window
 ///     after the HWND is created.</item>
 /// </list>
+///
+/// Note: Win32 common file dialogs (Open/Save) use an internal Explorer browser
+/// that always follows the Windows system theme, not the application theme.
+/// This is a known Windows limitation shared by VS Code, Notepad++, etc.
 /// </summary>
 public static class ThemeHelper
 {
@@ -54,7 +57,6 @@ public static class ThemeHelper
 
     // SetPreferredAppMode values
     private const int APPMODE_DEFAULT = 0;
-    private const int APPMODE_ALLOWDARK = 1;
     private const int APPMODE_FORCEDARK = 2;
     private const int APPMODE_FORCELIGHT = 3;
 
@@ -96,8 +98,9 @@ public static class ThemeHelper
     }
 
     /// <summary>
-    /// Set the application-wide preferred app mode for native controls.
-    /// Must be called BEFORE any window is created.
+    /// Set the application-wide preferred app mode for native controls
+    /// (menus, context menus, scrollbars). Affects newly created native
+    /// UI elements. Can be called at any time.
     /// </summary>
     public static void SetAppMode(bool dark)
     {

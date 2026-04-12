@@ -57,11 +57,12 @@ public partial class CallStackWindow : Window
         CallStackList.Items.Clear();
 
         var consolasFont = new FontFamily("Consolas");
-        var normalFg = new SolidColorBrush(Color.FromRgb(0xD4, 0xD4, 0xD4));
-        var currentFg = new SolidColorBrush(Color.FromRgb(0xFF, 0xFF, 0x80));
-        var fpFg = new SolidColorBrush(Color.FromRgb(0x80, 0xB0, 0xFF));
-        var heuristicFg = new SolidColorBrush(Color.FromRgb(0xA0, 0xA0, 0xA0));
-        var dimFg = new SolidColorBrush(Color.FromRgb(0x90, 0x90, 0x90));
+        Brush Res(string key) => (Brush)Application.Current.FindResource(key);
+        var normalFg = Res("ThemeForeground");
+        var currentFg = Res("ThemeCurrentLineFg");
+        var fpFg = Res("ThemeFpInfoFg");
+        var heuristicFg = Res("ThemeHeuristicFg");
+        var dimFg = Res("ThemeDisabledFg");
 
         if (isRunning)
         {

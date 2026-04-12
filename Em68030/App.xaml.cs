@@ -30,9 +30,7 @@ public partial class App : Application
         var config = EmulatorConfig.Load();
         bool dark = ThemeHelper.ResolveDarkMode(config.Theme);
 
-        // Enable OS-level dark/light mode for native UI elements (ContextMenu,
-        // ScrollBar, title bar chrome). Must be called before any Window
-        // is created so the theme applies to all popups and child windows.
+        // Set native UI mode (menus, context menus, scrollbars, title bars).
         ThemeHelper.SetAppMode(dark);
 
         // Apply the WPF theme dictionary.

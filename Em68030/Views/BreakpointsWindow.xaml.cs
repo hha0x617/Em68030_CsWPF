@@ -42,11 +42,12 @@ public partial class BreakpointsWindow : Window
         BreakpointList.Items.Clear();
 
         var consolasFont = new FontFamily("Consolas");
-        var normalFg = new SolidColorBrush(Color.FromRgb(0xD4, 0xD4, 0xD4));
-        var condFg = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0x80));
-        var deleteFg = new SolidColorBrush(Color.FromRgb(0xFF, 0x60, 0x60));
-        var headerFg = new SolidColorBrush(Color.FromRgb(0x80, 0xB0, 0xFF));
-        var watchFg = new SolidColorBrush(Color.FromRgb(0xFF, 0xB0, 0x60));
+        Brush Res(string key) => (Brush)Application.Current.FindResource(key);
+        var normalFg = Res("ThemeForeground");
+        var condFg = Res("ThemeConditionFg");
+        var deleteFg = Res("ThemeDeleteFg");
+        var headerFg = Res("ThemeFpInfoFg");
+        var watchFg = Res("ThemeWatchpointFg");
 
         // ---- Breakpoints section ----
         if (_vm.Breakpoints.Count > 0)
@@ -59,9 +60,9 @@ public partial class BreakpointsWindow : Window
             });
         }
 
-        var editFg = new SolidColorBrush(Color.FromRgb(0x80, 0xC0, 0xFF));
-        var btnBg = new SolidColorBrush(Color.FromRgb(0x3E, 0x3E, 0x42));
-        var btnBorder = new SolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55));
+        var editFg = Res("ThemeEditLinkFg");
+        var btnBg = Res("ThemeControlBg");
+        var btnBorder = Res("ThemeButtonBorder");
 
         foreach (var (addr, bp) in _vm.Breakpoints.OrderBy(kv => kv.Key))
         {

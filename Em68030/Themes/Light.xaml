@@ -66,6 +66,13 @@
     <SolidColorBrush x:Key="ThemeFocusIndicator"    Color="#FF0088CC" />
     <SolidColorBrush x:Key="ThemeOverlayHover"      Color="#40000000" />
     <SolidColorBrush x:Key="ThemeBuildHashFg"       Color="#FF999999" />
+    <SolidColorBrush x:Key="ThemeCurrentLineFg"     Color="#FF806600" />
+    <SolidColorBrush x:Key="ThemeFpInfoFg"          Color="#FF0050A0" />
+    <SolidColorBrush x:Key="ThemeHeuristicFg"       Color="#FF808080" />
+    <SolidColorBrush x:Key="ThemeConditionFg"       Color="#FF606030" />
+    <SolidColorBrush x:Key="ThemeDeleteFg"          Color="#FFCC0000" />
+    <SolidColorBrush x:Key="ThemeEditLinkFg"        Color="#FF0060A0" />
+    <SolidColorBrush x:Key="ThemeWatchpointFg"      Color="#FFCC6600" />
 
     <!-- ================================================================ -->
     <!-- SystemColors overrides (needed for WPF default control rendering)-->
