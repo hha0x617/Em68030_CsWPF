@@ -349,6 +349,14 @@
                                                         <DataTrigger Binding="{Binding HasDisabledBreakpoint}" Value="True">
                                                             <Setter Property="Foreground" Value="{DynamicResource ThemeDimFg}" />
                                                         </DataTrigger>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding HasBreakpoint}" Value="True" />
+                                                                <Condition Binding="{Binding HasDisabledBreakpoint}" Value="False" />
+                                                                <Condition Binding="{Binding IsCurrentPC}" Value="False" />
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Foreground" Value="{DynamicResource ThemeBreakpointFg}" />
+                                                        </MultiDataTrigger>
                                                         <DataTrigger Binding="{Binding IsCurrentPC}" Value="True">
                                                             <Setter Property="Background" Value="{DynamicResource ThemeCheckedBg}" />
                                                             <Setter Property="Foreground" Value="{DynamicResource ThemeHighlightedFg}" />
@@ -581,7 +589,7 @@
                                         <!-- Address -->
                                         <TextBlock Text="{Binding AddressText}" Width="68"
                                                    FontFamily="Consolas" FontSize="13"
-                                                   Foreground="{DynamicResource ThemeAccent}" VerticalAlignment="Center" />
+                                                   Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center" />
                                         <TextBlock Text=": " FontFamily="Consolas" FontSize="13"
                                                    Foreground="{DynamicResource ThemeDimFg}" VerticalAlignment="Center" />
                                         <!-- Individual byte cells -->
@@ -634,7 +642,7 @@
                                                    Foreground="{DynamicResource ThemeDimFg}" VerticalAlignment="Center" />
                                         <TextBlock Text="{Binding AsciiText}" Width="130"
                                                    FontFamily="Consolas" FontSize="13"
-                                                   Foreground="{DynamicResource ThemeAsciiDumpFg}" VerticalAlignment="Center" />
+                                                   Foreground="{DynamicResource ThemeForeground}" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
