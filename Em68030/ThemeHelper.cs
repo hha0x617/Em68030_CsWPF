@@ -14,24 +14,22 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using Microsoft.Win32;
 
 namespace Em68030;
 
 /// <summary>
-/// Applies Windows 10/11 dark mode to WPF windows and native UI elements
+/// Applies Windows 10/11 dark/light mode to WPF windows and native UI elements
 /// (ContextMenu, ScrollBar, title bar, etc.) via DWM and uxtheme APIs.
-///
-/// Current implementation: always-dark. Future: support "Light", "System"
-/// modes selectable via Settings dialog.
 ///
 /// Two APIs are used:
 /// <list type="bullet">
-///   <item><c>SetPreferredAppMode(ForceDark)</c> — uxtheme ordinal #135,
+///   <item><c>SetPreferredAppMode</c> — uxtheme ordinal #135,
 ///     tells the OS to render ALL native menus (including TextBox's built-in
-///     Cut/Copy/Paste ContextMenu) in dark mode. Must be called before any
+///     Cut/Copy/Paste ContextMenu) in the matching mode. Must be called before any
 ///     window is created.</item>
 ///   <item><c>DwmSetWindowAttribute(DWMWA_USE_IMMERSIVE_DARK_MODE)</c> —
-///     sets the title bar and window border to dark chrome. Applied per-window
+///     sets the title bar and window border chrome. Applied per-window
 ///     after the HWND is created.</item>
 /// </list>
 /// </summary>
@@ -45,69 +43,101 @@ public static class ThemeHelper
     private static extern int DwmSetWindowAttribute(
         IntPtr hwnd, int dwAttribute, ref int pvAttribute, int cbAttribute);
 
-    // Undocumented uxtheme ordinals used by Windows 10 1903+ / Windows 11.
-    // Firefox, VS Code (Electron), and many other apps use these.
     [DllImport("uxtheme.dll", EntryPoint = "#135", PreserveSig = true)]
     private static extern int SetPreferredAppMode(int mode);
 
     [DllImport("uxtheme.dll", EntryPoint = "#136", PreserveSig = true)]
     private static extern void FlushMenuThemes();
 
-    // DWMWA_USE_IMMERSIVE_DARK_MODE: attribute 20 on Win10 20H1+ / Win11,
-    // attribute 19 on Win10 1809–1903 (undocumented preview).
     private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
     private const int DWMWA_USE_IMMERSIVE_DARK_MODE_LEGACY = 19;
 
     // SetPreferredAppMode values
+    private const int APPMODE_DEFAULT = 0;
+    private const int APPMODE_ALLOWDARK = 1;
     private const int APPMODE_FORCEDARK = 2;
+    private const int APPMODE_FORCELIGHT = 3;
+
+    /// <summary>Current effective dark mode state.</summary>
+    public static bool IsDarkMode { get; set; } = true;
 
     // ================================================================
     // Public API
     // ================================================================
 
     /// <summary>
-    /// Set the application-wide preferred dark mode. Must be called in
-    /// App.OnStartup BEFORE any window is created. This makes native
-    /// Win32 menus (TextBox ContextMenu, etc.) render in dark mode.
+    /// Detect whether the OS is in dark mode via the registry.
+    /// Returns true if dark mode, false if light.
     /// </summary>
-    public static void SetAppDarkMode()
+    public static bool IsSystemDarkMode()
     {
         try
         {
-            SetPreferredAppMode(APPMODE_FORCEDARK);
+            using var key = Registry.CurrentUser.OpenSubKey(
+                @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+            if (key?.GetValue("AppsUseLightTheme") is int val)
+                return val == 0; // 0 = dark, 1 = light
+        }
+        catch { }
+        return true; // default to dark if unreadable
+    }
+
+    /// <summary>
+    /// Resolve theme string ("Dark", "Light", "System") to effective dark mode flag.
+    /// </summary>
+    public static bool ResolveDarkMode(string theme)
+    {
+        return theme switch
+        {
+            "Light" => false,
+            "System" => IsSystemDarkMode(),
+            _ => true, // "Dark" or unknown
+        };
+    }
+
+    /// <summary>
+    /// Set the application-wide preferred app mode for native controls.
+    /// Must be called BEFORE any window is created.
+    /// </summary>
+    public static void SetAppMode(bool dark)
+    {
+        IsDarkMode = dark;
+        try
+        {
+            SetPreferredAppMode(dark ? APPMODE_FORCEDARK : APPMODE_FORCELIGHT);
             FlushMenuThemes();
         }
         catch
         {
             // Graceful fallback: older Windows without uxtheme ordinals.
-            // Native menus will render in the OS default (light) theme.
         }
     }
 
     /// <summary>
-    /// Apply dark title bar and window border chrome to a single window.
-    /// Must be called after the HWND is available (SourceInitialized or
-    /// later). Safe to call from the Window.Loaded class handler.
+    /// Apply dark/light title bar and window border chrome to a single window.
     /// </summary>
-    public static void ApplyDarkTitleBar(Window window)
+    public static void ApplyTitleBar(Window window, bool dark)
     {
         try
         {
             var hwnd = new WindowInteropHelper(window).Handle;
             if (hwnd == IntPtr.Zero) return;
 
-            int darkMode = 1;
-            // Try the stable attribute (20) first; fall back to legacy (19).
+            int mode = dark ? 1 : 0;
             if (DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE,
-                    ref darkMode, sizeof(int)) != 0)
+                    ref mode, sizeof(int)) != 0)
             {
                 DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_LEGACY,
-                    ref darkMode, sizeof(int));
+                    ref mode, sizeof(int));
             }
         }
         catch
         {
-            // Graceful fallback: title bar stays in OS default chrome.
+            // Graceful fallback
         }
     }
+
+    // Keep backward compat
+    public static void SetAppDarkMode() => SetAppMode(true);
+    public static void ApplyDarkTitleBar(Window window) => ApplyTitleBar(window, IsDarkMode);
 }

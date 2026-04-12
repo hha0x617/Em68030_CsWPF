@@ -15,6 +15,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Em68030.Config;
 
 namespace Em68030;
 
@@ -25,17 +26,24 @@ public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
     {
-        // Enable OS-level dark mode for native UI elements (ContextMenu,
+        // Load config to determine theme before creating any window.
+        var config = EmulatorConfig.Load();
+        bool dark = ThemeHelper.ResolveDarkMode(config.Theme);
+
+        // Enable OS-level dark/light mode for native UI elements (ContextMenu,
         // ScrollBar, title bar chrome). Must be called before any Window
         // is created so the theme applies to all popups and child windows.
-        ThemeHelper.SetAppDarkMode();
+        ThemeHelper.SetAppMode(dark);
 
-        // Apply dark title bar to every Window when it loads.
+        // Apply the WPF theme dictionary.
+        ApplyTheme(dark);
+
+        // Apply matching title bar to every Window when it loads.
         EventManager.RegisterClassHandler(typeof(Window),
             FrameworkElement.LoadedEvent,
             new RoutedEventHandler((s, _) =>
             {
-                if (s is Window w) ThemeHelper.ApplyDarkTitleBar(w);
+                if (s is Window w) ThemeHelper.ApplyTitleBar(w, ThemeHelper.IsDarkMode);
             }));
 
         // Replace the default TextBox ContextMenu (which bypasses WPF's
@@ -82,5 +90,19 @@ public partial class App : Application
         }
         base.OnStartup(e);
     }
-}
 
+    /// <summary>
+    /// Switch the application theme by replacing the first MergedDictionary
+    /// (which is the theme dictionary) and updating native UI mode.
+    /// </summary>
+    public static void ApplyTheme(bool dark)
+    {
+        var merged = Current.Resources.MergedDictionaries;
+        if (merged.Count == 0) return;
+
+        string source = dark ? "Themes/Dark.xaml" : "Themes/Light.xaml";
+        merged[0] = new ResourceDictionary { Source = new Uri(source, UriKind.Relative) };
+
+        ThemeHelper.IsDarkMode = dark;
+    }
+}

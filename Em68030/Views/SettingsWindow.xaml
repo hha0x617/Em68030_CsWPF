@@ -16,28 +16,28 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:p="clr-namespace:Em68030.Properties"
         Title="{x:Static p:Strings.Window_Settings}" Height="600" Width="560"
-        Background="#FF1E1E1E" Foreground="#FFD4D4D4"
+        Background="{DynamicResource ThemeWindowBg}" Foreground="{DynamicResource ThemeForeground}"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize">
     <Window.Resources>
         <Style x:Key="SettingLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#FFD4D4D4" />
+            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="Margin" Value="0,4" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
         <Style x:Key="SettingTextBox" TargetType="TextBox">
-            <Setter Property="Background" Value="#FF2D2D30" />
-            <Setter Property="Foreground" Value="#FFD4D4D4" />
-            <Setter Property="BorderBrush" Value="#FF3F3F46" />
-            <Setter Property="CaretBrush" Value="White" />
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBg}" />
+            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource ThemeHighlightFg}" />
             <Setter Property="Padding" Value="4,2" />
             <Setter Property="FontFamily" Value="Consolas" />
         </Style>
         <Style x:Key="SectionHeader" TargetType="TextBlock">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#FF569CD6" />
+            <Setter Property="Foreground" Value="{DynamicResource ThemeAccent}" />
             <Setter Property="Margin" Value="0,12,0,4" />
         </Style>
         <!-- Dark ComboBox toggle button template (dropdown arrow) -->
@@ -48,26 +48,26 @@
                     <ColumnDefinition Width="20" />
                 </Grid.ColumnDefinitions>
                 <Border x:Name="Border" Grid.ColumnSpan="2"
-                        Background="#FF2D2D30" BorderBrush="#FF3F3F46" BorderThickness="1" />
-                <Border Grid.Column="0" Background="#FF2D2D30" Margin="1" />
-                <Path x:Name="Arrow" Grid.Column="1" Fill="#FFD4D4D4"
+                        Background="{DynamicResource ThemeInputBg}" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" />
+                <Border Grid.Column="0" Background="{DynamicResource ThemeInputBg}" Margin="1" />
+                <Path x:Name="Arrow" Grid.Column="1" Fill="{DynamicResource ThemeForeground}"
                       HorizontalAlignment="Center" VerticalAlignment="Center"
                       Data="M0,0 L4,4 L8,0 Z" />
             </Grid>
             <ControlTemplate.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter TargetName="Border" Property="Background" Value="#FF3E3E42" />
+                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource ThemeControlBg}" />
                 </Trigger>
                 <Trigger Property="IsChecked" Value="True">
-                    <Setter TargetName="Border" Property="Background" Value="#FF3E3E42" />
+                    <Setter TargetName="Border" Property="Background" Value="{DynamicResource ThemeControlBg}" />
                 </Trigger>
             </ControlTemplate.Triggers>
         </ControlTemplate>
         <!-- Dark ComboBox style with custom dropdown popup -->
         <Style TargetType="ComboBox">
-            <Setter Property="Foreground" Value="#FFD4D4D4" />
-            <Setter Property="Background" Value="#FF2D2D30" />
-            <Setter Property="BorderBrush" Value="#FF3F3F46" />
+            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}" />
             <Setter Property="Padding" Value="6,3,23,3" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -85,7 +85,7 @@
                                               VerticalAlignment="Center" HorizontalAlignment="Left">
                                 <ContentPresenter.Resources>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="#FFD4D4D4" />
+                                        <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
                                     </Style>
                                 </ContentPresenter.Resources>
                             </ContentPresenter>
@@ -95,7 +95,7 @@
                                 <Grid x:Name="DropDown" SnapsToDevicePixels="True"
                                       MinWidth="{TemplateBinding ActualWidth}"
                                       MaxHeight="{TemplateBinding MaxDropDownHeight}">
-                                    <Border Background="#FF2D2D30" BorderBrush="#FF3F3F46" BorderThickness="1">
+                                    <Border Background="{DynamicResource ThemeInputBg}" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1">
                                         <ScrollViewer Margin="2" SnapsToDevicePixels="True">
                                             <StackPanel IsItemsHost="True"
                                                         KeyboardNavigation.DirectionalNavigation="Contained" />
@@ -110,7 +110,7 @@
             <Setter Property="ItemContainerStyle">
                 <Setter.Value>
                     <Style TargetType="ComboBoxItem">
-                        <Setter Property="Foreground" Value="#FFD4D4D4" />
+                        <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
                         <Setter Property="Background" Value="Transparent" />
                         <Setter Property="Padding" Value="4,2" />
                         <Setter Property="Template">
@@ -122,8 +122,8 @@
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsHighlighted" Value="True">
-                                            <Setter TargetName="Bd" Property="Background" Value="#FF0078D4" />
-                                            <Setter Property="Foreground" Value="White" />
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ThemeHighlight}" />
+                                            <Setter Property="Foreground" Value="{DynamicResource ThemeHighlightFg}" />
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
@@ -135,13 +135,13 @@
         </Style>
         <!-- Dark TabControl / TabItem styles -->
         <Style TargetType="TabControl">
-            <Setter Property="Background" Value="#FF1E1E1E" />
-            <Setter Property="BorderBrush" Value="#FF3F3F46" />
+            <Setter Property="Background" Value="{DynamicResource ThemeWindowBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}" />
         </Style>
         <Style TargetType="TabItem">
-            <Setter Property="Foreground" Value="#FFD4D4D4" />
-            <Setter Property="Background" Value="#FF2D2D30" />
-            <Setter Property="BorderBrush" Value="#FF3F3F46" />
+            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}" />
             <Setter Property="Padding" Value="10,4" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -158,18 +158,18 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="TabBorder" Property="Background" Value="#FF1E1E1E" />
-                                <Setter Property="Foreground" Value="#FF569CD6" />
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource ThemeWindowBg}" />
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeAccent}" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="TabBorder" Property="Background" Value="#FF3E3E42" />
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource ThemeControlBg}" />
                             </Trigger>
                             <MultiTrigger>
                                 <MultiTrigger.Conditions>
                                     <Condition Property="IsSelected" Value="True" />
                                     <Condition Property="IsMouseOver" Value="True" />
                                 </MultiTrigger.Conditions>
-                                <Setter TargetName="TabBorder" Property="Background" Value="#FF1E1E1E" />
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource ThemeWindowBg}" />
                             </MultiTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -182,16 +182,16 @@
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
                     HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="{x:Static p:Strings.Dialog_OK}" Width="80" Click="OK_Click" Margin="4"
-                    Background="#FF0E639C" Foreground="White" Padding="4" />
+                    Background="{DynamicResource ThemeAccentBanner}" Foreground="{DynamicResource ThemeHighlightFg}" Padding="4" />
             <Button Content="{x:Static p:Strings.Dialog_Cancel}" Width="80" IsCancel="True" Margin="4"
-                    Background="#FF3E3E42" Foreground="#FFD4D4D4" Padding="4" />
+                    Background="{DynamicResource ThemeControlBg}" Foreground="{DynamicResource ThemeForeground}" Padding="4" />
         </StackPanel>
 
         <!-- Pending-changes legend: shown only when at least one field differs from AppliedConfig. -->
         <TextBlock x:Name="PendingLegendText"
                    DockPanel.Dock="Top"
                    Text="{x:Static p:Strings.Settings_PendingLegend}"
-                   Foreground="#FFFFA500"
+                   Foreground="{DynamicResource ThemeWarningFg}"
                    FontSize="11"
                    TextWrapping="Wrap"
                    Margin="0,0,0,8"
@@ -202,6 +202,21 @@
             <TabItem Header="General">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="8">
+                        <!-- Appearance -->
+                        <TextBlock Text="{x:Static p:Strings.Settings_Display}" Style="{StaticResource SectionHeader}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Theme" Style="{StaticResource SettingLabel}" />
+                            <ComboBox x:Name="ThemeBox" Grid.Column="1" Width="120" HorizontalAlignment="Left">
+                                <ComboBoxItem Content="Dark" />
+                                <ComboBoxItem Content="Light" />
+                                <ComboBoxItem Content="System" />
+                            </ComboBox>
+                        </Grid>
+
                         <!-- Board Type -->
                         <TextBlock Text="{x:Static p:Strings.Settings_BoardType}" Style="{StaticResource SectionHeader}" />
                         <Grid>
@@ -229,12 +244,12 @@
                                      ToolTip="4-4096" />
                         </Grid>
                         <TextBlock Text="{x:Static p:Strings.Settings_MemoryDescription}"
-                                   Foreground="#FF808080" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
+                                   Foreground="{DynamicResource ThemeDimFg}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
 
                         <!-- I/O Device Settings (Generic) -->
                         <TextBlock Text="{x:Static p:Strings.Settings_IoDevices}" Style="{StaticResource SectionHeader}" />
                         <CheckBox x:Name="ConsoleEnabledBox" Content="{x:Static p:Strings.Settings_ConsoleEnabled}"
-                                  Foreground="#FFD4D4D4" Margin="0,4" />
+                                  Foreground="{DynamicResource ThemeForeground}" Margin="0,4" />
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="150" />
@@ -268,7 +283,7 @@
                         </Grid>
 
                         <CheckBox x:Name="HddEnabledBox" Content="{x:Static p:Strings.Settings_HddEnabled}"
-                                  Foreground="#FFD4D4D4" Margin="0,8,0,4" />
+                                  Foreground="{DynamicResource ThemeForeground}" Margin="0,8,0,4" />
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="150" />
@@ -290,14 +305,14 @@
                             <TextBox x:Name="HddPathBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                             <Button Content="{x:Static p:Strings.Settings_Browse}" Grid.Column="2" Click="BrowseHdd_Click"
                                     Width="30" Margin="4,0,0,0"
-                                    Background="#FF3E3E42" Foreground="#FFD4D4D4" />
+                                    Background="{DynamicResource ThemeControlBg}" Foreground="{DynamicResource ThemeForeground}" />
                         </Grid>
                         <StackPanel Orientation="Horizontal" Margin="0,8">
                             <TextBlock Text="{x:Static p:Strings.Settings_NewImageSizeMB}" Style="{StaticResource SettingLabel}" Width="150" />
                             <TextBox x:Name="NewImageSizeBox" Width="80" Style="{StaticResource SettingTextBox}" Text="2048"
                                      ToolTip="100-2097152" />
                             <Button Content="{x:Static p:Strings.Settings_Create}" Click="CreateImage_Click" Margin="8,0"
-                                    Background="#FF3E3E42" Foreground="#FFD4D4D4" Padding="8,2" />
+                                    Background="{DynamicResource ThemeControlBg}" Foreground="{DynamicResource ThemeForeground}" Padding="8,2" />
                         </StackPanel>
 
                         <!-- Display Settings -->
@@ -336,7 +351,7 @@
                             <TextBox x:Name="Mvme147RomBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                             <Button Content="{x:Static p:Strings.Settings_Browse}" Grid.Column="2" Click="BrowseRom_Click"
                                     Width="30" Margin="4,0,0,0"
-                                    Background="#FF3E3E42" Foreground="#FFD4D4D4" />
+                                    Background="{DynamicResource ThemeControlBg}" Foreground="{DynamicResource ThemeForeground}" />
                         </Grid>
 
                         <!-- Target OS -->
@@ -365,10 +380,10 @@
                                 <TextBox x:Name="NetBsdKernelImagePathBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                                 <Button Content="{x:Static p:Strings.Settings_Browse}" Grid.Column="2" Click="BrowseNetBsdKernel_Click"
                                         Width="30" Margin="4,0,0,0"
-                                        Background="#FF3E3E42" Foreground="#FFD4D4D4" />
+                                        Background="{DynamicResource ThemeControlBg}" Foreground="{DynamicResource ThemeForeground}" />
                             </Grid>
                             <TextBlock Text="{x:Static p:Strings.Settings_KernelImageDescription}"
-                                       Foreground="#FF808080" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
+                                       Foreground="{DynamicResource ThemeDimFg}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="150" />
@@ -394,10 +409,10 @@
                                 <TextBox x:Name="LinuxKernelImagePathBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                                 <Button Content="{x:Static p:Strings.Settings_Browse}" Grid.Column="2" Click="BrowseLinuxKernel_Click"
                                         Width="30" Margin="4,0,0,0"
-                                        Background="#FF3E3E42" Foreground="#FFD4D4D4" />
+                                        Background="{DynamicResource ThemeControlBg}" Foreground="{DynamicResource ThemeForeground}" />
                             </Grid>
                             <TextBlock Text="{x:Static p:Strings.Settings_KernelImageDescription}"
-                                       Foreground="#FF808080" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
+                                       Foreground="{DynamicResource ThemeDimFg}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="150" />
@@ -411,17 +426,17 @@
                         <!-- SCSI Disk Settings -->
                         <TextBlock x:Name="LblScsiDisks" Text="{x:Static p:Strings.Settings_ScsiDisks}" Style="{StaticResource SectionHeader}" />
                         <TextBlock Text="{x:Static p:Strings.Settings_ScsiDescription}"
-                                   Foreground="#FF808080" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
+                                   Foreground="{DynamicResource ThemeDimFg}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
                         <StackPanel x:Name="ScsiDiskListPanel" />
                         <Button x:Name="AddScsiDiskBtn" Content="{x:Static p:Strings.Settings_AddDisk}" Click="AddScsiDisk_Click"
                                 Margin="0,4" Padding="8,2"
-                                Background="#FF3E3E42" Foreground="#FFD4D4D4" />
+                                Background="{DynamicResource ThemeControlBg}" Foreground="{DynamicResource ThemeForeground}" />
                         <StackPanel Orientation="Horizontal" Margin="0,8">
                             <TextBlock Text="{x:Static p:Strings.Settings_NewImageSizeMB}" Style="{StaticResource SettingLabel}" Width="150" />
                             <TextBox x:Name="NewScsiImageSizeBox" Width="80" Style="{StaticResource SettingTextBox}" Text="2048"
                                      ToolTip="100-2097152" />
                             <Button Content="{x:Static p:Strings.Settings_Create}" Click="CreateScsiImage_Click" Margin="8,0"
-                                    Background="#FF3E3E42" Foreground="#FFD4D4D4" Padding="8,2" />
+                                    Background="{DynamicResource ThemeControlBg}" Foreground="{DynamicResource ThemeForeground}" Padding="8,2" />
                         </StackPanel>
 
                         <!-- SCSI CD-ROM Settings -->
@@ -440,7 +455,7 @@
                             <TextBox x:Name="ScsiCdromPathBox" Grid.Column="1" Style="{StaticResource SettingTextBox}" />
                             <Button Content="{x:Static p:Strings.Settings_Browse}" Grid.Column="2" Click="BrowseScsiCdrom_Click"
                                     Width="30" Margin="4,0,0,0"
-                                    Background="#FF3E3E42" Foreground="#FFD4D4D4" />
+                                    Background="{DynamicResource ThemeControlBg}" Foreground="{DynamicResource ThemeForeground}" />
                             <TextBlock x:Name="LblScsiCdromId" Text="{x:Static p:Strings.Settings_ScsiId}" Grid.Row="1" Style="{StaticResource SettingLabel}" />
                             <ComboBox x:Name="ScsiCdromIdBox" Grid.Row="1" Grid.Column="1"
                                       Width="60" HorizontalAlignment="Left">
@@ -470,7 +485,7 @@
                             </ComboBox>
                         </Grid>
                         <TextBlock Text="{x:Static p:Strings.Settings_NetworkDescription}"
-                                   Foreground="#FF808080" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
+                                   Foreground="{DynamicResource ThemeDimFg}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
                         <Grid x:Name="TapAdapterGrid">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="150" />
@@ -499,9 +514,9 @@
                         <!-- Framebuffer -->
                         <TextBlock x:Name="LblFramebuffer" Text="{x:Static p:Strings.Settings_Framebuffer}" Style="{StaticResource SectionHeader}" />
                         <CheckBox x:Name="FramebufferEnabledBox" Content="{x:Static p:Strings.Settings_EnableFramebuffer}"
-                                  Foreground="#FFD4D4D4" Margin="0,4" />
+                                  Foreground="{DynamicResource ThemeForeground}" Margin="0,4" />
                         <TextBlock Text="{x:Static p:Strings.Settings_FramebufferDescription}"
-                                   Foreground="#FF9E9E9E" FontSize="11" TextWrapping="Wrap" Margin="20,0,0,4" />
+                                   Foreground="{DynamicResource ThemeSecondaryFg}" FontSize="11" TextWrapping="Wrap" Margin="20,0,0,4" />
                         <Grid Margin="24,4,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="120" />
@@ -541,9 +556,9 @@
                         <!-- Performance -->
                         <TextBlock Text="{x:Static p:Strings.Settings_Performance}" Style="{StaticResource SectionHeader}" />
                         <CheckBox x:Name="JitEnabledBox" Content="{x:Static p:Strings.Settings_EnableJit}"
-                                  Foreground="#FFD4D4D4" Margin="0,4" />
+                                  Foreground="{DynamicResource ThemeForeground}" Margin="0,4" />
                         <TextBlock Text="{x:Static p:Strings.Settings_JitDescription}"
-                                   Foreground="#FF9E9E9E" FontSize="11" TextWrapping="Wrap" Margin="20,0,0,4" />
+                                   Foreground="{DynamicResource ThemeSecondaryFg}" FontSize="11" TextWrapping="Wrap" Margin="20,0,0,4" />
                         <Grid Margin="24,4,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="180" /><ColumnDefinition Width="60" />
@@ -572,15 +587,15 @@
                             </ComboBox>
                         </Grid>
                         <TextBlock Text="{x:Static p:Strings.Settings_CallStackDescription}"
-                                   Foreground="#FF9E9E9E" FontSize="11" TextWrapping="Wrap" Margin="24,4,0,4" />
+                                   Foreground="{DynamicResource ThemeSecondaryFg}" FontSize="11" TextWrapping="Wrap" Margin="24,4,0,4" />
 
                         <!-- Debug -->
                         <TextBlock Text="{x:Static p:Strings.Settings_Debug}" Style="{StaticResource SectionHeader}" />
                         <CheckBox x:Name="EnableTraceButtonBox" Content="{x:Static p:Strings.Settings_EnableTraceButton}"
-                                  Foreground="#FFD4D4D4" Margin="0,4" />
+                                  Foreground="{DynamicResource ThemeForeground}" Margin="0,4" />
                         <TextBlock Text="{x:Static p:Strings.Settings_TraceDescription}"
-                                   Foreground="#FF9E9E9E" FontSize="11" TextWrapping="Wrap" Margin="20,0,0,4" />
-                        <TextBlock x:Name="TraceFilePathText" Foreground="#FF9E9E9E" FontSize="11" Margin="20,0,0,4" />
+                                   Foreground="{DynamicResource ThemeSecondaryFg}" FontSize="11" TextWrapping="Wrap" Margin="20,0,0,4" />
+                        <TextBlock x:Name="TraceFilePathText" Foreground="{DynamicResource ThemeSecondaryFg}" FontSize="11" Margin="20,0,0,4" />
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>

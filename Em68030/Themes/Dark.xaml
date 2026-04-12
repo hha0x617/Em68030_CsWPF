@@ -52,6 +52,22 @@
     <SolidColorBrush x:Key="ThemeGestureFg"      Color="#FFA0A0A0" />
 
     <!-- ================================================================ -->
+    <!-- Semantic / indicator colors                                      -->
+    <!-- ================================================================ -->
+    <SolidColorBrush x:Key="ThemeStatusBarBg"       Color="#FF007ACC" />
+    <SolidColorBrush x:Key="ThemeRunningFg"         Color="LightGreen" />
+    <SolidColorBrush x:Key="ThemeWarningFg"         Color="#FFFFA500" />
+    <SolidColorBrush x:Key="ThemeHighlightedFg"     Color="#FFFFFF00" />
+    <SolidColorBrush x:Key="ThemeRegisterHeaderFg"  Color="#FF4EC9B0" />
+    <SolidColorBrush x:Key="ThemeCallStackFg"       Color="#FF60C060" />
+    <SolidColorBrush x:Key="ThemeBreakpointFg"      Color="Red" />
+    <SolidColorBrush x:Key="ThemeAsciiDumpFg"       Color="#FF9CDCFE" />
+    <SolidColorBrush x:Key="ThemeModifiedBg"        Color="#FF3A3A20" />
+    <SolidColorBrush x:Key="ThemeFocusIndicator"    Color="#FF4CC2FF" />
+    <SolidColorBrush x:Key="ThemeOverlayHover"      Color="#40FFFFFF" />
+    <SolidColorBrush x:Key="ThemeBuildHashFg"       Color="#FF888888" />
+
+    <!-- ================================================================ -->
     <!-- SystemColors overrides (needed for WPF default control rendering)-->
     <!-- ================================================================ -->
     <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}"          Color="#FF2D2D30" />

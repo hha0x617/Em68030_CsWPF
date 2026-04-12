@@ -19,7 +19,7 @@
         xmlns:local="clr-namespace:Em68030"
         Title="{x:Static p:Strings.MainWindow_Title}" Height="750" Width="1100"
         WindowStartupLocation="CenterScreen"
-        Background="#FF1E1E1E" Foreground="#FFD4D4D4">
+        Background="{DynamicResource ThemeWindowBg}" Foreground="{DynamicResource ThemeForeground}">
     <Window.CommandBindings>
         <CommandBinding Command="{x:Static local:MainWindow.OpenElfCommand}" Executed="OpenElf_Executed" />
         <CommandBinding Command="{x:Static local:MainWindow.OpenBinaryCommand}" Executed="OpenBinary_Executed" />
@@ -37,47 +37,23 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <vm:InverseBoolConverter x:Key="InverseBoolConverter" />
 
-        <!-- Override SystemColors for dark theme -->
-        <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}" Color="#FF2D2D30" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.MenuTextBrushKey}" Color="#FFF0F0F0" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.MenuBarBrushKey}" Color="#FF2D2D30" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.MenuHighlightBrushKey}" Color="#FF0078D4" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#FF0078D4" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFFFFFFF" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.GrayTextBrushKey}" Color="#FF909090" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#FF3E3E42" />
-        <!-- Borders and 3D edges used by menu popup/item templates -->
-        <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#FF2D2D30" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.ControlDarkBrushKey}" Color="#FF3F3F46" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.ControlDarkDarkBrushKey}" Color="#FF3F3F46" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.ControlLightBrushKey}" Color="#FF3F3F46" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.ControlLightLightBrushKey}" Color="#FF2D2D30" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#FFF0F0F0" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.ActiveBorderBrushKey}" Color="#FF3F3F46" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveBorderBrushKey}" Color="#FF3F3F46" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#FF1E1E1E" />
-        <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="#FFF0F0F0" />
-
         <Style x:Key="MonoText" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Consolas" />
             <Setter Property="FontSize" Value="13" />
-            <Setter Property="Foreground" Value="#FFD4D4D4" />
+            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
         </Style>
         <Style x:Key="MonoTextBox" TargetType="TextBox">
             <Setter Property="FontFamily" Value="Consolas" />
             <Setter Property="FontSize" Value="13" />
-            <Setter Property="Background" Value="#FF2D2D30" />
-            <Setter Property="Foreground" Value="#FFD4D4D4" />
-            <Setter Property="BorderBrush" Value="#FF3F3F46" />
-            <Setter Property="CaretBrush" Value="White" />
+            <Setter Property="Background" Value="{DynamicResource ThemeInputBg}" />
+            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource ThemeHighlightFg}" />
             <Style.Triggers>
-                <!-- Explicit disabled state: without this WPF falls back to
-                     SystemColors.GrayTextBrushKey which is barely readable on
-                     our dark background. Use the same brighter gray as menus. -->
                 <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Foreground" Value="#FF909090" />
-                    <Setter Property="Background" Value="#FF25252A" />
-                    <Setter Property="BorderBrush" Value="#FF3F3F46" />
+                    <Setter Property="Foreground" Value="{DynamicResource ThemeDisabledFg}" />
+                    <Setter Property="Background" Value="{DynamicResource ThemeDisabledBg}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}" />
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -88,7 +64,7 @@
                 <DataTrigger Binding="{Binding DataContext.IsRegisterEditMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
                     <Setter Property="IsReadOnly" Value="False" />
                     <Setter Property="Cursor" Value="IBeam" />
-                    <Setter Property="BorderBrush" Value="#FF569CD6" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource ThemeAccent}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
@@ -96,13 +72,13 @@
             <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#FF569CD6" />
+            <Setter Property="Foreground" Value="{DynamicResource ThemeAccent}" />
             <Setter Property="Margin" Value="4,2" />
         </Style>
         <Style x:Key="ToolBarButton" TargetType="Button">
-            <Setter Property="Background" Value="#FF3E3E42" />
-            <Setter Property="Foreground" Value="#FFD4D4D4" />
-            <Setter Property="BorderBrush" Value="#FF555555" />
+            <Setter Property="Background" Value="{DynamicResource ThemeControlBg}" />
+            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeButtonBorder}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="8,3" />
             <Setter Property="Margin" Value="2,0" />
@@ -125,15 +101,15 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#FF505054" />
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource ThemeHover}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#FF606064" />
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource ThemePressed}" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="border" Property="Background" Value="#FF2D2D30" />
-                                <Setter TargetName="border" Property="BorderBrush" Value="#FF3F3F46" />
-                                <Setter Property="Foreground" Value="#FF909090" />
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource ThemePanelBg}" />
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource ThemeBorder}" />
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeDisabledFg}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -141,9 +117,9 @@
             </Setter>
         </Style>
         <Style x:Key="ToolBarToggleButton" TargetType="ToggleButton">
-            <Setter Property="Background" Value="#FF3E3E42" />
-            <Setter Property="Foreground" Value="#FFD4D4D4" />
-            <Setter Property="BorderBrush" Value="#FF555555" />
+            <Setter Property="Background" Value="{DynamicResource ThemeControlBg}" />
+            <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeButtonBorder}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="8,3" />
             <Setter Property="Margin" Value="2,0" />
@@ -166,18 +142,18 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#FF264F78" />
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource ThemeCheckedBg}" />
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#FF505054" />
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource ThemeHover}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#FF606064" />
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource ThemePressed}" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="border" Property="Background" Value="#FF2D2D30" />
-                                <Setter TargetName="border" Property="BorderBrush" Value="#FF3F3F46" />
-                                <Setter Property="Foreground" Value="#FF909090" />
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource ThemePanelBg}" />
+                                <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource ThemeBorder}" />
+                                <Setter Property="Foreground" Value="{DynamicResource ThemeDisabledFg}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -191,7 +167,7 @@
     </Window.Resources>
     <DockPanel>
         <!-- Menu Bar -->
-        <Menu DockPanel.Dock="Top" Background="#FF2D2D30" Foreground="#FFF0F0F0">
+        <Menu DockPanel.Dock="Top" Background="{DynamicResource ThemePanelBg}" Foreground="{DynamicResource ThemeBrightFg}">
             <MenuItem Header="{x:Static p:Strings.Menu_File}">
                 <MenuItem Header="{x:Static p:Strings.Menu_OpenElf}" Command="{x:Static local:MainWindow.OpenElfCommand}" />
                 <MenuItem Header="{x:Static p:Strings.Menu_OpenBinary}" Command="{x:Static local:MainWindow.OpenBinaryCommand}" />
@@ -227,8 +203,8 @@
         </Menu>
 
         <!-- Toolbar -->
-        <ToolBarTray DockPanel.Dock="Top" Background="#FF2D2D30">
-            <ToolBar Background="#FF2D2D30" Band="0" BandIndex="0" Loaded="ToolBar_Loaded">
+        <ToolBarTray DockPanel.Dock="Top" Background="{DynamicResource ThemePanelBg}">
+            <ToolBar Background="{DynamicResource ThemePanelBg}" Band="0" BandIndex="0" Loaded="ToolBar_Loaded">
                 <Button Content="{x:Static p:Strings.Toolbar_Run}" Command="{Binding RunCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button Content="{x:Static p:Strings.Toolbar_Stop}" Command="{Binding StopCommand}" Style="{StaticResource ToolBarButton}" />
                 <Button Content="{x:Static p:Strings.Toolbar_Step}" Command="{Binding StepCommand}" Style="{StaticResource ToolBarButton}" />
@@ -240,30 +216,30 @@
                 <Separator />
                 <TextBlock Text="{Binding CyclesText}" VerticalAlignment="Center"
                            Style="{StaticResource MonoText}" Margin="8,0" />
-                <TextBlock Text="{Binding EstimatedMHz}" Foreground="LightGreen" VerticalAlignment="Center"
+                <TextBlock Text="{Binding EstimatedMHz}" Foreground="{DynamicResource ThemeRunningFg}" VerticalAlignment="Center"
                            Style="{StaticResource MonoText}" Margin="8,0"
                            MouseLeftButtonDown="MhzText_MouseLeftButtonDown" Cursor="Hand" />
-                <TextBlock Text="{Binding StopReason}" Foreground="Orange" VerticalAlignment="Center"
+                <TextBlock Text="{Binding StopReason}" Foreground="{DynamicResource ThemeWarningFg}" VerticalAlignment="Center"
                            Style="{StaticResource MonoText}" Margin="8,0" />
             </ToolBar>
         </ToolBarTray>
 
         <!-- Status Bar -->
-        <StatusBar DockPanel.Dock="Bottom" Background="#FF007ACC">
+        <StatusBar DockPanel.Dock="Bottom" Background="{DynamicResource ThemeStatusBarBg}">
             <StatusBarItem>
-                <TextBlock Text="{Binding StatusText}" Foreground="White" />
+                <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource ThemeHighlightFg}" />
             </StatusBarItem>
             <StatusBarItem>
-                <TextBlock Text="{Binding BoardTypeText}" Foreground="White" Margin="16,0,0,0" />
+                <TextBlock Text="{Binding BoardTypeText}" Foreground="{DynamicResource ThemeHighlightFg}" Margin="16,0,0,0" />
             </StatusBarItem>
             <StatusBarItem>
-                <TextBlock Text="{Binding NetworkModeText}" Foreground="White" Margin="16,0,0,0" />
+                <TextBlock Text="{Binding NetworkModeText}" Foreground="{DynamicResource ThemeHighlightFg}" Margin="16,0,0,0" />
             </StatusBarItem>
             <StatusBarItem>
-                <TextBlock Text="{Binding JitStatusText}" Foreground="White" Margin="16,0,0,0" />
+                <TextBlock Text="{Binding JitStatusText}" Foreground="{DynamicResource ThemeHighlightFg}" Margin="16,0,0,0" />
             </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
-                <TextBlock Foreground="Yellow" FontWeight="Bold">
+                <TextBlock Foreground="{DynamicResource ThemeHighlightedFg}" FontWeight="Bold">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Setter Property="Text" Value="" />
@@ -292,9 +268,9 @@
             </Grid.ColumnDefinitions>
 
             <!-- Disassembly View -->
-            <Border Grid.Row="0" Grid.Column="0" BorderBrush="#FF3F3F46" BorderThickness="1" Margin="2">
+            <Border Grid.Row="0" Grid.Column="0" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="2">
                     <DockPanel>
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="#FF2D2D30">
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="{DynamicResource ThemePanelBg}">
                             <TextBlock Text="{x:Static p:Strings.Disasm_Title}" Style="{StaticResource HeaderText}" />
                             <TextBlock Text="{x:Static p:Strings.Disasm_Address}" Style="{StaticResource MonoText}" VerticalAlignment="Center" Margin="16,0,4,0" />
                             <TextBox x:Name="DisasmAddrBox" Width="80" Style="{StaticResource MonoTextBox}"
@@ -310,10 +286,10 @@
                             <Button Content="{x:Static p:Strings.Disasm_LST}" Click="ToggleLst_Click" Style="{StaticResource ToolBarButton}"
                                     Margin="8,2" Visibility="{Binding HasLstFile, Converter={StaticResource BoolToVis}}" />
                             <TextBlock Text="{Binding FileStatusText}" VerticalAlignment="Center"
-                                       Style="{StaticResource MonoText}" Foreground="#FF9B9B9B" Margin="12,0" />
+                                       Style="{StaticResource MonoText}" Foreground="{DynamicResource ThemeInfoFg}" Margin="12,0" />
                         </StackPanel>
                         <ListBox x:Name="DisasmList" ItemsSource="{Binding DisassemblyLines}"
-                                 Background="#FF1E1E1E" BorderThickness="0"
+                                 Background="{DynamicResource ThemeWindowBg}" BorderThickness="0"
                                  FontFamily="Consolas" FontSize="13"
                                  SelectionMode="Extended"
                                  MouseDoubleClick="DisasmList_DoubleClick"
@@ -346,11 +322,11 @@
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsCallStackFrame}" Value="True">
                                                             <Setter Property="Text" Value="&#x25B8;" />
-                                                            <Setter Property="Foreground" Value="#FF60C060" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource ThemeCallStackFg}" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding HasDisabledBreakpoint}" Value="True">
                                                             <Setter Property="Text" Value="&#x25CF;" />
-                                                            <Setter Property="Foreground" Value="Gray" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource ThemeDimFg}" />
                                                         </DataTrigger>
                                                         <MultiDataTrigger>
                                                             <MultiDataTrigger.Conditions>
@@ -358,7 +334,7 @@
                                                                 <Condition Binding="{Binding HasDisabledBreakpoint}" Value="False" />
                                                             </MultiDataTrigger.Conditions>
                                                             <Setter Property="Text" Value="&#x25CF;" />
-                                                            <Setter Property="Foreground" Value="Red" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource ThemeBreakpointFg}" />
                                                         </MultiDataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -368,14 +344,14 @@
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="FontFamily" Value="Consolas" />
-                                                    <Setter Property="Foreground" Value="#FFD4D4D4" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding HasDisabledBreakpoint}" Value="True">
-                                                            <Setter Property="Foreground" Value="Gray" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource ThemeDimFg}" />
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding IsCurrentPC}" Value="True">
-                                                            <Setter Property="Background" Value="#FF264F78" />
-                                                            <Setter Property="Foreground" Value="#FFFFFF00" />
+                                                            <Setter Property="Background" Value="{DynamicResource ThemeCheckedBg}" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource ThemeHighlightedFg}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -387,16 +363,16 @@
                             <ListBox.ItemContainerStyle>
                                 <Style TargetType="ListBoxItem">
                                     <Setter Property="Background" Value="Transparent" />
-                                    <Setter Property="Foreground" Value="#FFD4D4D4" />
+                                    <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
                                     <Setter Property="Padding" Value="0" />
                                     <Setter Property="Margin" Value="0" />
                                     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                     <Setter Property="FocusVisualStyle" Value="{x:Null}" />
                                     <Style.Resources>
-                                        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#FF264F78" />
-                                        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFD4D4D4" />
-                                        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#FF3F3F46" />
-                                        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#FFD4D4D4" />
+                                        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="{Binding Color, Source={StaticResource ThemeCheckedBg}}" />
+                                        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="{Binding Color, Source={StaticResource ThemeForeground}}" />
+                                        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="{Binding Color, Source={StaticResource ThemeBorder}}" />
+                                        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="{Binding Color, Source={StaticResource ThemeForeground}}" />
                                     </Style.Resources>
                                 </Style>
                             </ListBox.ItemContainerStyle>
@@ -405,10 +381,10 @@
                 </Border>
 
             <GridSplitter Grid.Row="0" Grid.Column="1" Grid.RowSpan="3" Width="5" HorizontalAlignment="Stretch"
-                          Background="#FF3F3F46" />
+                          Background="{DynamicResource ThemeBorder}" />
 
             <!-- Register Panel (spans all rows) -->
-            <Border Grid.Row="0" Grid.Column="2" Grid.RowSpan="3" BorderBrush="#FF3F3F46" BorderThickness="1" Margin="2">
+            <Border Grid.Row="0" Grid.Column="2" Grid.RowSpan="3" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="2">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel Margin="4">
                             <DockPanel>
@@ -421,7 +397,7 @@
                             </DockPanel>
 
                             <!-- Data Registers -->
-                            <TextBlock Text="{x:Static p:Strings.Regs_DataRegisters}" Style="{StaticResource HeaderText}" Foreground="#FF4EC9B0" Margin="4,8,4,2" />
+                            <TextBlock Text="{x:Static p:Strings.Regs_DataRegisters}" Style="{StaticResource HeaderText}" Foreground="{DynamicResource ThemeRegisterHeaderFg}" Margin="4,8,4,2" />
                             <UniformGrid Columns="2">
                                 <StackPanel Orientation="Horizontal" Margin="2">
                                     <TextBlock Text="D0:" Width="30" Style="{StaticResource MonoText}" />
@@ -458,7 +434,7 @@
                             </UniformGrid>
 
                             <!-- Address Registers -->
-                            <TextBlock Text="{x:Static p:Strings.Regs_AddressRegisters}" Style="{StaticResource HeaderText}" Foreground="#FF4EC9B0" Margin="4,8,4,2" />
+                            <TextBlock Text="{x:Static p:Strings.Regs_AddressRegisters}" Style="{StaticResource HeaderText}" Foreground="{DynamicResource ThemeRegisterHeaderFg}" Margin="4,8,4,2" />
                             <UniformGrid Columns="2">
                                 <StackPanel Orientation="Horizontal" Margin="2">
                                     <TextBlock Text="A0:" Width="30" Style="{StaticResource MonoText}" />
@@ -495,19 +471,19 @@
                             </UniformGrid>
 
                             <!-- Flags -->
-                            <TextBlock Text="{x:Static p:Strings.Regs_Flags}" Style="{StaticResource HeaderText}" Foreground="#FF4EC9B0" Margin="4,8,4,2" />
+                            <TextBlock Text="{x:Static p:Strings.Regs_Flags}" Style="{StaticResource HeaderText}" Foreground="{DynamicResource ThemeRegisterHeaderFg}" Margin="4,8,4,2" />
                             <WrapPanel Margin="2" IsEnabled="{Binding IsRegisterEditMode}">
-                                <CheckBox Content="X" IsChecked="{Binding FlagX}" Foreground="#FFD4D4D4" Margin="4,2" />
-                                <CheckBox Content="N" IsChecked="{Binding FlagN}" Foreground="#FFD4D4D4" Margin="4,2" />
-                                <CheckBox Content="Z" IsChecked="{Binding FlagZ}" Foreground="#FFD4D4D4" Margin="4,2" />
-                                <CheckBox Content="V" IsChecked="{Binding FlagV}" Foreground="#FFD4D4D4" Margin="4,2" />
-                                <CheckBox Content="C" IsChecked="{Binding FlagC}" Foreground="#FFD4D4D4" Margin="4,2" />
-                                <CheckBox Content="S" IsChecked="{Binding FlagS}" Foreground="#FFD4D4D4" Margin="4,2" />
-                                <CheckBox Content="T" IsChecked="{Binding FlagT}" Foreground="#FFD4D4D4" Margin="4,2" />
+                                <CheckBox Content="X" IsChecked="{Binding FlagX}" Foreground="{DynamicResource ThemeForeground}" Margin="4,2" />
+                                <CheckBox Content="N" IsChecked="{Binding FlagN}" Foreground="{DynamicResource ThemeForeground}" Margin="4,2" />
+                                <CheckBox Content="Z" IsChecked="{Binding FlagZ}" Foreground="{DynamicResource ThemeForeground}" Margin="4,2" />
+                                <CheckBox Content="V" IsChecked="{Binding FlagV}" Foreground="{DynamicResource ThemeForeground}" Margin="4,2" />
+                                <CheckBox Content="C" IsChecked="{Binding FlagC}" Foreground="{DynamicResource ThemeForeground}" Margin="4,2" />
+                                <CheckBox Content="S" IsChecked="{Binding FlagS}" Foreground="{DynamicResource ThemeForeground}" Margin="4,2" />
+                                <CheckBox Content="T" IsChecked="{Binding FlagT}" Foreground="{DynamicResource ThemeForeground}" Margin="4,2" />
                             </WrapPanel>
 
                             <!-- Special Registers -->
-                            <TextBlock Text="{x:Static p:Strings.Regs_SpecialRegisters}" Style="{StaticResource HeaderText}" Foreground="#FF4EC9B0" Margin="4,8,4,2" />
+                            <TextBlock Text="{x:Static p:Strings.Regs_SpecialRegisters}" Style="{StaticResource HeaderText}" Foreground="{DynamicResource ThemeRegisterHeaderFg}" Margin="4,8,4,2" />
                             <StackPanel Orientation="Horizontal" Margin="2">
                                 <TextBlock Text="PC: " Width="35" Style="{StaticResource MonoText}" />
                                 <TextBox Text="{Binding PC, StringFormat=X8}" Width="75" Style="{StaticResource RegisterTextBox}" />
@@ -526,7 +502,7 @@
                             </StackPanel>
 
                             <!-- FPU Registers -->
-                            <TextBlock Text="{x:Static p:Strings.Regs_FpuRegisters}" Style="{StaticResource HeaderText}" Foreground="#FF4EC9B0" Margin="4,8,4,2" />
+                            <TextBlock Text="{x:Static p:Strings.Regs_FpuRegisters}" Style="{StaticResource HeaderText}" Foreground="{DynamicResource ThemeRegisterHeaderFg}" Margin="4,8,4,2" />
                             <StackPanel Orientation="Horizontal" Margin="2">
                                 <TextBlock Text="FP0:" Width="35" Style="{StaticResource MonoText}" />
                                 <TextBox Text="{Binding FP0, StringFormat=G}" Width="110" Style="{StaticResource RegisterTextBox}" FontSize="11" />
@@ -577,12 +553,12 @@
             </Border>
 
             <GridSplitter Grid.Row="1" Grid.Column="0" Height="5" HorizontalAlignment="Stretch"
-                          Background="#FF3F3F46" />
+                          Background="{DynamicResource ThemeBorder}" />
 
             <!-- Lower pane: Memory Dump -->
-            <Border Grid.Row="2" Grid.Column="0" BorderBrush="#FF3F3F46" BorderThickness="1" Margin="2">
+            <Border Grid.Row="2" Grid.Column="0" BorderBrush="{DynamicResource ThemeBorder}" BorderThickness="1" Margin="2">
                 <DockPanel>
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="#FF2D2D30">
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Background="{DynamicResource ThemePanelBg}">
                         <TextBlock Text="{x:Static p:Strings.MemDump_Title}" Style="{StaticResource HeaderText}" />
                         <TextBlock Text="{x:Static p:Strings.MemDump_Address}" Style="{StaticResource MonoText}" VerticalAlignment="Center" Margin="16,0,4,0" />
                         <TextBox x:Name="MemAddrBox" Width="80" Style="{StaticResource MonoTextBox}"
@@ -597,7 +573,7 @@
                         <Button Content="{x:Static p:Strings.MemDump_Cancel}" Command="{Binding CancelMemoryCommand}" Style="{StaticResource ToolBarButton}" Margin="4,2" />
                     </StackPanel>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                                    Background="#FF1E1E1E">
+                                    Background="{DynamicResource ThemeWindowBg}">
                         <ItemsControl x:Name="MemoryDumpList" ItemsSource="{Binding MemoryDumpRows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -605,9 +581,9 @@
                                         <!-- Address -->
                                         <TextBlock Text="{Binding AddressText}" Width="68"
                                                    FontFamily="Consolas" FontSize="13"
-                                                   Foreground="#FF569CD6" VerticalAlignment="Center" />
+                                                   Foreground="{DynamicResource ThemeAccent}" VerticalAlignment="Center" />
                                         <TextBlock Text=": " FontFamily="Consolas" FontSize="13"
-                                                   Foreground="#FF808080" VerticalAlignment="Center" />
+                                                   Foreground="{DynamicResource ThemeDimFg}" VerticalAlignment="Center" />
                                         <!-- Individual byte cells -->
                                         <ItemsControl ItemsSource="{Binding Cells}">
                                             <ItemsControl.ItemsPanel>
@@ -621,15 +597,15 @@
                                                              Width="22" FontFamily="Consolas" FontSize="13"
                                                              MaxLength="2" CharacterCasing="Upper"
                                                              Margin="1,0" Padding="1,1"
-                                                             BorderThickness="1" CaretBrush="White"
+                                                             BorderThickness="1" CaretBrush="{DynamicResource ThemeHighlightFg}"
                                                              TextAlignment="Center" VerticalAlignment="Center"
                                                              GotFocus="MemCell_GotFocus"
                                                              PreviewKeyDown="MemCell_PreviewKeyDown"
                                                              TextChanged="MemCell_TextChanged">
                                                         <TextBox.Style>
                                                             <Style TargetType="TextBox">
-                                                                <Setter Property="Background" Value="#FF1E1E1E" />
-                                                                <Setter Property="Foreground" Value="#FFD4D4D4" />
+                                                                <Setter Property="Background" Value="{DynamicResource ThemeWindowBg}" />
+                                                                <Setter Property="Foreground" Value="{DynamicResource ThemeForeground}" />
                                                                 <Setter Property="BorderBrush" Value="Transparent" />
                                                                 <Setter Property="IsReadOnly" Value="True" />
                                                                 <Setter Property="Cursor" Value="Arrow" />
@@ -639,12 +615,12 @@
                                                                         <Setter Property="IsReadOnly" Value="False" />
                                                                         <Setter Property="Cursor" Value="IBeam" />
                                                                         <Setter Property="Focusable" Value="True" />
-                                                                        <Setter Property="BorderBrush" Value="#FF3F3F46" />
-                                                                        <Setter Property="Background" Value="#FF2D2D30" />
+                                                                        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}" />
+                                                                        <Setter Property="Background" Value="{DynamicResource ThemeInputBg}" />
                                                                     </DataTrigger>
                                                                     <DataTrigger Binding="{Binding IsModified}" Value="True">
-                                                                        <Setter Property="Foreground" Value="#FFFFFF00" />
-                                                                        <Setter Property="Background" Value="#FF3A3A20" />
+                                                                        <Setter Property="Foreground" Value="{DynamicResource ThemeHighlightedFg}" />
+                                                                        <Setter Property="Background" Value="{DynamicResource ThemeModifiedBg}" />
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
@@ -655,10 +631,10 @@
                                         </ItemsControl>
                                         <!-- ASCII -->
                                         <TextBlock Text="  " FontFamily="Consolas" FontSize="13"
-                                                   Foreground="#FF808080" VerticalAlignment="Center" />
+                                                   Foreground="{DynamicResource ThemeDimFg}" VerticalAlignment="Center" />
                                         <TextBlock Text="{Binding AsciiText}" Width="130"
                                                    FontFamily="Consolas" FontSize="13"
-                                                   Foreground="#FF9CDCFE" VerticalAlignment="Center" />
+                                                   Foreground="{DynamicResource ThemeAsciiDumpFg}" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

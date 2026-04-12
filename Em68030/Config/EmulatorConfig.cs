@@ -44,6 +44,9 @@ public class EmulatorConfig
     public string LastOpenedFile { get; set; } = "";
     public uint LastLoadAddress { get; set; } = 0x1000;
 
+    // Theme: "Dark", "Light", or "System"
+    public string Theme { get; set; } = "Dark";
+
     // Board type: "Generic" or "MVME147"
     public string BoardType { get; set; } = "Generic";
 

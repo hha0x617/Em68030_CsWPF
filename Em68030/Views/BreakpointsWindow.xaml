@@ -16,7 +16,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:p="clr-namespace:Em68030.Properties"
         Title="{x:Static p:Strings.Window_Breakpoints}" Height="400" Width="360"
-        Background="#FF1E1E1E" Foreground="#FFD4D4D4"
+        Background="{DynamicResource ThemeWindowBg}" Foreground="{DynamicResource ThemeForeground}"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip">
 
@@ -28,13 +28,13 @@
 
         <!-- Breakpoint list -->
         <ListView x:Name="BreakpointList" Grid.Row="0"
-                  Background="#FF1E1E1E" BorderThickness="0"
-                  Foreground="#FFD4D4D4"
+                  Background="{DynamicResource ThemeWindowBg}" BorderThickness="0"
+                  Foreground="{DynamicResource ThemeForeground}"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                   MouseDoubleClick="BreakpointList_MouseDoubleClick">
             <ListView.Resources>
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#FF3E3E42" />
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#FF3E3E42" />
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="{Binding Color, Source={StaticResource ThemeListSelection}}" />
+                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="{Binding Color, Source={StaticResource ThemeListSelection}}" />
             </ListView.Resources>
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
@@ -44,14 +44,14 @@
         </ListView>
 
         <!-- Bottom toolbar -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Background="#FF2D2D30" Height="36">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Background="{DynamicResource ThemePanelBg}" Height="36">
             <Button x:Name="AddWatchpointButton" Content="{x:Static p:Strings.Breakpoints_AddWatchpoint}" Click="AddWatchpoint_Click"
-                    Background="#FF3E3E42" Foreground="#FFD4D4D4"
-                    BorderBrush="#FF555555" Padding="8,3" Margin="4"
+                    Background="{DynamicResource ThemeControlBg}" Foreground="{DynamicResource ThemeForeground}"
+                    BorderBrush="{DynamicResource ThemeButtonBorder}" Padding="8,3" Margin="4"
                     FontSize="12" />
             <Button x:Name="ClearAllButton" Content="{x:Static p:Strings.Breakpoints_ClearAll}" Click="ClearAll_Click"
-                    Background="#FF3E3E42" Foreground="#FFD4D4D4"
-                    BorderBrush="#FF555555" Padding="8,3" Margin="4"
+                    Background="{DynamicResource ThemeControlBg}" Foreground="{DynamicResource ThemeForeground}"
+                    BorderBrush="{DynamicResource ThemeButtonBorder}" Padding="8,3" Margin="4"
                     FontSize="12" />
         </StackPanel>
     </Grid>

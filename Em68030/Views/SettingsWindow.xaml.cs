@@ -76,6 +76,9 @@ public partial class SettingsWindow : Window
 
     private void LoadSettings()
     {
+        // Theme
+        SelectItemByText(ThemeBox, Config.Theme);
+
         // Board type
         SelectItemByText(BoardTypeBox, Config.BoardType);
         Mvme147RomBox.Text = Config.Mvme147RomPath;
@@ -176,31 +179,25 @@ public partial class SettingsWindow : Window
     // saved but not yet applied to live hardware.
     // ========================================================================
 
-    private static readonly Brush PendingBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0xA5, 0x00));
-    private static readonly Brush DefaultLabelBrush = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
-    private static readonly Brush DefaultControlBrush = new SolidColorBrush(Color.FromRgb(0xD4, 0xD4, 0xD4));
-    private static readonly Brush SectionHeaderDefaultBrush = new SolidColorBrush(Color.FromRgb(0xCC, 0xCC, 0xCC));
+    private static Brush GetThemeBrush(string key) =>
+        (Brush)Application.Current.FindResource(key);
 
-    // Mark a label (TextBlock) — used for fields whose visible "title" is a
-    // separate TextBlock next to the input control. Mirrors the WinUI3 version.
     private static void MarkLabel(TextBlock? label, bool isPending)
     {
         if (label != null)
-            label.Foreground = isPending ? PendingBrush : DefaultLabelBrush;
+            label.Foreground = isPending ? GetThemeBrush("ThemeWarningFg") : GetThemeBrush("ThemeForeground");
     }
 
-    // Mark a CheckBox — used for fields where the label *is* the control's
-    // Content (no separate TextBlock).
     private static void MarkCheckBox(CheckBox? cb, bool isPending)
     {
         if (cb != null)
-            cb.Foreground = isPending ? PendingBrush : DefaultControlBrush;
+            cb.Foreground = isPending ? GetThemeBrush("ThemeWarningFg") : GetThemeBrush("ThemeForeground");
     }
 
     private static void MarkSectionLabel(TextBlock? header, bool isPending)
     {
         if (header != null)
-            header.Foreground = isPending ? PendingBrush : SectionHeaderDefaultBrush;
+            header.Foreground = isPending ? GetThemeBrush("ThemeWarningFg") : GetThemeBrush("ThemeAccent");
     }
 
     private void MarkPendingFields()
@@ -292,24 +289,24 @@ public partial class SettingsWindow : Window
         {
             Text = path,
             MinWidth = 160,
-            Background = new SolidColorBrush(Color.FromRgb(0x2D, 0x2D, 0x30)),
-            Foreground = new SolidColorBrush(Color.FromRgb(0xD4, 0xD4, 0xD4)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0x3F, 0x3F, 0x46)),
-            CaretBrush = Brushes.White,
             Padding = new Thickness(4, 2, 4, 2),
             FontFamily = new FontFamily("Consolas"),
             VerticalAlignment = VerticalAlignment.Center
         };
+        pathBox.SetResourceReference(TextBox.BackgroundProperty, "ThemeInputBg");
+        pathBox.SetResourceReference(TextBox.ForegroundProperty, "ThemeForeground");
+        pathBox.SetResourceReference(TextBox.BorderBrushProperty, "ThemeBorder");
+        pathBox.SetResourceReference(TextBox.CaretBrushProperty, "ThemeHighlightFg");
 
         var browseBtn = new Button
         {
             Content = "...",
             Width = 30,
             Margin = new Thickness(4, 0, 0, 0),
-            Background = new SolidColorBrush(Color.FromRgb(0x3E, 0x3E, 0x42)),
-            Foreground = new SolidColorBrush(Color.FromRgb(0xD4, 0xD4, 0xD4)),
             VerticalAlignment = VerticalAlignment.Center
         };
+        browseBtn.SetResourceReference(Button.BackgroundProperty, "ThemeControlBg");
+        browseBtn.SetResourceReference(Button.ForegroundProperty, "ThemeForeground");
         browseBtn.Tag = row;
         browseBtn.Click += BrowseScsiDisk_Click;
 
@@ -318,10 +315,10 @@ public partial class SettingsWindow : Window
             Content = "\u00D7", // multiplication sign
             Width = 24,
             Margin = new Thickness(4, 0, 0, 0),
-            Background = new SolidColorBrush(Color.FromRgb(0x3E, 0x3E, 0x42)),
-            Foreground = new SolidColorBrush(Color.FromRgb(0xD4, 0xD4, 0xD4)),
             VerticalAlignment = VerticalAlignment.Center
         };
+        removeBtn.SetResourceReference(Button.BackgroundProperty, "ThemeControlBg");
+        removeBtn.SetResourceReference(Button.ForegroundProperty, "ThemeForeground");
         removeBtn.Tag = row;
         removeBtn.Click += RemoveScsiDisk_Click;
 
@@ -329,23 +326,23 @@ public partial class SettingsWindow : Window
         {
             Content = Strings.Settings_Disklabel,
             Margin = new Thickness(4, 0, 0, 0),
-            Background = new SolidColorBrush(Color.FromRgb(0x3E, 0x3E, 0x42)),
-            Foreground = new SolidColorBrush(Color.FromRgb(0xD4, 0xD4, 0xD4)),
             FontSize = 11,
             ToolTip = "Write a NetBSD disklabel to this disk image",
             VerticalAlignment = VerticalAlignment.Center
         };
+        disklabelBtn.SetResourceReference(Button.BackgroundProperty, "ThemeControlBg");
+        disklabelBtn.SetResourceReference(Button.ForegroundProperty, "ThemeForeground");
         disklabelBtn.Tag = row;
         disklabelBtn.Click += WriteDisklabel_Click;
 
         var idLabel = new TextBlock
         {
             Text = "ID:",
-            Foreground = new SolidColorBrush(Color.FromRgb(0xD4, 0xD4, 0xD4)),
             FontSize = 13,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 4, 0)
         };
+        idLabel.SetResourceReference(TextBlock.ForegroundProperty, "ThemeForeground");
 
         var grid = new Grid { Margin = new Thickness(0, 2, 0, 2) };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -541,6 +538,23 @@ public partial class SettingsWindow : Window
 
     private void OK_Click(object sender, RoutedEventArgs e)
     {
+        // Theme
+        string newTheme = GetSelectedItemText(ThemeBox);
+        if (!string.IsNullOrEmpty(newTheme))
+        {
+            string oldTheme = Config.Theme;
+            Config.Theme = newTheme;
+            if (oldTheme != newTheme)
+            {
+                bool dark = ThemeHelper.ResolveDarkMode(newTheme);
+                App.ApplyTheme(dark);
+                ThemeHelper.SetAppMode(dark);
+                // Update title bars on all open windows
+                foreach (Window w in Application.Current.Windows)
+                    ThemeHelper.ApplyTitleBar(w, dark);
+            }
+        }
+
         // Board type
         Config.BoardType = GetSelectedItemText(BoardTypeBox);
         Config.Mvme147RomPath = Mvme147RomBox.Text;

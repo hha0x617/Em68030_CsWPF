@@ -16,19 +16,19 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:p="clr-namespace:Em68030.Properties"
         Title="{x:Static p:Strings.Window_CallStack}" Height="400" Width="420"
-        Background="#FF1E1E1E" Foreground="#FFD4D4D4"
+        Background="{DynamicResource ThemeWindowBg}" Foreground="{DynamicResource ThemeForeground}"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip">
 
     <Grid>
         <ListView x:Name="CallStackList"
-                  Background="#FF1E1E1E" BorderThickness="0"
-                  Foreground="#FFD4D4D4"
+                  Background="{DynamicResource ThemeWindowBg}" BorderThickness="0"
+                  Foreground="{DynamicResource ThemeForeground}"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                   MouseDoubleClick="CallStackList_MouseDoubleClick">
             <ListView.Resources>
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#FF3E3E42" />
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#FF3E3E42" />
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="{Binding Color, Source={StaticResource ThemeListSelection}}" />
+                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="{Binding Color, Source={StaticResource ThemeListSelection}}" />
             </ListView.Resources>
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">
