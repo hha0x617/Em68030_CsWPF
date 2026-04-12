@@ -566,7 +566,23 @@ public partial class MainWindow : Window
     {
         if (sender is System.Windows.Controls.TextBox tb)
         {
+            if (_vm.IsMemoryEditMode)
+            {
+                tb.IsReadOnly = false;
+                tb.Background = (System.Windows.Media.Brush)FindResource("ThemeInputBg");
+                tb.BorderBrush = (System.Windows.Media.Brush)FindResource("ThemeBorder");
+            }
             tb.SelectAll();
+        }
+    }
+
+    private void MemCell_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.TextBox tb)
+        {
+            tb.IsReadOnly = true;
+            tb.Background = (System.Windows.Media.Brush)FindResource("ThemeWindowBg");
+            tb.BorderBrush = System.Windows.Media.Brushes.Transparent;
         }
     }
 

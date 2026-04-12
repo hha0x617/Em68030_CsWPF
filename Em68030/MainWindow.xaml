@@ -608,6 +608,7 @@
                                                              BorderThickness="1" CaretBrush="{DynamicResource ThemeHighlightFg}"
                                                              TextAlignment="Center" VerticalAlignment="Center"
                                                              GotFocus="MemCell_GotFocus"
+                                                             LostFocus="MemCell_LostFocus"
                                                              PreviewKeyDown="MemCell_PreviewKeyDown"
                                                              TextChanged="MemCell_TextChanged">
                                                         <TextBox.Style>
@@ -620,11 +621,8 @@
                                                                 <Setter Property="Focusable" Value="False" />
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding DataContext.IsMemoryEditMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                                                        <Setter Property="IsReadOnly" Value="False" />
                                                                         <Setter Property="Cursor" Value="IBeam" />
                                                                         <Setter Property="Focusable" Value="True" />
-                                                                        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorder}" />
-                                                                        <Setter Property="Background" Value="{DynamicResource ThemeInputBg}" />
                                                                     </DataTrigger>
                                                                     <DataTrigger Binding="{Binding IsModified}" Value="True">
                                                                         <Setter Property="Foreground" Value="{DynamicResource ThemeHighlightedFg}" />
