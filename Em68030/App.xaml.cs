@@ -13,6 +13,8 @@
 
 using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace Em68030;
 
@@ -23,6 +25,41 @@ public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Enable OS-level dark mode for native UI elements (ContextMenu,
+        // ScrollBar, title bar chrome). Must be called before any Window
+        // is created so the theme applies to all popups and child windows.
+        ThemeHelper.SetAppDarkMode();
+
+        // Apply dark title bar to every Window when it loads.
+        EventManager.RegisterClassHandler(typeof(Window),
+            FrameworkElement.LoadedEvent,
+            new RoutedEventHandler((s, _) =>
+            {
+                if (s is Window w) ThemeHelper.ApplyDarkTitleBar(w);
+            }));
+
+        // Replace the default TextBox ContextMenu (which bypasses WPF's
+        // implicit style system) with an explicit WPF ContextMenu that
+        // picks up our dark MenuItem/ContextMenu styles from App.xaml.
+        EventManager.RegisterClassHandler(typeof(TextBox),
+            FrameworkElement.LoadedEvent,
+            new RoutedEventHandler((s, _) =>
+            {
+                if (s is TextBox tb &&
+                    tb.ReadLocalValue(FrameworkElement.ContextMenuProperty) == DependencyProperty.UnsetValue)
+                {
+                    tb.ContextMenu = new ContextMenu();
+                    tb.ContextMenu.Items.Add(new MenuItem { Command = ApplicationCommands.Undo });
+                    tb.ContextMenu.Items.Add(new Separator());
+                    tb.ContextMenu.Items.Add(new MenuItem { Command = ApplicationCommands.Cut });
+                    tb.ContextMenu.Items.Add(new MenuItem { Command = ApplicationCommands.Copy });
+                    tb.ContextMenu.Items.Add(new MenuItem { Command = ApplicationCommands.Paste });
+                    tb.ContextMenu.Items.Add(new MenuItem { Command = ApplicationCommands.Delete });
+                    tb.ContextMenu.Items.Add(new Separator());
+                    tb.ContextMenu.Items.Add(new MenuItem { Command = ApplicationCommands.SelectAll });
+                }
+            }));
+
         // --lang=xx-XX command line argument to override UI language
         foreach (var arg in e.Args)
         {

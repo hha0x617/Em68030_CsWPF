@@ -184,213 +184,10 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        <!-- ============================================================ -->
-        <!-- Dark MenuItem: TopLevelHeader (e.g. "File", "Run") -->
-        <!-- ============================================================ -->
-        <ControlTemplate x:Key="DarkTopLevelHeaderTemplate" TargetType="MenuItem">
-            <Grid>
-                <Border x:Name="Bd" Background="Transparent" Padding="8,4">
-                    <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"
-                                      VerticalAlignment="Center" />
-                </Border>
-                <Popup x:Name="PART_Popup" Placement="Bottom"
-                       IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
-                       AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
-                    <Border Background="#FF2D2D30" BorderBrush="#FF3F3F46" BorderThickness="1"
-                            Padding="0,4">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel IsItemsHost="True"
-                                        KeyboardNavigation.DirectionalNavigation="Cycle" />
-                        </ScrollViewer>
-                    </Border>
-                </Popup>
-            </Grid>
-            <ControlTemplate.Triggers>
-                <Trigger Property="IsHighlighted" Value="True">
-                    <Setter TargetName="Bd" Property="Background" Value="#FF3E3E42" />
-                </Trigger>
-                <Trigger Property="IsSubmenuOpen" Value="True">
-                    <Setter TargetName="Bd" Property="Background" Value="#FF3E3E42" />
-                </Trigger>
-            </ControlTemplate.Triggers>
-        </ControlTemplate>
-        <!-- ============================================================ -->
-        <!-- Dark MenuItem: SubmenuItem (leaf items in dropdown) -->
-        <!-- ============================================================ -->
-        <ControlTemplate x:Key="DarkSubmenuItemTemplate" TargetType="MenuItem">
-            <Border x:Name="Bd" Background="Transparent" Padding="10,5">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <!-- TextElement.Foreground binding is required: ContentPresenter
-                         wraps string Headers in a generated TextBlock, and that
-                         TextBlock does not inherit Foreground unless it is set
-                         via the TextElement/TextBlock attached property. -->
-                    <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"
-                                      VerticalAlignment="Center"
-                                      TextElement.Foreground="{TemplateBinding Foreground}" />
-                    <TextBlock Grid.Column="1" Text="{TemplateBinding InputGestureText}"
-                               Foreground="#FFA0A0A0" Margin="20,0,0,0"
-                               VerticalAlignment="Center" />
-                </Grid>
-            </Border>
-            <ControlTemplate.Triggers>
-                <Trigger Property="IsHighlighted" Value="True">
-                    <Setter TargetName="Bd" Property="Background" Value="#FF0078D4" />
-                    <Setter Property="Foreground" Value="White" />
-                </Trigger>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Foreground" Value="#FF909090" />
-                </Trigger>
-            </ControlTemplate.Triggers>
-        </ControlTemplate>
-        <!-- ============================================================ -->
-        <!-- Dark MenuItem: SubmenuHeader (submenu item with arrow) -->
-        <!-- ============================================================ -->
-        <ControlTemplate x:Key="DarkSubmenuHeaderTemplate" TargetType="MenuItem">
-            <Border x:Name="Bd" Background="Transparent" Padding="10,5">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"
-                                      VerticalAlignment="Center"
-                                      TextElement.Foreground="{TemplateBinding Foreground}" />
-                    <Path Grid.Column="1" Fill="{TemplateBinding Foreground}"
-                          Data="M0,0 L4,4 L0,8 Z" VerticalAlignment="Center" Margin="8,0,0,0" />
-                </Grid>
-            </Border>
-            <ControlTemplate.Triggers>
-                <Trigger Property="IsHighlighted" Value="True">
-                    <Setter TargetName="Bd" Property="Background" Value="#FF0078D4" />
-                    <Setter Property="Foreground" Value="White" />
-                </Trigger>
-                <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Foreground" Value="#FF909090" />
-                </Trigger>
-            </ControlTemplate.Triggers>
-        </ControlTemplate>
-        <!-- ============================================================ -->
-        <!-- Dark MenuItem implicit style: switch template by Role -->
-        <!-- ============================================================ -->
-        <Style TargetType="MenuItem">
-            <Setter Property="OverridesDefaultStyle" Value="True" />
-            <Setter Property="Foreground" Value="#FFF0F0F0" />
-            <Setter Property="Background" Value="#FF2D2D30" />
-            <Setter Property="FontFamily" Value="Segoe UI" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Template" Value="{StaticResource DarkSubmenuItemTemplate}" />
-            <Style.Triggers>
-                <Trigger Property="Role" Value="TopLevelHeader">
-                    <Setter Property="Template" Value="{StaticResource DarkTopLevelHeaderTemplate}" />
-                </Trigger>
-                <Trigger Property="Role" Value="TopLevelItem">
-                    <Setter Property="Template" Value="{StaticResource DarkSubmenuItemTemplate}" />
-                </Trigger>
-                <Trigger Property="Role" Value="SubmenuHeader">
-                    <Setter Property="Template" Value="{StaticResource DarkSubmenuHeaderTemplate}" />
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        <!-- Dark theme Separator style inside menus (must use SeparatorStyleKey) -->
-        <Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="Separator">
-            <Setter Property="OverridesDefaultStyle" Value="True" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Separator">
-                        <Border Margin="0,3" BorderBrush="#FF555555" BorderThickness="0,1,0,0" />
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <!-- Fallback implicit Separator style (for non-menu separators) -->
-        <Style TargetType="Separator">
-            <Setter Property="OverridesDefaultStyle" Value="True" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Separator">
-                        <Border Margin="0,3" BorderBrush="#FF555555" BorderThickness="0,1,0,0" />
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <!-- Context menu item style (no icon gutter) -->
-        <Style x:Key="CtxMenuItem" TargetType="MenuItem">
-            <Setter Property="OverridesDefaultStyle" Value="True" />
-            <Setter Property="Foreground" Value="#FFF0F0F0" />
-            <Setter Property="FontFamily" Value="Segoe UI" />
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="MenuItem">
-                        <Border x:Name="Bd" Background="Transparent" Padding="10,5">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ContentPresenter ContentSource="Header"
-                                                  RecognizesAccessKey="True"
-                                                  VerticalAlignment="Center"
-                                                  TextElement.Foreground="{TemplateBinding Foreground}" />
-                                <TextBlock Grid.Column="1" Text="{TemplateBinding InputGestureText}"
-                                           Foreground="#FFA0A0A0" Margin="20,0,0,0"
-                                           VerticalAlignment="Center" />
-                            </Grid>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#FF0078D4" />
-                                <Setter Property="Foreground" Value="#FFFFFFFF" />
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Foreground" Value="#FF909090" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Implicit ContextMenu style: dark background + border + apply
-             CtxMenuItem to every child MenuItem, including the ones WPF
-             auto-generates for TextBox Copy/Cut/Paste/Undo. -->
-        <Style TargetType="ContextMenu">
-            <Setter Property="Background" Value="#FF2D2D30" />
-            <Setter Property="Foreground" Value="#FFF0F0F0" />
-            <Setter Property="BorderBrush" Value="#FF3F3F46" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="0,4" />
-            <Setter Property="HasDropShadow" Value="True" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ContextMenu">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                Padding="{TemplateBinding Padding}"
-                                CornerRadius="2">
-                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="ItemContainerStyle" Value="{StaticResource CtxMenuItem}" />
-        </Style>
-        <!-- Context menu separator style -->
-        <Style x:Key="CtxSeparator" TargetType="Separator">
-            <Setter Property="OverridesDefaultStyle" Value="True" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Separator">
-                        <Border Margin="4,3" BorderBrush="#FF555555" BorderThickness="0,1,0,0" />
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <!-- Menu/ContextMenu/MenuItem/Separator styles and templates have
+             been moved to App.xaml (Application.Resources) so that popup
+             visual trees (ContextMenu, etc.) can find them. Popup visual
+             trees inherit from Application, NOT from Window. -->
     </Window.Resources>
     <DockPanel>
         <!-- Menu Bar -->
@@ -524,12 +321,12 @@
                                  ScrollViewer.HorizontalScrollBarVisibility="Auto">
                             <ListBox.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="{x:Static p:Strings.Context_Copy}" Click="DisasmCopy_Click" InputGestureText="Ctrl+C" Style="{StaticResource CtxMenuItem}" />
-                                    <Separator Style="{StaticResource CtxSeparator}" />
-                                    <MenuItem Header="{x:Static p:Strings.Context_RunToCursor}" Click="ContextRunToCursor_Click" Style="{StaticResource CtxMenuItem}" />
-                                    <MenuItem Header="{x:Static p:Strings.Context_SetPCToAddress}" Click="ContextSetPC_Click" Style="{StaticResource CtxMenuItem}" />
-                                    <Separator Style="{StaticResource CtxSeparator}" />
-                                    <MenuItem Header="{x:Static p:Strings.Context_Cancel}" Style="{StaticResource CtxMenuItem}" />
+                                    <MenuItem Header="{x:Static p:Strings.Context_Copy}" Click="DisasmCopy_Click" InputGestureText="Ctrl+C" />
+                                    <Separator />
+                                    <MenuItem Header="{x:Static p:Strings.Context_RunToCursor}" Click="ContextRunToCursor_Click" />
+                                    <MenuItem Header="{x:Static p:Strings.Context_SetPCToAddress}" Click="ContextSetPC_Click" />
+                                    <Separator />
+                                    <MenuItem Header="{x:Static p:Strings.Context_Cancel}" />
                                 </ContextMenu>
                             </ListBox.ContextMenu>
                             <ListBox.ItemTemplate>
