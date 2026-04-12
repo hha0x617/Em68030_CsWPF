@@ -1,0 +1,76 @@
+<!-- Dark theme brush definitions for Em68030.
+     All keys here have a matching counterpart in Light.xaml.
+     XAML and code-behind should use {DynamicResource KeyName} to reference
+     these so that swapping the merged dictionary at runtime updates all UI. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ================================================================ -->
+    <!-- Backgrounds                                                      -->
+    <!-- ================================================================ -->
+    <SolidColorBrush x:Key="ThemeWindowBg"       Color="#FF1E1E1E" />
+    <SolidColorBrush x:Key="ThemePanelBg"        Color="#FF2D2D30" />
+    <SolidColorBrush x:Key="ThemeControlBg"      Color="#FF3E3E42" />
+    <SolidColorBrush x:Key="ThemeInputBg"        Color="#FF2D2D30" />
+    <SolidColorBrush x:Key="ThemeDisabledBg"     Color="#FF25252A" />
+    <SolidColorBrush x:Key="ThemeConsoleBg"      Color="#FF0C0C0C" />
+
+    <!-- ================================================================ -->
+    <!-- Foregrounds                                                      -->
+    <!-- ================================================================ -->
+    <SolidColorBrush x:Key="ThemeForeground"     Color="#FFD4D4D4" />
+    <SolidColorBrush x:Key="ThemeBrightFg"       Color="#FFF0F0F0" />
+    <SolidColorBrush x:Key="ThemeDisabledFg"     Color="#FF909090" />
+    <SolidColorBrush x:Key="ThemeDimFg"          Color="#FF808080" />
+    <SolidColorBrush x:Key="ThemeSecondaryFg"    Color="#FF9E9E9E" />
+    <SolidColorBrush x:Key="ThemeInfoFg"         Color="#FF9B9B9B" />
+    <SolidColorBrush x:Key="ThemeConsoleFg"      Color="#FF00FF00" />
+
+    <!-- ================================================================ -->
+    <!-- Borders and separators                                           -->
+    <!-- ================================================================ -->
+    <SolidColorBrush x:Key="ThemeBorder"         Color="#FF3F3F46" />
+    <SolidColorBrush x:Key="ThemeButtonBorder"   Color="#FF555555" />
+    <SolidColorBrush x:Key="ThemeSeparator"      Color="#FF555555" />
+
+    <!-- ================================================================ -->
+    <!-- Interactive states                                               -->
+    <!-- ================================================================ -->
+    <SolidColorBrush x:Key="ThemeHighlight"      Color="#FF0078D4" />
+    <SolidColorBrush x:Key="ThemeHighlightFg"    Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="ThemeHover"          Color="#FF505054" />
+    <SolidColorBrush x:Key="ThemePressed"        Color="#FF606064" />
+    <SolidColorBrush x:Key="ThemeCheckedBg"      Color="#FF264F78" />
+    <SolidColorBrush x:Key="ThemeMenuHover"      Color="#FF3E3E42" />
+    <SolidColorBrush x:Key="ThemeListSelection"  Color="#FF3E3E42" />
+
+    <!-- ================================================================ -->
+    <!-- Accent / semantic (same or similar in both themes)               -->
+    <!-- ================================================================ -->
+    <SolidColorBrush x:Key="ThemeAccent"         Color="#FF569CD6" />
+    <SolidColorBrush x:Key="ThemeAccentBanner"   Color="#FF0E639C" />
+    <SolidColorBrush x:Key="ThemeGestureFg"      Color="#FFA0A0A0" />
+
+    <!-- ================================================================ -->
+    <!-- SystemColors overrides (needed for WPF default control rendering)-->
+    <!-- ================================================================ -->
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}"          Color="#FF2D2D30" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuTextBrushKey}"      Color="#FFF0F0F0" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuBarBrushKey}"       Color="#FF2D2D30" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuHighlightBrushKey}" Color="#FF0078D4" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}"     Color="#FF0078D4" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFFFFFFF" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.GrayTextBrushKey}"      Color="#FF909090" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#FF3E3E42" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}"       Color="#FF2D2D30" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlDarkBrushKey}"   Color="#FF3F3F46" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlDarkDarkBrushKey}" Color="#FF3F3F46" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlLightBrushKey}"  Color="#FF3F3F46" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlLightLightBrushKey}" Color="#FF2D2D30" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}"   Color="#FFF0F0F0" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ActiveBorderBrushKey}"  Color="#FF3F3F46" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveBorderBrushKey}" Color="#FF3F3F46" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}"        Color="#FF1E1E1E" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}"    Color="#FFF0F0F0" />
+
+</ResourceDictionary>
