@@ -1,0 +1,87 @@
+name: Bug report
+description: Report a crash, hang, wrong instruction result, or UI glitch
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug.  Reproducibility is the
+        single most important detail — a minimal ELF, ROM, or disk image
+        helps enormously.
+
+  - type: input
+    id: version
+    attributes:
+      label: Em68030 version
+      description: Release tag (e.g. `v0.1.0`) or commit hash
+      placeholder: v0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CPU (ISA, addressing modes, cycles, exceptions)
+        - MMU / memory
+        - FPU
+        - JIT
+        - MVME147 peripherals (PCC, WD33C93, Z8530, LANCE, FB, …)
+        - Guest OS boot (NetBSD / Linux)
+        - Debugger UI (breakpoints, watchpoints, call stack)
+        - Console / framebuffer window
+        - Settings / configuration
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Windows 11 24H2 x64
+    validations:
+      required: true
+
+  - type: input
+    id: dotnet
+    attributes:
+      label: .NET runtime version
+      description: `dotnet --list-runtimes` output or installer version
+      placeholder: 8.0.15 (Microsoft.WindowsDesktop.App)
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: |
+        Include any guest image / ELF / assembly snippet if relevant.
+      placeholder: |
+        1. Launch Em68030.exe
+        2. File → Open ELF → select `vmlinux-<hash>`
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / register dumps / screenshots
+      render: shell

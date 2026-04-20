@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/hha0x617/Em68030_CsWPF/security/advisories/new
+    about: Please report security issues privately via Private Vulnerability Reporting (see SECURITY.md).
+  - name: Question / Discussion
+    url: https://github.com/hha0x617/Em68030_CsWPF/discussions
+    about: For general questions, ideas, or help requests, start a discussion.
+  - name: C++ port
+    url: https://github.com/hha0x617/Em68030_WinUI3Cpp/issues/new/choose
+    about: If the bug reproduces in the WinUI 3 port too, consider filing it there as well (or file once and mention).

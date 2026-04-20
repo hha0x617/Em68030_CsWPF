@@ -1,5 +1,9 @@
 # Em68030 - MC68030 Emulator (C# / WPF)
 
+[![Build and Test](https://github.com/hha0x617/Em68030_CsWPF/actions/workflows/build.yml/badge.svg)](https://github.com/hha0x617/Em68030_CsWPF/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/hha0x617/Em68030_CsWPF?include_prereleases&sort=semver)](https://github.com/hha0x617/Em68030_CsWPF/releases)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
 [Motorola MC68030](https://en.wikipedia.org/wiki/Motorola_68030) マイクロプロセッサのエミュレータです。MC68030 は 1980 年代後半にワークステーションや組み込みシステムで広く使われた 32-bit CPU です。本エミュレータは MC68030 を搭載した VMEbus シングルボードコンピュータ [MVME147](https://en.wikipedia.org/wiki/MVME147) をエミュレートし、MC68030 ELF バイナリ、[NetBSD/mvme68k](https://www.netbsd.org/ports/mvme68k/)、[Linux/m68k](https://www.debian.org/ports/m68k/) を実行できます。
 
 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) との vibe coding により開発されました。アプリケーションアイコンは [Claude](https://claude.ai/) で生成しました。

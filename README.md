@@ -1,5 +1,9 @@
 # Em68030 - MC68030 Emulator (C# / WPF)
 
+[![Build and Test](https://github.com/hha0x617/Em68030_CsWPF/actions/workflows/build.yml/badge.svg)](https://github.com/hha0x617/Em68030_CsWPF/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/hha0x617/Em68030_CsWPF?include_prereleases&sort=semver)](https://github.com/hha0x617/Em68030_CsWPF/releases)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
 An emulator for the [Motorola MC68030](https://en.wikipedia.org/wiki/Motorola_68030) microprocessor, a 32-bit CPU from the late 1980s used in workstations, embedded systems, and single-board computers. This emulator targets the [MVME147](https://en.wikipedia.org/wiki/MVME147), a VMEbus single-board computer built around the MC68030, and can run MC68030 ELF binaries, [NetBSD/mvme68k](https://www.netbsd.org/ports/mvme68k/), and [Linux/m68k](https://www.debian.org/ports/m68k/).
 
 Developed through vibe coding with [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Application icon generated with [Claude](https://claude.ai/).
