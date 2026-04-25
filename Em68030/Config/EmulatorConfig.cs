@@ -51,7 +51,14 @@ public class EmulatorConfig
     public string BoardType { get; set; } = "Generic";
 
     public string Mvme147RomPath { get; set; } = "";
+    // Active SCSI disk list — a denormalized view of the corresponding entry
+    // in Mvme147ScsiDisksByTargetOS for the currently-selected TargetOS.
+    // Reseated by SyncScsiDisksForTargetOS on every OS switch.
     public List<ScsiDiskConfig> Mvme147ScsiDisks { get; set; } = new();
+    // Per-target-OS storage so NetBSD and Linux remember independent disk
+    // lists. The map is the source of truth on disk; Mvme147ScsiDisks is
+    // the in-memory snapshot for the current OS.
+    public Dictionary<string, List<ScsiDiskConfig>> Mvme147ScsiDisksByTargetOS { get; set; } = new();
     public string Mvme147ScsiCdromPath { get; set; } = "";
     public int Mvme147ScsiCdromId { get; set; } = 3;
 
@@ -220,6 +227,20 @@ public class EmulatorConfig
                     }
                 }
 
+                // Per-OS SCSI disk list. Older configs only have the single
+                // Mvme147ScsiDisks list; copy it into both NetBSD and Linux
+                // entries so the existing disk set remains visible regardless
+                // of which OS is selected.
+                if (config.Mvme147ScsiDisksByTargetOS.Count == 0 && config.Mvme147ScsiDisks.Count > 0)
+                {
+                    config.Mvme147ScsiDisksByTargetOS["NetBSD"] = CloneDiskList(config.Mvme147ScsiDisks);
+                    config.Mvme147ScsiDisksByTargetOS["Linux"]  = CloneDiskList(config.Mvme147ScsiDisks);
+                }
+                if (config.Mvme147ScsiDisksByTargetOS.TryGetValue(config.TargetOS, out var activeList))
+                {
+                    config.Mvme147ScsiDisks = CloneDiskList(activeList);
+                }
+
                 config.ConsoleColumns = Math.Max(config.ConsoleColumns, 80);
                 config.ConsoleRows = Math.Max(config.ConsoleRows, 24);
                 return config;
@@ -236,6 +257,13 @@ public class EmulatorConfig
     {
         try
         {
+            // Reflect the active disk list back into the per-OS map so the
+            // on-disk JSON always has a consistent snapshot, even when
+            // callers mutate Mvme147ScsiDisks directly without calling
+            // SyncScsiDisksForTargetOS.
+            if (!string.IsNullOrEmpty(TargetOS))
+                Mvme147ScsiDisksByTargetOS[TargetOS] = CloneDiskList(Mvme147ScsiDisks);
+
             string json = JsonSerializer.Serialize(this, JsonOptions);
             File.WriteAllText(ConfigPath, json);
         }
@@ -249,5 +277,35 @@ public class EmulatorConfig
     {
         string json = JsonSerializer.Serialize(this, JsonOptions);
         return JsonSerializer.Deserialize<EmulatorConfig>(json, JsonOptions) ?? new EmulatorConfig();
+    }
+
+    /// <summary>
+    /// Save the current Mvme147ScsiDisks under <paramref name="oldOS"/> in
+    /// Mvme147ScsiDisksByTargetOS, then reseat Mvme147ScsiDisks from the
+    /// map's entry for <paramref name="newOS"/> (empty if absent). Also
+    /// updates TargetOS to newOS. Call whenever Target OS is about to
+    /// change so the two OS's disk lists stay independent.
+    /// </summary>
+    public void SyncScsiDisksForTargetOS(string oldOS, string newOS)
+    {
+        if (oldOS == newOS)
+        {
+            TargetOS = newOS;
+            return;
+        }
+        if (!string.IsNullOrEmpty(oldOS))
+            Mvme147ScsiDisksByTargetOS[oldOS] = CloneDiskList(Mvme147ScsiDisks);
+        Mvme147ScsiDisks = Mvme147ScsiDisksByTargetOS.TryGetValue(newOS, out var disks)
+            ? CloneDiskList(disks)
+            : new List<ScsiDiskConfig>();
+        TargetOS = newOS;
+    }
+
+    private static List<ScsiDiskConfig> CloneDiskList(List<ScsiDiskConfig> source)
+    {
+        var copy = new List<ScsiDiskConfig>(source.Count);
+        foreach (var d in source)
+            copy.Add(new ScsiDiskConfig { Path = d.Path, ScsiId = d.ScsiId });
+        return copy;
     }
 }

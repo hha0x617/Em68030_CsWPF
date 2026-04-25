@@ -40,6 +40,13 @@ public partial class SettingsWindow : Window
     private readonly List<DiskRowInfo> _diskRows = new();
     private int _desiredCdromId = 3;
     private readonly Action? _unmountScsiDisks;
+    // Per-target-OS disk list cache. The visible _diskRows reflects whichever
+    // entry of _disksByTargetOS matches _currentTargetOS. When the Target OS
+    // ComboBox changes we snapshot rows back into the old slot, then rebuild
+    // rows from the new slot — so NetBSD and Linux remember independent disk
+    // lists across in-dialog OS toggles.
+    private readonly Dictionary<string, List<ScsiDiskConfig>> _disksByTargetOS = new();
+    private string _currentTargetOS = "NetBSD";
     // Snapshot of the config values currently reflected in live hardware.
     // Fields that differ between Config and _appliedConfig are marked as "pending"
     // (orange foreground) in LoadSettings().
@@ -85,11 +92,16 @@ public partial class SettingsWindow : Window
         NetBsdKernelImagePathBox.Text = Config.NetBsdKernelImagePath;
         LinuxKernelImagePathBox.Text = Config.LinuxKernelImagePath;
 
-        // SCSI Disks
-        foreach (var disk in Config.Mvme147ScsiDisks)
-            AddDiskRow(disk.Path, disk.ScsiId);
-        if (_diskRows.Count == 0)
-            AddDiskRow("", 0);
+        // SCSI Disks — seeded from the per-OS map; the active list
+        // (Config.Mvme147ScsiDisks) is the snapshot for the current
+        // Target OS and is what we display until the user toggles.
+        _disksByTargetOS.Clear();
+        foreach (var kv in Config.Mvme147ScsiDisksByTargetOS)
+            _disksByTargetOS[kv.Key] = CloneDiskList(kv.Value);
+        _currentTargetOS = Config.TargetOS;
+        if (!_disksByTargetOS.ContainsKey(_currentTargetOS))
+            _disksByTargetOS[_currentTargetOS] = CloneDiskList(Config.Mvme147ScsiDisks);
+        RebuildDiskRowsFromConfig(_disksByTargetOS[_currentTargetOS]);
 
         ScsiCdromPathBox.Text = Config.Mvme147ScsiCdromPath;
         _desiredCdromId = Math.Clamp(Config.Mvme147ScsiCdromId, 0, 6);
@@ -501,8 +513,57 @@ public partial class SettingsWindow : Window
 
     private void TargetOS_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (NetBsdPanel != null)
-            UpdateTargetOSVisibility();
+        if (NetBsdPanel == null) return; // guard against the firing during InitializeComponent
+
+        // Snapshot rows under the previous OS, swap to the new OS's stored
+        // list, then rebuild the visible rows. NetBSD and Linux thus
+        // remember independent disk configurations across in-dialog
+        // Target OS toggles.
+        string newOS = GetSelectedItemText(TargetOSBox);
+        if (!string.IsNullOrEmpty(newOS) && newOS != _currentTargetOS)
+        {
+            _disksByTargetOS[_currentTargetOS] = ReadDiskRowsAsConfig();
+            var disks = _disksByTargetOS.TryGetValue(newOS, out var stored)
+                ? stored
+                : new List<ScsiDiskConfig>();
+            RebuildDiskRowsFromConfig(disks);
+            _currentTargetOS = newOS;
+            RefreshScsiIdOptions();
+        }
+        UpdateTargetOSVisibility();
+    }
+
+    private List<ScsiDiskConfig> ReadDiskRowsAsConfig()
+    {
+        var disks = new List<ScsiDiskConfig>();
+        foreach (var row in _diskRows)
+        {
+            string path = row.PathBox.Text;
+            int id = (row.IdBox.SelectedItem is ComboBoxItem sel &&
+                      int.TryParse(sel.Content?.ToString(), out int parsed)) ? parsed
+                    : (row.IdBox.Tag is int tagId ? tagId : 0);
+            if (!string.IsNullOrEmpty(path))
+                disks.Add(new ScsiDiskConfig { Path = path, ScsiId = id });
+        }
+        return disks;
+    }
+
+    private void RebuildDiskRowsFromConfig(List<ScsiDiskConfig> disks)
+    {
+        _diskRows.Clear();
+        ScsiDiskListPanel.Children.Clear();
+        foreach (var disk in disks)
+            AddDiskRow(disk.Path, disk.ScsiId);
+        if (_diskRows.Count == 0)
+            AddDiskRow("", 0);
+    }
+
+    private static List<ScsiDiskConfig> CloneDiskList(List<ScsiDiskConfig> source)
+    {
+        var copy = new List<ScsiDiskConfig>(source.Count);
+        foreach (var d in source)
+            copy.Add(new ScsiDiskConfig { Path = d.Path, ScsiId = d.ScsiId });
+        return copy;
     }
 
     private void UpdateNatGatewayEnabled()
@@ -560,20 +621,23 @@ public partial class SettingsWindow : Window
         Config.NetBsdKernelImagePath = NetBsdKernelImagePathBox.Text;
         Config.LinuxKernelImagePath = LinuxKernelImagePathBox.Text;
 
-        // SCSI Disks
-        Config.Mvme147ScsiDisks.Clear();
-        foreach (var row in _diskRows)
-        {
-            string path = row.PathBox.Text;
-            int id = GetSelectedScsiId(row.IdBox);
-            if (!string.IsNullOrEmpty(path))
-                Config.Mvme147ScsiDisks.Add(new ScsiDiskConfig { Path = path, ScsiId = id });
-        }
+        // SCSI Disks — snapshot the visible rows back to the current Target
+        // OS slot, then write the entire per-OS map to Config. The active
+        // list is reseated from the slot for whatever Target OS the user
+        // picked at OK time.
+        _disksByTargetOS[_currentTargetOS] = ReadDiskRowsAsConfig();
+        Config.Mvme147ScsiDisksByTargetOS = new Dictionary<string, List<ScsiDiskConfig>>();
+        foreach (var kv in _disksByTargetOS)
+            Config.Mvme147ScsiDisksByTargetOS[kv.Key] = CloneDiskList(kv.Value);
+        string finalOS = GetSelectedItemText(TargetOSBox);
+        Config.Mvme147ScsiDisks = Config.Mvme147ScsiDisksByTargetOS.TryGetValue(finalOS, out var activeList)
+            ? CloneDiskList(activeList)
+            : new List<ScsiDiskConfig>();
 
         Config.Mvme147ScsiCdromPath = ScsiCdromPathBox.Text;
         Config.Mvme147ScsiCdromId = GetSelectedScsiId(ScsiCdromIdBox);
         Config.Mvme147BootPartition = BootPartitionBox.SelectedIndex;
-        Config.TargetOS = GetSelectedItemText(TargetOSBox);
+        Config.TargetOS = finalOS;
         Config.LinuxCommandLine = LinuxCommandLineBox.Text;
         Config.NetworkMode = GetSelectedItemText(NetworkModeBox);
 
