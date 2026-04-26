@@ -51,16 +51,17 @@ public class EmulatorConfig
     public string BoardType { get; set; } = "Generic";
 
     public string Mvme147RomPath { get; set; } = "";
-    // Active SCSI disk list — a denormalized view of the corresponding entry
-    // in Mvme147ScsiDisksByTargetOS for the currently-selected TargetOS.
-    // Reseated by SyncScsiDisksForTargetOS on every OS switch.
+    // Active SCSI bus state — denormalized views of the *ByTargetOS maps for
+    // the currently-selected TargetOS. Reseated by SyncMvme147ScsiForTargetOS
+    // on every OS switch.
     public List<ScsiDiskConfig> Mvme147ScsiDisks { get; set; } = new();
-    // Per-target-OS storage so NetBSD and Linux remember independent disk
-    // lists. The map is the source of truth on disk; Mvme147ScsiDisks is
-    // the in-memory snapshot for the current OS.
-    public Dictionary<string, List<ScsiDiskConfig>> Mvme147ScsiDisksByTargetOS { get; set; } = new();
     public string Mvme147ScsiCdromPath { get; set; } = "";
     public int Mvme147ScsiCdromId { get; set; } = 3;
+    // Per-target-OS storage: NetBSD and Linux remember independent SCSI bus
+    // configurations (disk list + CD-ROM image + CD-ROM SCSI ID).
+    public Dictionary<string, List<ScsiDiskConfig>> Mvme147ScsiDisksByTargetOS { get; set; } = new();
+    public Dictionary<string, string> Mvme147ScsiCdromPathByTargetOS { get; set; } = new();
+    public Dictionary<string, int>    Mvme147ScsiCdromIdByTargetOS   { get; set; } = new();
 
     // Kernel image paths for auto-load on startup (per target OS)
     public string NetBsdKernelImagePath { get; set; } = "";
@@ -227,19 +228,31 @@ public class EmulatorConfig
                     }
                 }
 
-                // Per-OS SCSI disk list. Older configs only have the single
-                // Mvme147ScsiDisks list; copy it into both NetBSD and Linux
-                // entries so the existing disk set remains visible regardless
-                // of which OS is selected.
+                // Per-OS SCSI bus state. Older configs only have the single
+                // Mvme147ScsiDisks/CdromPath/CdromId fields; copy each into
+                // both NetBSD and Linux slots so the existing devices remain
+                // visible regardless of which OS is selected.
                 if (config.Mvme147ScsiDisksByTargetOS.Count == 0 && config.Mvme147ScsiDisks.Count > 0)
                 {
                     config.Mvme147ScsiDisksByTargetOS["NetBSD"] = CloneDiskList(config.Mvme147ScsiDisks);
                     config.Mvme147ScsiDisksByTargetOS["Linux"]  = CloneDiskList(config.Mvme147ScsiDisks);
                 }
-                if (config.Mvme147ScsiDisksByTargetOS.TryGetValue(config.TargetOS, out var activeList))
+                if (config.Mvme147ScsiCdromPathByTargetOS.Count == 0 && !string.IsNullOrEmpty(config.Mvme147ScsiCdromPath))
                 {
-                    config.Mvme147ScsiDisks = CloneDiskList(activeList);
+                    config.Mvme147ScsiCdromPathByTargetOS["NetBSD"] = config.Mvme147ScsiCdromPath;
+                    config.Mvme147ScsiCdromPathByTargetOS["Linux"]  = config.Mvme147ScsiCdromPath;
                 }
+                if (config.Mvme147ScsiCdromIdByTargetOS.Count == 0)
+                {
+                    config.Mvme147ScsiCdromIdByTargetOS["NetBSD"] = config.Mvme147ScsiCdromId;
+                    config.Mvme147ScsiCdromIdByTargetOS["Linux"]  = config.Mvme147ScsiCdromId;
+                }
+                if (config.Mvme147ScsiDisksByTargetOS.TryGetValue(config.TargetOS, out var activeList))
+                    config.Mvme147ScsiDisks = CloneDiskList(activeList);
+                if (config.Mvme147ScsiCdromPathByTargetOS.TryGetValue(config.TargetOS, out var activeCdromPath))
+                    config.Mvme147ScsiCdromPath = activeCdromPath;
+                if (config.Mvme147ScsiCdromIdByTargetOS.TryGetValue(config.TargetOS, out var activeCdromId))
+                    config.Mvme147ScsiCdromId = activeCdromId;
 
                 config.ConsoleColumns = Math.Max(config.ConsoleColumns, 80);
                 config.ConsoleRows = Math.Max(config.ConsoleRows, 24);
@@ -257,12 +270,16 @@ public class EmulatorConfig
     {
         try
         {
-            // Reflect the active disk list back into the per-OS map so the
-            // on-disk JSON always has a consistent snapshot, even when
-            // callers mutate Mvme147ScsiDisks directly without calling
-            // SyncScsiDisksForTargetOS.
+            // Reflect the active SCSI bus state back into the per-OS maps so
+            // the on-disk JSON always has a consistent snapshot, even when
+            // callers mutate Mvme147ScsiDisks/CdromPath/CdromId directly
+            // without calling SyncMvme147ScsiForTargetOS.
             if (!string.IsNullOrEmpty(TargetOS))
-                Mvme147ScsiDisksByTargetOS[TargetOS] = CloneDiskList(Mvme147ScsiDisks);
+            {
+                Mvme147ScsiDisksByTargetOS[TargetOS]     = CloneDiskList(Mvme147ScsiDisks);
+                Mvme147ScsiCdromPathByTargetOS[TargetOS] = Mvme147ScsiCdromPath;
+                Mvme147ScsiCdromIdByTargetOS[TargetOS]   = Mvme147ScsiCdromId;
+            }
 
             string json = JsonSerializer.Serialize(this, JsonOptions);
             File.WriteAllText(ConfigPath, json);
@@ -280,13 +297,14 @@ public class EmulatorConfig
     }
 
     /// <summary>
-    /// Save the current Mvme147ScsiDisks under <paramref name="oldOS"/> in
-    /// Mvme147ScsiDisksByTargetOS, then reseat Mvme147ScsiDisks from the
-    /// map's entry for <paramref name="newOS"/> (empty if absent). Also
-    /// updates TargetOS to newOS. Call whenever Target OS is about to
-    /// change so the two OS's disk lists stay independent.
+    /// Save the current MVME147 SCSI bus state (disk list + CD-ROM image +
+    /// CD-ROM SCSI ID) under <paramref name="oldOS"/> in the *ByTargetOS
+    /// maps, then reseat all three from the entries for <paramref name="newOS"/>
+    /// (defaults if absent). Also updates TargetOS to newOS. Call whenever
+    /// Target OS is about to change so the two OS's SCSI configurations
+    /// stay independent.
     /// </summary>
-    public void SyncScsiDisksForTargetOS(string oldOS, string newOS)
+    public void SyncMvme147ScsiForTargetOS(string oldOS, string newOS)
     {
         if (oldOS == newOS)
         {
@@ -294,10 +312,20 @@ public class EmulatorConfig
             return;
         }
         if (!string.IsNullOrEmpty(oldOS))
-            Mvme147ScsiDisksByTargetOS[oldOS] = CloneDiskList(Mvme147ScsiDisks);
+        {
+            Mvme147ScsiDisksByTargetOS[oldOS]     = CloneDiskList(Mvme147ScsiDisks);
+            Mvme147ScsiCdromPathByTargetOS[oldOS] = Mvme147ScsiCdromPath;
+            Mvme147ScsiCdromIdByTargetOS[oldOS]   = Mvme147ScsiCdromId;
+        }
         Mvme147ScsiDisks = Mvme147ScsiDisksByTargetOS.TryGetValue(newOS, out var disks)
             ? CloneDiskList(disks)
             : new List<ScsiDiskConfig>();
+        Mvme147ScsiCdromPath = Mvme147ScsiCdromPathByTargetOS.TryGetValue(newOS, out var cdPath)
+            ? cdPath
+            : "";
+        Mvme147ScsiCdromId = Mvme147ScsiCdromIdByTargetOS.TryGetValue(newOS, out var cdId)
+            ? cdId
+            : 3;
         TargetOS = newOS;
     }
 
