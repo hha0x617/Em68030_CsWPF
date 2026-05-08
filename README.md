@@ -201,6 +201,12 @@ Em68030_CsWPF/
 
 - [Em68030 C++/WinUI3 version](https://github.com/hha0x617/Em68030_WinUI3Cpp) - Same emulator implemented in C++/WinRT (faster)
 
+## Contributing and Policies
+
+- Contribution workflow: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Code of Conduct: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) (Contributor Covenant 2.1)
+- Security: [`SECURITY.md`](SECURITY.md)
+
 ## License
 
 [Apache License 2.0](LICENSE)
