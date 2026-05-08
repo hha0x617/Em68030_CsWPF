@@ -201,6 +201,12 @@ Em68030_CsWPF/
 
 - [Em68030 C++/WinUI3 版](https://github.com/hha0x617/Em68030_WinUI3Cpp) - 同じエミュレータの C++/WinRT 実装 (より高速)
 
+## 貢献とポリシー
+
+- 貢献ワークフロー: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- 行動規範: [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)（Contributor Covenant 2.1 準拠）
+- セキュリティ: [`SECURITY.md`](SECURITY.md)
+
 ## ライセンス
 
 [Apache License 2.0](LICENSE)
