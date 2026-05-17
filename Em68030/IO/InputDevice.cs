@@ -269,7 +269,7 @@ public class InputDevice : IMemoryMappedDevice
         foreach (char ch in text)
         {
             if (ch == '\r') continue; // Skip CR in CRLF — LF alone produces KEY_ENTER
-            var (keyCode, needShift) = KeyMapping.CharToLinuxKey(ch);
+            var (keyCode, needShift) = KeyMapping.CharToScancode(ch);
             if (keyCode == 0) continue;
 
             if (needShift)
